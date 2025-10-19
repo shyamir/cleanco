@@ -1,0 +1,127 @@
+import React from "react";
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  StyleProp,
+} from "react-native";
+import LinearGradient from "react-native-linear-gradient";
+import { useTheme } from "@/theme/useTheme";
+
+type ButtonProps = {
+  variant?: "filled" | "tonal" | "outline";
+  label: string;
+  onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  disabled?: boolean;
+};
+
+const Button: React.FC<ButtonProps> = ({
+  variant = "filled",
+  label,
+  onPress,
+  style,
+  textStyle,
+  disabled = false,
+}) => {
+  const theme = useTheme();
+
+  const getTextColor = () => {
+    if (disabled) return theme.colors.button.label.secondary;
+
+    switch (variant) {
+      case "filled":
+        return theme.colors.button.label.default;
+      case "tonal":
+        return theme.colors.button.label.default;
+      case "outline":
+        return theme.colors.button.label.secondary; // blue text
+      default:
+        return theme.colors.button.label.default;
+    }
+  };
+
+  const getBorder = () => {
+    if (variant === "outline") {
+      return {
+        borderWidth: 1,
+        borderColor: theme.colors.button.border.default,
+      };
+    }
+    return {};
+  };
+
+  const getPaddingVertical = () => {
+    switch (variant) {
+      case "tonal":
+        return 4; // smaller padding for tonal
+      case "filled":
+        return 12; // larger padding for filled & outline
+      case "outline":
+        return 12; // larger padding for filled & outline
+      default:
+        return 12; // larger padding for filled & outline
+    }
+  };
+
+  const content = (
+    <Text style={[{ color: getTextColor() }, textStyle]}>{label}</Text>
+  );
+
+  const buttonStyle: ViewStyle = {
+    paddingVertical: getPaddingVertical(),
+    paddingHorizontal: 12,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
+  if (variant === "filled" && !disabled) {
+    const gradient = theme.colors.button.background.primary;
+
+    return (
+      <LinearGradient
+        colors={gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[{ borderRadius: 48 }, getBorder(), style]}
+      >
+        <TouchableOpacity
+          onPress={onPress}
+          activeOpacity={0.8}
+          style={{
+            paddingVertical: 12,
+            paddingHorizontal: 20,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={[{ color: getTextColor() }, textStyle]}>{label}</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    );
+  }
+
+  // Tonal or Outline
+  const backgroundColor =
+    variant === "tonal"
+      ? "rgba(255, 255, 255, 0.2)" // semi-transparent white
+      : "transparent";
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      style={[buttonStyle, { backgroundColor }, getBorder(), style]}
+    >
+      {content}
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({});
+
+export default Button;

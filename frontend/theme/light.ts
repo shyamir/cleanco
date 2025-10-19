@@ -13,6 +13,7 @@ export const lightTheme = {
         default: colors.gray60,
         secondary: colors.gray50,
         tertiary: colors.gray80,
+        disabled: colors.gray40
       },
       //  heading
       heading: {
@@ -28,6 +29,7 @@ export const lightTheme = {
         active: colors.blue50,
       },
     },
+
     //   navbar
     navbar: {
       background: {
@@ -44,20 +46,23 @@ export const lightTheme = {
     // card
     card: {
       background: {
-        default: colors.blue60,
-        secondary: colors.blue40,
+        primary: [colors.blue60, colors.blue40],
+        secondary: [colors.orange40, colors.yellow40],
+        tertiary: colors.gray0,
       },
       label: {
         default: colors.gray0,
-        secondary: colors.gray30
+        secondary: colors.gray30,
+        tertiary: colors.gray60,
+        active: colors.blue60,
       },
     },
 
     // button
     button: {
       background: {
-        default: colors.blue60,
-        secondary: colors.blue40,
+        primary: [colors.blue60, colors.blue40],
+        secondary: colors.gray0,
         tertiary: colors.gray40,
         error: colors.red70,
       },
@@ -145,9 +150,14 @@ export const lightTheme = {
         fontSize: units.unit36,
         lineHeight: units.unit36,
       },
-      xxs: {
+      xs2: {
         fontFamily: "GeomanistMedium",
         fontSize: units.unit24,
+        lineHeight: units.unit28,
+      },
+      xs3: {
+        fontFamily: "GeomanistMedium",
+        fontSize: units.unit20,
         lineHeight: units.unit24,
       },
     },

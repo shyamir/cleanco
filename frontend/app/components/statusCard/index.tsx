@@ -13,17 +13,16 @@ export const StatusCard: React.FC<Props> = ({ title, description }) => {
 
   return (
     <LinearGradient
-      colors={[
-        theme.colors.card.background.default,
-        theme.colors.card.background.secondary,
-      ]}
+      colors={theme.colors.card.background.primary}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.container}
     >
       <View style={styles.textContainer}>
         <Text
           style={[
             {
-              ...theme.typography.heading.xxs,
+              ...theme.typography.heading.xs2,
               color: theme.colors.card.label.default,
             } as any,
           ]}
@@ -52,11 +51,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     height: "70%",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 5, 
+
   },
   textContainer: {
     alignItems: "center",

@@ -13,6 +13,7 @@ export const darkTheme = {
         default: colors.gray40,
         secondary: colors.gray30,
         tertiary: colors.gray10,
+        disabled: colors.gray30,
       },
       //  heading
       heading: {
@@ -40,34 +41,37 @@ export const darkTheme = {
         active: colors.yellow40,
       },
     },
-
     // card
     card: {
       background: {
-        default: colors.blue60,
-        secondary: colors.blue40,
+        primary: [colors.blue60, colors.blue40],
+        secondary: [colors.orange40, colors.yellow40],
+        tertiary: colors.gray0,
       },
       label: {
         default: colors.gray0,
         secondary: colors.gray30,
+        tertiary: colors.gray60,
+        active: colors.blue30,
       },
     },
 
     // button
     button: {
       background: {
-        default: colors.blue60,
-        secondary: colors.blue40,
-        error: colors.red80,
+        primary: [colors.blue60, colors.blue40],
+        secondary: colors.gray0,
+        tertiary: colors.gray40,
+        error: colors.red70,
       },
       border: {
-        default: colors.gray80,
-        error: colors.red60,
+        default: colors.gray30,
+        error: colors.red70,
       },
       label: {
         default: colors.gray0,
-        secondary: colors.blue20,
-        error: colors.red60,
+        secondary: colors.blue70,
+        error: colors.red70,
       },
     },
   },
@@ -143,9 +147,14 @@ export const darkTheme = {
         fontSize: units.unit36,
         lineHeight: units.unit36,
       },
-      xxs: {
+      xs2: {
         fontFamily: "GeomanistMedium",
         fontSize: units.unit24,
+        lineHeight: units.unit28,
+      },
+      xs3: {
+        fontFamily: "GeomanistMedium",
+        fontSize: units.unit20,
         lineHeight: units.unit24,
       },
     },
