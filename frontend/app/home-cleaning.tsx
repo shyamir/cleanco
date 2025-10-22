@@ -5,7 +5,6 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
 import { AnimatedHeader } from "./components/animatedHeader";
 
-
 const HomeCleaningScreen = () => {
   const theme = useTheme();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -57,8 +56,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   section: {
-    fontSize: 48
-  }
+    fontSize: 48,
+  },
 });
 
 export default HomeCleaningScreen;

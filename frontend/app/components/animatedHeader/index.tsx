@@ -2,6 +2,7 @@ import React, { useRef } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Animated,
   TouchableOpacity,
@@ -104,6 +105,12 @@ export const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
           {title}
         </Animated.Text>
       </Animated.View>
+
+      <Image
+        source={require("@/assets/images/service.png")}
+        style={styles.headerImage}
+        resizeMode="contain"
+      />
     </View>
   );
 };
@@ -112,7 +119,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: 24,
     flexDirection: "row",
-    alignItems: "flex-start",
+        alignItems: "flex-start",
+    
   },
   backButton: {
     width: BACK_BUTTON_SIZE,
@@ -120,5 +128,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 2,
+  },
+  headerImage: {
+    position: "absolute",
+      right: 0,
+    zIndex: -10
   },
 });
