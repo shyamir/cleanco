@@ -15,7 +15,7 @@ import GradientText from "./components/gradientText";
 import { useNavigation } from "expo-router";
 import Button from "./components/button";
 import { Icon } from "@/constants/icon";
-import InfoRow from "./infoRow";
+import InfoRow from "./components/infoRow";
 
 const Review = () => {
   const theme = useTheme();
