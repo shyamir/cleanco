@@ -1,9 +1,11 @@
 import { StyleSheet, useWindowDimensions } from "react-native";
 import { useRouter, usePathname, Href } from "expo-router";
 import LinearGradient from "react-native-linear-gradient";
+// import { LinearGradient } from "expo-linear-gradient";
 
 import { useTheme } from "@/theme/useTheme";
 import { Tab } from "./tab";
+
 import { Icon } from "@/constants/icon";
 
 type TabsProps = {

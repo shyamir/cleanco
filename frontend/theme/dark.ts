@@ -7,10 +7,11 @@ export const darkTheme = {
       background: {
         default: colors.gray90,
         secondary: colors.gray80,
+        tertiary: [colors.blue60, colors.blue40],
       },
       // body
       body: {
-        default: colors.gray40,
+        default: colors.gray0,
         secondary: colors.gray30,
         tertiary: colors.gray10,
         disabled: colors.gray30,
@@ -20,6 +21,7 @@ export const darkTheme = {
         default: [colors.blue60, colors.blue40],
         secondary: [colors.orange40, colors.yellow40],
         tertiary: colors.gray20,
+        active: colors.gray0,
       },
     },
     // pagination
@@ -46,7 +48,7 @@ export const darkTheme = {
       background: {
         primary: [colors.blue60, colors.blue40],
         secondary: [colors.orange40, colors.yellow40],
-        tertiary: colors.gray0,
+        tertiary: colors.gray80,
       },
       label: {
         default: colors.gray0,
@@ -70,7 +72,7 @@ export const darkTheme = {
       },
       label: {
         default: colors.gray0,
-        secondary: colors.blue70,
+        secondary: colors.blue30,
         error: colors.red70,
       },
     },

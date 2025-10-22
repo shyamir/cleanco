@@ -1,13 +1,15 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/theme/useTheme";
+import { Href, useRouter } from "expo-router";
 
 type CardProps = {
   title: string;
   duration: string;
   price: string;
   currency?: string;
+  route: Href; // optional route to navigate on press
 };
 
 const Card: React.FC<CardProps> = ({
@@ -15,11 +17,22 @@ const Card: React.FC<CardProps> = ({
   duration,
   price,
   currency = "MVR",
+  route,
 }) => {
   const theme = useTheme();
 
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (route) {
+      router.push(route);
+    }
+  };
+
   return (
-    <View
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.8}
       style={[
         styles.card,
         { backgroundColor: theme.colors.card.background.tertiary },
@@ -40,13 +53,13 @@ const Card: React.FC<CardProps> = ({
           <Ionicons
             name="time-outline"
             size={16}
-            color={theme.colors.card.label.tertiary}
+            color={theme.colors.system.body.disabled}
           />
           <Text
             style={
               [
                 theme.typography.body.md,
-                { color: theme.colors.card.label.tertiary},
+                { color: theme.colors.system.body.disabled },
               ] as any
             }
           >
@@ -90,7 +103,7 @@ const Card: React.FC<CardProps> = ({
           onwards
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

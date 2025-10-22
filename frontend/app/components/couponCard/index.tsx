@@ -1,6 +1,6 @@
 import { useTheme } from "@/theme/useTheme";
 import React from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Button from "../button";
 
@@ -62,7 +62,7 @@ const CouponCard: React.FC<CouponCardProps> = ({
           </Text>
         </View>
         <View style={styles.buttonWrapper}>
-          <Button label="Apply" variant="tonal" onPress={() => {}} />
+          <Button label={buttonText} variant="tonal" onPress={() => {}} />
         </View>
       </View>
         <Image source={imageSource} style={styles.image} resizeMode="contain" />

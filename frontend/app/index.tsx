@@ -1,5 +1,4 @@
 import { useFonts } from "expo-font";
-import { useRouter } from "expo-router";
 import React from "react";
 import Splash from "./splash";
 

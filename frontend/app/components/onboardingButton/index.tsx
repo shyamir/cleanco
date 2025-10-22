@@ -1,6 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
+import { router } from "expo-router";
 import React, { useCallback } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -20,6 +23,8 @@ const OnboardingButton: React.FC<Props> = ({
   length,
   flatListRef,
 }) => {
+  const theme = useTheme();
+  
   // Animated style for "Next" text
   const nextTextStyle = useAnimatedStyle(() => ({
     opacity: currentIndex.value === length - 1 ? withTiming(0) : withTiming(1),
@@ -33,7 +38,7 @@ const OnboardingButton: React.FC<Props> = ({
   const onPress = useCallback(() => {
     if (currentIndex.value === length - 1) {
       console.log("Get Started pressed");
-      // Add navigation here if needed, e.g., router.push("/home")
+      router.push("/home");
     } else {
       flatListRef.current?.scrollToIndex({
         index: currentIndex.value + 1,
@@ -49,15 +54,27 @@ const OnboardingButton: React.FC<Props> = ({
         style={{ flex: 1, borderRadius: 48, overflow: "hidden" }}
       >
         <LinearGradient
-          colors={["#1E40AF", "#3B82F6"]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
+          colors={theme.colors.button.background.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.gradient}
         >
-          <Animated.Text style={[styles.text, nextTextStyle]}>
+          <Animated.Text
+            style={[
+              styles.text,
+              nextTextStyle,
+              theme.typography.body.md.medium,
+            ]}
+          >
             Next
           </Animated.Text>
-          <Animated.Text style={[styles.text, startTextStyle]}>
+          <Animated.Text
+            style={[
+              styles.text,
+              startTextStyle,
+              theme.typography.body.md.medium,
+            ]}
+          >
             Get Started
           </Animated.Text>
         </LinearGradient>

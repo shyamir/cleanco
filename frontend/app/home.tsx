@@ -6,8 +6,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import GradientText from "./components/gradientText";
 import { Tabs } from "./components/tabs";
 import { StatusCard } from "./components/statusCard";
-import PromoCard from "./components/couponCard";
-import Button from "./components/button";
+import CouponCard from "./components/couponCard";
 import Card from "./components/card";
 
 export default function Home() {
@@ -44,7 +43,7 @@ export default function Home() {
               title="Book your first service!"
               description="Professional services, just the way you want them"
             />
-            <PromoCard
+            <CouponCard
               discountText="Get 30% off!"
               serviceText="Home Cleaning Service"
               buttonText="Apply"
@@ -64,8 +63,18 @@ export default function Home() {
             </Text>
 
             <View style={styles.cardWrapper}>
-              <Card title="Home Cleaning" duration="1–4h" price="435" />
-              <Card title="Office Cleaning" duration="1–4h" price="435" />
+              <Card
+                title="Home Cleaning"
+                duration="1–4h"
+                price="435"
+                route="/home-cleaning" 
+              />
+              <Card
+                title="Office Cleaning"
+                duration="1–4h"
+                price="435"
+                route="/office-cleaning"
+              />
             </View>
 
             <Text

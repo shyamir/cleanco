@@ -34,14 +34,20 @@ const Button: React.FC<ButtonProps> = ({
 
     switch (variant) {
       case "filled":
-        return theme.colors.button.label.default;
+        return theme.colors.button.label.default; // gradient button
       case "tonal":
-        return theme.colors.button.label.default;
+        return theme.colors.button.label.default; // transparent button
       case "outline":
-        return theme.colors.button.label.secondary; // blue text
+        return theme.colors.button.label.secondary; // outline button
       default:
         return theme.colors.button.label.default;
     }
+  };
+
+  const getTextStyle = () => {
+    return variant === "filled" || variant === "outline"
+      ? theme.typography.body.md.medium
+      : theme.typography.body.sm.medium;
   };
 
   const getBorder = () => {
@@ -57,18 +63,20 @@ const Button: React.FC<ButtonProps> = ({
   const getPaddingVertical = () => {
     switch (variant) {
       case "tonal":
-        return 4; // smaller padding for tonal
+        return 4;
       case "filled":
-        return 12; // larger padding for filled & outline
+        return 12;
       case "outline":
-        return 12; // larger padding for filled & outline
+        return 12;
       default:
-        return 12; // larger padding for filled & outline
+        return 12;
     }
   };
 
   const content = (
-    <Text style={[{ color: getTextColor() }, textStyle]}>{label}</Text>
+    <Text style={[{ color: getTextColor(), ...getTextStyle() }, textStyle]}>
+      {label}
+    </Text>
   );
 
   const buttonStyle: ViewStyle = {

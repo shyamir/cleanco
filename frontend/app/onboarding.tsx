@@ -116,6 +116,7 @@ export default function Onboarding() {
           flatListRef={flatListRef}
         />
       </View>
+      
     </SafeAreaView>
   );
 }

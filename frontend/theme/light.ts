@@ -7,19 +7,21 @@ export const lightTheme = {
       background: {
         default: colors.gray10,
         secondary: colors.gray0,
+        tertiary: [colors.blue60, colors.blue40],
       },
       // body
       body: {
         default: colors.gray60,
         secondary: colors.gray50,
         tertiary: colors.gray80,
-        disabled: colors.gray40
+        disabled: colors.gray50,
       },
       //  heading
       heading: {
         default: [colors.blue60, colors.blue40],
         secondary: [colors.orange40, colors.yellow40],
         tertiary: colors.gray70,
+        active: colors.gray0
       },
     },
     // pagination
@@ -54,7 +56,7 @@ export const lightTheme = {
         default: colors.gray0,
         secondary: colors.gray30,
         tertiary: colors.gray60,
-        active: colors.blue60,
+        active: colors.blue50,
       },
     },
 
