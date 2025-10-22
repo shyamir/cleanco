@@ -67,13 +67,19 @@ export default function Home() {
                 title="Home Cleaning"
                 duration="1–4h"
                 price="435"
-                route="/home-cleaning" 
+                route="/home-cleaning"
               />
               <Card
                 title="Office Cleaning"
                 duration="1–4h"
                 price="435"
                 route="/office-cleaning"
+              />
+              <Card
+                title="Office Cleaning"
+                duration="1–4h"
+                price="435"
+                route="/review"
               />
             </View>
 

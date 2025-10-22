@@ -20,7 +20,7 @@ type ButtonProps = {
 };
 
 const Button: React.FC<ButtonProps> = ({
-  variant = "filled",
+  variant,
   label,
   onPress,
   style,
@@ -45,9 +45,9 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const getTextStyle = () => {
-    return variant === "filled" || variant === "outline"
-      ? theme.typography.body.md.medium
-      : theme.typography.body.sm.medium;
+    return variant === "tonal"
+      ? theme.typography.body.sm.medium
+      : theme.typography.body.md.medium;
   };
 
   const getBorder = () => {
@@ -107,7 +107,11 @@ const Button: React.FC<ButtonProps> = ({
             justifyContent: "center",
           }}
         >
-          <Text style={[{ color: getTextColor() }, textStyle]}>{label}</Text>
+          <Text
+            style={[{ color: getTextColor(), ...getTextStyle() }, textStyle]}
+          >
+            {label}
+          </Text>
         </TouchableOpacity>
       </LinearGradient>
     );
@@ -129,7 +133,5 @@ const Button: React.FC<ButtonProps> = ({
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({});
 
 export default Button;
