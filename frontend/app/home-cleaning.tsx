@@ -3,7 +3,7 @@ import { View, StyleSheet, Animated, Text } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
-import { AnimatedHeader } from "./components/animatedHeader";
+import AnimatedHeader from "../components/animatedHeader";
 
 const HomeCleaningScreen = () => {
   const theme = useTheme();

@@ -21,7 +21,7 @@ type TabProps = {
 
 const IconSize = 24;
 
-export const Tab = ({
+const Tab = ({
   label,
   maxWidth,
   minWidth,
@@ -123,3 +123,5 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
 });
+
+export default Tab;

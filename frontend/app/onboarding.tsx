@@ -10,10 +10,10 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // components
-import ListItem from "./components/listItem";
-import OnboardingButton  from "./components/onboardingButton";
+import ListItem from "../components/listItem";
+import OnboardingButton from "../components/onboardingButton";
 
-import Pagination from "./components/pagination";
+import Pagination from "../components/pagination";
 
 type Page = { line1: string; line2: string; description: string; image: any };
 
@@ -40,7 +40,7 @@ const pages: Page[] = [
   },
 ];
 export default function Onboarding() {
-  const theme = useTheme(); 
+  const theme = useTheme();
   const x = useSharedValue(0);
   const currentIndex = useSharedValue(0);
   const flatListRef = useAnimatedRef<Animated.FlatList<Page>>();
@@ -116,7 +116,6 @@ export default function Onboarding() {
           flatListRef={flatListRef}
         />
       </View>
-      
     </SafeAreaView>
   );
 }

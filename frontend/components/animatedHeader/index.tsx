@@ -27,7 +27,7 @@ type AnimatedHeaderProps = {
   textStyle?: TextStyle;
 };
 
-export const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
+const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
   title,
   scrollY,
   style,
@@ -135,3 +135,5 @@ const styles = StyleSheet.create({
     zIndex: -10
   },
 });
+
+export default AnimatedHeader;

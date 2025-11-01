@@ -11,11 +11,11 @@ import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/theme/useTheme";
-import GradientText from "./components/gradientText";
+import GradientText from "../components/gradientText";
 import { useNavigation } from "expo-router";
-import Button from "./components/button";
+import Button from "../components/button";
 import { Icon } from "@/constants/icon";
-import InfoRow from "./components/infoRow";
+import InfoRow from "../components/infoRow";
 
 const Review = () => {
   const theme = useTheme();
@@ -78,7 +78,6 @@ const Review = () => {
               label="Service"
               value="Home Cleaning"
             />
-
             <InfoRow
               icon={<Icon.location color={theme.colors.system.body.disabled} />}
               label="Address"

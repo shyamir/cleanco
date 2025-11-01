@@ -3,7 +3,7 @@ import { useTheme } from "@/theme/useTheme";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { Tabs } from "./components/tabs";
+import Tabs from "@/components/tabs";
 
 export default function Home() {
   const theme = useTheme();
@@ -30,9 +30,7 @@ export default function Home() {
         </View>
 
         <View>
-          <Tabs
-            tabs={TABS_DATA}
-          />
+          <Tabs tabs={TABS_DATA} />
         </View>
       </SafeAreaView>
     </SafeAreaProvider>

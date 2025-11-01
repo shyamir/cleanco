@@ -4,7 +4,7 @@ import LinearGradient from "react-native-linear-gradient";
 // import { LinearGradient } from "expo-linear-gradient";
 
 import { useTheme } from "@/theme/useTheme";
-import { Tab } from "./tab";
+import Tab from "./tab";
 
 import { Icon } from "@/constants/icon";
 
@@ -12,7 +12,7 @@ type TabsProps = {
   tabs: { label: string; icon: keyof typeof Icon; route: Href }[];
 };
 
-export const Tabs = ({ tabs }: TabsProps) => {
+const Tabs = ({ tabs }: TabsProps) => {
   const { width: windowWidth } = useWindowDimensions();
   const containerWidth = windowWidth * 0.7; // 80% of screen
   const containerPadding = 4; // paddingHorizontal inside container
@@ -72,3 +72,5 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
 });
+
+export default Tabs;

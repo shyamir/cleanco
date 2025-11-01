@@ -109,7 +109,7 @@ const Card: React.FC<CardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    flexBasis: "48.5%", // roughly half width, allowing for gap
+    // flexBasis: "48.5%", // roughly half width, allowing for gap
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
@@ -119,6 +119,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     justifyContent: "space-between",
     height: 155,
+    width: "48.5%", // ✅ ensures two per row
   },
   topSection: {
     flexDirection: "column",

@@ -55,6 +55,7 @@ export const darkTheme = {
         secondary: colors.gray30,
         tertiary: colors.gray60,
         active: colors.blue30,
+        test: colors.orange40,
       },
     },
 

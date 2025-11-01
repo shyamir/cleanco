@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
 import { useTheme } from "@/theme/useTheme";
 
 type InfoRowProps = {
-  icon: React.ReactNode; // pass your icon component
+  icon?: React.ReactNode;
   label: string;
-  value: string;
+  value?: string;
   containerStyle?: ViewStyle;
   labelStyle?: TextStyle;
   valueStyle?: TextStyle;
+  labelColor?: string;
+  valueColor?: string;
 };
 
 const InfoRow: React.FC<InfoRowProps> = ({
@@ -18,6 +20,8 @@ const InfoRow: React.FC<InfoRowProps> = ({
   containerStyle,
   labelStyle,
   valueStyle,
+  labelColor,
+  valueColor,
 }) => {
   const theme = useTheme();
 
@@ -28,25 +32,27 @@ const InfoRow: React.FC<InfoRowProps> = ({
         <Text
           style={[
             {
-              ...theme.typography.body.md.regular,
-              color: theme.colors.system.body.disabled,
+              ...theme.typography.body.sm.regular,
+              color: labelColor || theme.colors.system.body.disabled,
             },
             labelStyle,
           ]}
         >
           {label}
         </Text>
-        <Text
-          style={[
-            {
-              ...theme.typography.body.md.regular,
-              color: theme.colors.system.body.default,
-            },
-            valueStyle,
-          ]}
-        >
-          {value}
-        </Text>
+        {value ? (
+          <Text
+            style={[
+              {
+                ...theme.typography.body.sm.regular,
+                color: valueColor || theme.colors.system.body.default,
+              },
+              valueStyle,
+            ]}
+          >
+            {value}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -56,6 +62,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     marginBottom: 12,
+    alignItems: "center",
   },
   iconWrapper: {
     marginRight: 12,
