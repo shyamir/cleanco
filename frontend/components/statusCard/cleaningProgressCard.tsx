@@ -1,15 +1,17 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "@/theme/useTheme";
-import BaseCard from "./baseCard";
+import BaseCard from "./base";
 import RatingStars from "../rating";
 import ProgressBar from "../progressBar";
 
-type CleaningProgressProps = {
+type CleaningProgressCardProps = {
   status: "todo" | "in-progress" | "done"; // cleaner on route, making it shine, all clean
 };
 
-const CleaningProgress: React.FC<CleaningProgressProps> = ({ status }) => {
+const CleaningProgressCard: React.FC<CleaningProgressCardProps> = ({
+  status,
+}) => {
   const theme = useTheme();
   const [rating, setRating] = React.useState(0);
 
@@ -74,7 +76,7 @@ const CleaningProgress: React.FC<CleaningProgressProps> = ({ status }) => {
                   { color: theme.colors.card.label.secondary } as any,
                 ]}
               >
-                Completed in 1h{" "}
+                Completed in{" "}
               </Text>
               <Text
                 style={[
@@ -196,4 +198,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CleaningProgress;
+export default CleaningProgressCard;

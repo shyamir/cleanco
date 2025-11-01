@@ -1,12 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/theme/useTheme";
-import BaseCard from "./baseCard";
+import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
 import GradientText from "../gradientText";
 
-const PaymentDue = () => {
+const PaymentDueCard = () => {
   const theme = useTheme();
 
   return (
@@ -16,7 +16,7 @@ const PaymentDue = () => {
           <Text
             style={[
               {
-                ...theme.typography.heading.xs3,
+                ...theme.typography.heading.xs3.medium,
                 color: theme.colors.system.heading.active,
               } as any,
             ]}
@@ -24,22 +24,29 @@ const PaymentDue = () => {
             Your payment is due in{" "}
           </Text>
 
-          {/* change to gradien text */}
+          {/* change to gradient text */}
+
           <Text
             style={[
               {
-                ...theme.typography.heading.xs3,
-                color: theme.colors.system.heading.active,
+                ...theme.typography.heading.xs3.medium,
+                color: theme.colors.system.heading.secondary[1],
               } as any,
             ]}
           >
             2 days
           </Text>
+
+          {/* <GradientText
+            text="2 days"
+            colors={theme.colors.system.heading.secondary}
+            variant={theme.typography.heading.xs3}
+          /> */}
         </View>
 
         <View style={styles.body}>
           <InfoRow
-            icon={<Icon.star color={theme.colors.system.body.disabled} />}
+            icon={<Icon.sparkle color={theme.colors.system.body.disabled} />}
             label="Home Cleaning"
             labelColor={theme.colors.card.label.default}
           />
@@ -60,7 +67,7 @@ const PaymentDue = () => {
             style={[
               {
                 ...theme.typography.heading.sm,
-                color: theme.colors.system.heading.active,
+                color: theme.colors.system.heading.secondary[1],
               } as any,
             ]}
           >
@@ -70,7 +77,7 @@ const PaymentDue = () => {
             style={[
               {
                 ...theme.typography.heading.xs2,
-                color: theme.colors.system.heading.active,
+                color: theme.colors.system.heading.secondary[1],
               } as any,
             ]}
           >
@@ -93,7 +100,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   footer: {
-    justifyContent:"flex-end",
+    justifyContent: "flex-end",
     flexDirection: "row",
     gap: 4,
     alignItems: "baseline", // keeps texts aligned
@@ -104,4 +111,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PaymentDue;
+export default PaymentDueCard;

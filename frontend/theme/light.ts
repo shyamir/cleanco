@@ -21,7 +21,7 @@ export const lightTheme = {
         default: [colors.blue60, colors.blue40],
         secondary: [colors.orange40, colors.yellow40],
         tertiary: colors.gray70,
-        active: colors.gray0
+        active: colors.gray0,
       },
     },
     // pagination
@@ -76,6 +76,18 @@ export const lightTheme = {
         default: colors.gray0,
         secondary: colors.blue70,
         error: colors.red70,
+      },
+    },
+
+    // toggle
+    toggle: {
+      background: {
+        default: colors.gray10,
+        active: colors.blue0,
+      },
+      label: {
+        default: colors.gray60,
+        active: colors.blue70,
       },
     },
   },
@@ -133,34 +145,53 @@ export const lightTheme = {
     },
     heading: {
       lg: {
-        fontFamily: "GeomanistMedium",
+        fontFamily: "Geomanist-Medium",
         fontSize: units.unit64,
         lineHeight: units.unit64,
       },
       md: {
-        fontFamily: "GeomanistMedium",
+        fontFamily: "Geomanist-Medium",
         fontSize: units.unit56,
         lineHeight: units.unit56,
       },
       sm: {
-        fontFamily: "GeomanistMedium",
+        fontFamily: "Geomanist-Medium",
         fontSize: units.unit48,
         lineHeight: units.unit48,
       },
       xs: {
-        fontFamily: "GeomanistMedium",
+        fontFamily: "Geomanist-Medium",
         fontSize: units.unit36,
         lineHeight: units.unit36,
       },
       xs2: {
-        fontFamily: "GeomanistMedium",
+        fontFamily: "Geomanist-Medium",
         fontSize: units.unit24,
         lineHeight: units.unit28,
       },
       xs3: {
-        fontFamily: "GeomanistMedium",
-        fontSize: units.unit20,
-        lineHeight: units.unit24,
+        medium: {
+          fontFamily: "Geomanist-Medium",
+          fontSize: units.unit20,
+          lineHeight: units.unit24,
+        },
+        book: {
+          fontFamily: "Geomanist-Book",
+          fontSize: units.unit20,
+          lineHeight: units.unit24,
+        },
+      },
+      xs4: {
+        medium: {
+          fontFamily: "Geomanist-Medium",
+          fontSize: units.unit16,
+          lineHeight: units.unit20,
+        },
+        book: {
+          fontFamily: "Geomanist-Book",
+          fontSize: units.unit16,
+          lineHeight: units.unit20,
+        },
       },
     },
   },

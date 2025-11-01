@@ -1,12 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "@/theme/useTheme";
-import BaseCard from "./baseCard";
+import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
 import GradientText from "../gradientText";
 
-const UpcomingService = () => {
+const UpcomingServiceCard = () => {
   const theme = useTheme();
 
   return (
@@ -40,8 +40,8 @@ const UpcomingService = () => {
             <Text
               style={[
                 {
-                  ...theme.typography.heading.xs3,
-                  color: theme.colors.system.heading.active,
+                  ...theme.typography.heading.xs3.medium,
+                  color: theme.colors.system.heading.secondary[1],
                 } as any,
               ]}
             >
@@ -97,4 +97,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default UpcomingService;
+export default UpcomingServiceCard;

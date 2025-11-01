@@ -7,7 +7,7 @@ import GradientText from "@/components/gradientText";
 import Tabs from "../components/tabs";
 import { StatusCard } from "@/components/statusCard";
 import CouponCard from "../components/couponCard";
-import Card from "../components/card";
+import ServiceCard from "../components/card/serviceCard";
 import { Dimensions } from "react-native";
 
 export default function Home() {
@@ -45,9 +45,9 @@ export default function Home() {
         >
           <View style={styles.topContainer}>
             <StatusCard
-              hasService={true}
-              hasOngoingJob={true}
-              hasPaymentDue={false}
+              hasService={false}
+              hasOngoingJob={false}
+              hasPaymentDue={true}
               cleaningStatus="done"
             />
 
@@ -62,7 +62,7 @@ export default function Home() {
             <Text
               style={[
                 {
-                  ...theme.typography.heading.xs3,
+                  ...theme.typography.heading.xs3.medium,
                   color: theme.colors.system.body.tertiary,
                 } as any,
               ]}
@@ -71,24 +71,19 @@ export default function Home() {
             </Text>
 
             <View style={styles.cardWrapper}>
-              <Card
+              <ServiceCard
                 title="Home Cleaning"
                 duration="1–4h"
                 price="435"
                 route="/home-cleaning"
               />
-              <Card
+              <ServiceCard
                 title="Office Cleaning"
                 duration="1–4h"
                 price="435"
                 route="/office-cleaning"
               />
-              <Card
-                title="Office Cleaning"
-                duration="1–4h"
-                price="435"
-                route="/review"
-              />
+            
             </View>
 
             <Text

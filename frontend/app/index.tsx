@@ -4,7 +4,8 @@ import Splash from "./splash";
 
 export default function Index() {
   const [fontsLoaded] = useFonts({
-    GeomanistMedium: require("../assets/fonts/GeomanistMedium.ttf"),
+    GeomanistMedium: require("../assets/fonts/Geomanist-Medium.ttf"),
+    GeomanistBook: require("../assets/fonts/Geomanist-Book.ttf"),
     InterMedium: require("../assets/fonts/Inter-Medium.ttf"),
     InterRegular: require("../assets/fonts/Inter-Regular.ttf"),
   });

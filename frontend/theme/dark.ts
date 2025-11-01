@@ -31,6 +31,7 @@ export const darkTheme = {
         active: colors.blue40,
       },
     },
+
     //  navbar
     navbar: {
       background: {
@@ -75,6 +76,18 @@ export const darkTheme = {
         default: colors.gray0,
         secondary: colors.blue30,
         error: colors.red70,
+      },
+    },
+
+    // toggle
+    toggle: {
+      background: {
+        default: colors.gray90,
+        active: colors.blue90,
+      },
+      label: {
+        default: colors.gray40,
+        active: colors.blue20,
       },
     },
   },
@@ -156,9 +169,28 @@ export const darkTheme = {
         lineHeight: units.unit28,
       },
       xs3: {
-        fontFamily: "GeomanistMedium",
-        fontSize: units.unit20,
-        lineHeight: units.unit24,
+        medium: {
+          fontFamily: "Geomanist-Medium",
+          fontSize: units.unit20,
+          lineHeight: units.unit24,
+        },
+        book: {
+          fontFamily: "Geomanist-Book",
+          fontSize: units.unit20,
+          lineHeight: units.unit24,
+        },
+      },
+      xs4: {
+        medium: {
+          fontFamily: "Geomanist-Medium",
+          fontSize: units.unit16,
+          lineHeight: units.unit20,
+        },
+        book: {
+          fontFamily: "Geomanist-Book",
+          fontSize: units.unit16,
+          lineHeight: units.unit20,
+        },
       },
     },
   },

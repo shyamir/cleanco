@@ -3,12 +3,12 @@ import LinearGradient from "react-native-linear-gradient";
 import { StyleSheet } from "react-native";
 import { useTheme } from "@/theme/useTheme";
 
-type BaseCardProps = {
+type BaseProps = {
   colors: string[];
   children: React.ReactNode;
 };
 
-const BaseCard: React.FC<BaseCardProps> = ({ children }) => {
+const Base: React.FC<BaseProps> = ({ children }) => {
   const theme = useTheme();
 
   return (
@@ -32,4 +32,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BaseCard;
+export default Base;

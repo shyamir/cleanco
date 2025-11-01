@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  ImageSourcePropType,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
@@ -23,6 +24,7 @@ const TITLE_MIN_LINE_HEIGHT = 38;
 type AnimatedHeaderProps = {
   title: string;
   scrollY: Animated.Value; // Passed from parent
+  animatedImage?: ImageSourcePropType; // NEW: image to fade out
   style?: ViewStyle;
   textStyle?: TextStyle;
 };
@@ -30,6 +32,7 @@ type AnimatedHeaderProps = {
 const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
   title,
   scrollY,
+  animatedImage,
   style,
   textStyle,
 }) => {
@@ -64,6 +67,13 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
   const titleMaxWidth = scrollY.interpolate({
     inputRange: [0, SCROLL_DISTANCE],
     outputRange: [200, 400],
+    extrapolate: "clamp",
+  });
+
+  // New image fade-out
+  const newImageOpacity = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: [1, 0],
     extrapolate: "clamp",
   });
 
@@ -106,21 +116,30 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
         </Animated.Text>
       </Animated.View>
 
+      {/* Existing watermark image */}
       <Image
         source={require("@/assets/images/service.png")}
-        style={styles.headerImage}
+        style={styles.watermark}
         resizeMode="contain"
       />
+
+      {/* Animated image passed via prop */}
+      {animatedImage && (
+        <Animated.Image
+          source={animatedImage}
+          style={[styles.headerImage, { opacity: newImageOpacity }]}
+          resizeMode="contain"
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 8,
     flexDirection: "row",
-        alignItems: "flex-start",
-    
+    alignItems: "flex-start",
   },
   backButton: {
     width: BACK_BUTTON_SIZE,
@@ -129,10 +148,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 2,
   },
+  watermark: {
+    position: "absolute",
+    right: 0,
+    zIndex: -10,
+  },
   headerImage: {
     position: "absolute",
-      right: 0,
-    zIndex: -10
+    right: 16,
+    top: 68,
   },
 });
 

@@ -1,13 +1,13 @@
 import React from "react";
-import BookService from "./bookService";
-import PaymentDue from "./paymentDue";
-import UpcomingService from "./upcomingService";
-import CleaningProgress from "./cleaningProgress";
+import BookServiceCard from "./bookServiceCard";
+import PaymentDueCard from "./paymentDueCard";
+import UpcomingServiceCard from "./upcomingServiceCard";
+import CleaningProgressCard from "./cleaningProgressCard";
 
 type StatusCardProps = {
   hasService?: boolean;
   hasPaymentDue?: boolean;
-  hasOngoingJob?: boolean; // 👈 new flag
+  hasOngoingJob?: boolean;
   cleaningStatus?: "todo" | "in-progress" | "done"; // 👈 progress stages
 };
 
@@ -18,16 +18,16 @@ export const StatusCard: React.FC<StatusCardProps> = ({
   cleaningStatus = "todo",
 }) => {
   if (!hasService) {
-    return <BookService />;
+    return <BookServiceCard />;
   }
 
   if (hasPaymentDue) {
-    return <PaymentDue />;
+    return <PaymentDueCard />;
   }
 
   if (hasOngoingJob) {
-    return <CleaningProgress status={cleaningStatus} />;
+    return <CleaningProgressCard status={cleaningStatus} />;
   }
 
-  return <UpcomingService />;
+  return <UpcomingServiceCard />;
 };

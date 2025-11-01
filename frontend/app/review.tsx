@@ -74,7 +74,7 @@ const Review = () => {
         >
           <ScrollView contentContainerStyle={styles.scrollContainer}>
             <InfoRow
-              icon={<Icon.star color={theme.colors.system.body.disabled} />}
+              icon={<Icon.sparkle color={theme.colors.system.body.disabled} />}
               label="Service"
               value="Home Cleaning"
             />

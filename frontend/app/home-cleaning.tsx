@@ -1,13 +1,21 @@
-import React, { useRef } from "react";
-import { View, StyleSheet, Animated, Text } from "react-native";
+import React, { useRef, useState } from "react";
+import { View, StyleSheet, Animated, Text, Image } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
 import AnimatedHeader from "../components/animatedHeader";
+import FrequencyCard from "@/components/card/toggleCard";
+import ToggleCard from "@/components/card/toggleCard";
+import Button from "@/components/button";
+import FooterSummary from "@/components/footerSummary";
+import { useRouter } from "expo-router";
 
 const HomeCleaningScreen = () => {
   const theme = useTheme();
+  const router = useRouter(); // 👈 initialize router
+
   const scrollY = useRef(new Animated.Value(0)).current;
+  const [step, setStep] = useState<"selection" | "schedule">("selection");
 
   return (
     <SafeAreaProvider>
@@ -18,8 +26,11 @@ const HomeCleaningScreen = () => {
         style={styles.gradientBackground}
       >
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
-          <AnimatedHeader title="Home Cleaning" scrollY={scrollY} />
-
+          <AnimatedHeader
+            title="Home Cleaning"
+            scrollY={scrollY}
+            animatedImage={require("@/assets/images/home-cleaning.png")}
+          />
           <Animated.ScrollView
             contentContainerStyle={{
               paddingTop: 86,
@@ -38,17 +49,61 @@ const HomeCleaningScreen = () => {
                 { backgroundColor: theme.colors.system.background.default },
               ]}
             >
-              <Text style={styles.section}>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-                eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
-                enim ad minim veniam, quis nostrud exercitation ullamco laboris
-                nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor
-                in reprehenderit in voluptate velit esse cillum dolore eu fugiat
-                nulla pariatur. Excepteur sint occaecat cupidatat non proident,
-                sunt in culpa qui officia deserunt mollit anim id est laborum.
-              </Text>
+              {step === "selection" ? (
+                <>
+                  <ToggleCard
+                    title="How Often"
+                    options={["Once", "1x /week", "2x /week", "3x /week"]}
+                    initialValue="Once"
+                    onChange={(value) => console.log("Frequency:", value)}
+                  />
+                  <ToggleCard
+                    title="Pets"
+                    options={["None", "Cat", "Dog", "Fish", "Bird", "Other"]}
+                    initialValue="Once"
+                    onChange={(value) => console.log("Pets:", value)}
+                  />
+                </>
+              ) : (
+                <>
+                  <ToggleCard
+                    title="Time"
+                    options={[
+                      "08:00",
+                      "09:00",
+                      "10:00",
+                      "11:00",
+                      "12:00",
+                      "13:00",
+                      "14:00",
+                      "15:00",
+                    ]}
+                    initialValue="Once"
+                    onChange={(value) => console.log("Time:", value)}
+                  />
+                </>
+              )}
             </View>
           </Animated.ScrollView>
+          {step === "selection" ? (
+            <FooterSummary
+              total={435}
+              currency="MVR"
+              primaryLabel="Next"
+              onPrimaryPress={() => setStep("schedule")}
+              secondaryLabel="Back"
+              onSecondaryPress={() => router.push("/home")}
+            />
+          ) : (
+            <FooterSummary
+              total={435}
+              currency="MVR"
+              primaryLabel="Review"
+              onPrimaryPress={() => router.push("/review")}
+              secondaryLabel="Back"
+              onSecondaryPress={() => setStep("selection")}
+            />
+          )}
         </SafeAreaView>
       </LinearGradient>
     </SafeAreaProvider>
@@ -59,12 +114,30 @@ const styles = StyleSheet.create({
   gradientBackground: { flex: 1 },
   safeArea: { flex: 1 },
   whiteArea: {
+    flexDirection: "column",
+    gap: 8,
     flex: 1,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  section: {
-    fontSize: 48,
+  textWrapper: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  footer: {
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap:8,
+  },
+  priceWrapper: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 4,
   },
 });
 

@@ -43,7 +43,7 @@ const CouponCard: React.FC<CouponCardProps> = ({
           <Text
             style={[
               {
-                ...theme.typography.heading.xs3,
+                ...theme.typography.heading.xs3.medium,
                 color: theme.colors.card.label.default,
               } as any,
             ]}
