@@ -1,14 +1,19 @@
-import { TABS_DATA } from "@/constants/tabData";
-import { useTheme } from "@/theme/useTheme";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Dimensions } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+
+  /* --- Constants ---*/
+import { TABS_DATA } from "@/constants/tabData";
+
+  /* --- Theme ---*/
+import { useTheme } from "@/theme/useTheme";
+
+  /* --- Hook ---*/
 import GradientText from "@/components/gradientText";
 import Tabs from "../components/tabs";
 import { StatusCard } from "@/components/statusCard";
 import CouponCard from "../components/couponCard";
 import ServiceCard from "../components/card/serviceCard";
-import { Dimensions } from "react-native";
 
 export default function Home() {
   const theme = useTheme();

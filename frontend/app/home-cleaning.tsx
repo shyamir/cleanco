@@ -1,80 +1,49 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+
+/* --- Theme ---*/
 import { useTheme } from "@/theme/useTheme";
-import AnimatedHeader from "../components/animatedHeader";
+
+/* --- Routing ---*/
+import { useRouter } from "expo-router";
+
+/* --- Components ---*/
+import AnimatedHeader from "@/components/animatedHeader";
 import ToggleCard from "@/components/card/toggleCard";
 import FooterSummary from "@/components/footerSummary";
-import { useRouter } from "expo-router";
 import TextField from "@/components/inputs/textfield";
 import InstructionsCard from "@/components/card/instructionsCard";
 import ScheduleSelector from "@/components/scheduleSelector";
 import PropertyDetailsCard from "@/components/card/propertyDetailsCard";
-import { CLEANING_PRICING } from "@/constants/pricing";
+
+  /* --- Hooks ---*/
+import useCleaningBooking from "./hooks/useCleaningBooking";
 
 const HomeCleaningScreen = () => {
   const theme = useTheme();
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const [step, setStep] = useState<"selection" | "schedule">("selection");
-  const [frequency, setFrequency] = useState("Once");
+  const {
+    step,
+    setStep,
+    frequency,
+    setFrequency,
+    bedrooms,
+    setBedrooms,
+    bathrooms,
+    setBathrooms,
+    total,
+    setSlots,
+    handleNext,
+    isSelectionValid,
+  } = useCleaningBooking();
+
+  // Local-only state for pets
   const [pet, setPet] = useState("None");
   const [otherPet, setOtherPet] = useState("");
-  const [bedrooms, setBedrooms] = useState(0);
-  const [bathrooms, setBathrooms] = useState(0);
-  const [total, setTotal] = useState(0);
-
-  type Slot = { day: string; time: string };
-  const emptySlots: Slot[] = [
-    { day: "", time: "" },
-    { day: "", time: "" },
-    { day: "", time: "" },
-  ];
-  const [slots, setSlots] = useState<Slot[]>(emptySlots);
-
-  // Reset slots when frequency changes or when returning to schedule step
-  useEffect(() => {
-    setSlots(emptySlots);
-  }, [frequency]);
-
-  useEffect(() => {
-    if (step === "selection") {
-      setSlots(emptySlots);
-    }
-  }, [step]);
-
-  // Validation logic based on frequency
-  const isSelectionValid = () => {
-    if (frequency === "Once") return !!slots[0].time;
-    if (frequency === "1x /week") return !!slots[0].day && !!slots[0].time;
-    if (frequency === "2x /week")
-      return (
-        !!slots[0].day && !!slots[0].time && !!slots[1].day && !!slots[1].time
-      );
-    if (frequency === "3x /week")
-      return (
-        !!slots[0].day &&
-        !!slots[0].time &&
-        !!slots[1].day &&
-        !!slots[1].time &&
-        !!slots[2].day &&
-        !!slots[2].time
-      );
-    return false;
-  };
-
-  const handleNext = () => {
-    setStep("schedule");
-    setSlots(emptySlots); // Ensure slots clear when entering schedule step fresh
-  };
-
-  // Update total whenever bedrooms or frequency change
-  useEffect(() => {
-    const price = CLEANING_PRICING[bedrooms]?.[frequency] || 435;
-    setTotal(price);
-  }, [bedrooms, frequency]);
 
   return (
     <SafeAreaProvider>
@@ -117,6 +86,7 @@ const HomeCleaningScreen = () => {
                     onPrimaryChange={setBedrooms}
                     onSecondaryChange={setBathrooms}
                   />
+
                   <ToggleCard
                     title="How Often"
                     options={["Once", "1x /week", "2x /week", "3x /week"]}
@@ -143,10 +113,7 @@ const HomeCleaningScreen = () => {
                   <InstructionsCard title="Special Instructions" />
                 </View>
               ) : (
-                <ScheduleSelector
-                  frequency={frequency}
-                  onChange={(updated) => setSlots(updated)}
-                />
+                <ScheduleSelector frequency={frequency} onChange={setSlots} />
               )}
             </View>
           </Animated.ScrollView>
