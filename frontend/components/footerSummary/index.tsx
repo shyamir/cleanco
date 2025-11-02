@@ -10,6 +10,7 @@ type FooterSummaryProps = {
   secondaryLabel: string;
   onPrimaryPress: () => void;
   onSecondaryPress: () => void;
+  disabled?: boolean;
 };
 
 const FooterSummary: React.FC<FooterSummaryProps> = ({
@@ -19,6 +20,7 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
   secondaryLabel,
   onPrimaryPress,
   onSecondaryPress,
+  disabled = false,
 }) => {
   const theme = useTheme();
 
@@ -73,11 +75,11 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
             onPress={onSecondaryPress}
           />
         </View>
-        <View style={styles.buttonContainer}>
+        <View style={[styles.buttonContainer, disabled && { opacity: 0.5 }]}>
           <Button
             label={primaryLabel}
             variant="filled"
-            onPress={onPrimaryPress}
+            onPress={!disabled ? onPrimaryPress : undefined} // disable press
           />
         </View>
       </View>

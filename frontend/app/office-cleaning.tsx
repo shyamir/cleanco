@@ -1,21 +1,81 @@
-import React, { useRef, useState } from "react";
-import { View, StyleSheet, Animated, Text, Image } from "react-native";
+import React, { useRef, useState, useEffect } from "react";
+import { View, StyleSheet, Animated } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
 import AnimatedHeader from "../components/animatedHeader";
-import FrequencyCard from "@/components/card/toggleCard";
 import ToggleCard from "@/components/card/toggleCard";
-import Button from "@/components/button";
 import FooterSummary from "@/components/footerSummary";
 import { useRouter } from "expo-router";
+import TextField from "@/components/inputs/textfield";
+import InstructionsCard from "@/components/card/instructionsCard";
+import ScheduleSelector from "@/components/scheduleSelector";
+import PropertyDetailsCard from "@/components/card/propertyDetailsCard";
+import { CLEANING_PRICING } from "@/constants/pricing";
+import SquareFeetCard from "@/components/card/squareFeetCard";
 
 const OfficeCleaningScreen = () => {
   const theme = useTheme();
-  const router = useRouter(); // 👈 initialize router
-
+  const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
+
   const [step, setStep] = useState<"selection" | "schedule">("selection");
+  const [frequency, setFrequency] = useState("Once");
+  const [pet, setPet] = useState("None");
+  const [otherPet, setOtherPet] = useState("");
+  const [bedrooms, setBedrooms] = useState(0);
+  const [bathrooms, setBathrooms] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  type Slot = { day: string; time: string };
+  const emptySlots: Slot[] = [
+    { day: "", time: "" },
+    { day: "", time: "" },
+    { day: "", time: "" },
+  ];
+  const [slots, setSlots] = useState<Slot[]>(emptySlots);
+
+  // Reset slots when frequency changes or when returning to schedule step
+  useEffect(() => {
+    setSlots(emptySlots);
+  }, [frequency]);
+
+  useEffect(() => {
+    if (step === "selection") {
+      setSlots(emptySlots);
+    }
+  }, [step]);
+
+  // Validation logic based on frequency
+  const isSelectionValid = () => {
+    if (frequency === "Once") return !!slots[0].time;
+    if (frequency === "1x /week") return !!slots[0].day && !!slots[0].time;
+    if (frequency === "2x /week")
+      return (
+        !!slots[0].day && !!slots[0].time && !!slots[1].day && !!slots[1].time
+      );
+    if (frequency === "3x /week")
+      return (
+        !!slots[0].day &&
+        !!slots[0].time &&
+        !!slots[1].day &&
+        !!slots[1].time &&
+        !!slots[2].day &&
+        !!slots[2].time
+      );
+    return false;
+  };
+
+  const handleNext = () => {
+    setStep("schedule");
+    setSlots(emptySlots); // Ensure slots clear when entering schedule step fresh
+  };
+
+  // Update total whenever bedrooms or frequency change
+  useEffect(() => {
+    const price = CLEANING_PRICING[bedrooms]?.[frequency] || 435;
+    setTotal(price);
+  }, [bedrooms, frequency]);
 
   return (
     <SafeAreaProvider>
@@ -31,11 +91,9 @@ const OfficeCleaningScreen = () => {
             scrollY={scrollY}
             animatedImage={require("@/assets/images/office-cleaning.png")}
           />
+
           <Animated.ScrollView
-            contentContainerStyle={{
-              paddingTop: 86,
-              flexGrow: 1,
-            }}
+            contentContainerStyle={{ paddingTop: 86, flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -50,52 +108,60 @@ const OfficeCleaningScreen = () => {
               ]}
             >
               {step === "selection" ? (
-                <>
+                <View style={styles.body}>
+                  <PropertyDetailsCard
+                    title="Office Details"
+                    primaryLabel="Rooms"
+                    secondaryLabel="Washrooms"
+                    primaryValue={bedrooms}
+                    secondaryValue={bathrooms}
+                    onPrimaryChange={setBedrooms}
+                    onSecondaryChange={setBathrooms}
+                  />
+                  <SquareFeetCard
+                    initialValue={150}
+                    onChange={(val) => {
+                      console.log("Square feet selected:", val);
+                      // possibly update total/pricing logic here
+                    }}
+                  />
                   <ToggleCard
                     title="How Often"
                     options={["Once", "1x /week", "2x /week", "3x /week"]}
-                    initialValue="Once"
-                    onChange={(value) => console.log("Frequency:", value)}
+                    initialValue={frequency}
+                    onChange={setFrequency}
                   />
-                </>
+
+                  <InstructionsCard title="Special Instructions" />
+                </View>
               ) : (
-                <>
-                  <ToggleCard
-                    title="Time"
-                    options={[
-                      "08:00",
-                      "09:00",
-                      "10:00",
-                      "11:00",
-                      "12:00",
-                      "13:00",
-                      "14:00",
-                      "15:00",
-                    ]}
-                    initialValue="Once"
-                    onChange={(value) => console.log("Time:", value)}
-                  />
-                </>
+                <ScheduleSelector
+                  frequency={frequency}
+                  onChange={(updated) => setSlots(updated)}
+                />
               )}
             </View>
           </Animated.ScrollView>
+
+          {/* Footer */}
           {step === "selection" ? (
             <FooterSummary
-              total={435}
+              total={total}
               currency="MVR"
               primaryLabel="Next"
-              onPrimaryPress={() => setStep("schedule")}
+              onPrimaryPress={handleNext}
               secondaryLabel="Back"
               onSecondaryPress={() => router.push("/home")}
             />
           ) : (
             <FooterSummary
-              total={435}
+              total={total}
               currency="MVR"
               primaryLabel="Review"
               onPrimaryPress={() => router.push("/review")}
               secondaryLabel="Back"
               onSecondaryPress={() => setStep("selection")}
+              disabled={!isSelectionValid()}
             />
           )}
         </SafeAreaView>
@@ -107,31 +173,14 @@ const OfficeCleaningScreen = () => {
 const styles = StyleSheet.create({
   gradientBackground: { flex: 1 },
   safeArea: { flex: 1 },
+  body: { flexDirection: "column", gap: 8 },
   whiteArea: {
     flexDirection: "column",
     gap: 8,
     flex: 1,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
     paddingHorizontal: 16,
-  },
-  textWrapper: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  footer: {
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 8,
-  },
-  priceWrapper: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 4,
   },
 });
 

@@ -5,11 +5,19 @@ import { useTheme } from "@/theme/useTheme";
 import Base from "./base";
 import ToggleGroup from "@/components/toggleButton/toggleGroup";
 
-type ToggleCardProps = {
-  title: string;
+type ToggleGroupItem = {
   options: string[];
   initialValue?: string;
   onChange?: (value: string) => void;
+};
+
+type ToggleCardProps = {
+  title: string;
+  options?: string[];
+  initialValue?: string;
+  onChange?: (value: string) => void;
+  groups?: ToggleGroupItem[];
+  children?: React.ReactNode;
 };
 
 const ToggleCard: React.FC<ToggleCardProps> = ({
@@ -17,6 +25,8 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
   options,
   initialValue,
   onChange,
+  groups,
+  children,
 }) => {
   const theme = useTheme();
 
@@ -24,7 +34,7 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <Base>
-          <View>
+          <View style={styles.inner}>
             <Text
               style={[
                 {
@@ -35,12 +45,41 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
             >
               {title}
             </Text>
+
+            {groups && groups.length > 0 ? (
+              <View style={styles.groupContainer}>
+                {groups.map((group, idx) => (
+                  <React.Fragment key={idx}>
+                    <ToggleGroup
+                      options={group.options}
+                      initialValue={group.initialValue}
+                      onChange={group.onChange}
+                    />
+                    {idx < groups.length - 1 && (
+                      <View
+                        style={[
+                          styles.divider,
+                          {
+                            backgroundColor: theme.colors.card.border.default,
+                          },
+                        ]}
+                      />
+                    )}
+                  </React.Fragment>
+                ))}
+              </View>
+            ) : (
+              options && (
+                <ToggleGroup
+                  options={options}
+                  initialValue={initialValue}
+                  onChange={onChange}
+                />
+              )
+            )}
+
+            {children && <View style={styles.children}>{children}</View>}
           </View>
-          <ToggleGroup
-            options={options}
-            initialValue={initialValue}
-            onChange={onChange}
-          />
         </Base>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -49,8 +88,23 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    // backgroundColor: "#ff0000",
-    // flex: 1,
+    width: "100%",
+  },
+  inner: {
+    flexDirection: "column",
+    gap: 8,
+  },
+  groupContainer: {
+    flexDirection: "column",
+    gap: 8,
+  },
+  children: {
+    marginTop: 8,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 12,
+    width: "100%",
   },
 });
 

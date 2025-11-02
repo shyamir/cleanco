@@ -1,17 +1,19 @@
 import { useTheme } from "@/theme/useTheme";
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, ViewStyle } from "react-native";
 
 type ToggleButtonProps = {
   label: string;
   selected?: boolean;
   onPress?: () => void;
+  style?: ViewStyle; // ✅ already good
 };
 
 const ToggleButton: React.FC<ToggleButtonProps> = ({
   label,
   selected,
   onPress,
+  style, // ✅ make sure to include this here
 }) => {
   const theme = useTheme();
 
@@ -19,6 +21,7 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({
     <TouchableOpacity
       style={[
         styles.button,
+        style, // ✅ this lets external styles (like height: 86) apply
         selected
           ? ({
               backgroundColor: theme.colors.toggle.background.active,
@@ -35,13 +38,13 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({
           styles.text,
           selected
             ? ([
-                theme.typography.body.sm.medium,
+                theme.typography.body.md.medium,
                 {
                   color: theme.colors.toggle.label.active,
                 },
               ] as any)
             : ([
-                theme.typography.body.sm.regular,
+                theme.typography.body.md.regular,
                 {
                   color: theme.colors.toggle.label.default,
                 },
@@ -62,20 +65,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 6,
     flex: 1,
-    height: 40,
-  },
-  selectedButton: {
-    backgroundColor: "#E8F0FF",
-  },
-  unselectedButton: {
-    backgroundColor: "#F4F4F4",
-  },
-  selectedText: {
-    color: "#0025A5",
-    fontWeight: "600",
-  },
-  unselectedText: {
-    color: "#555",
+    height: 40, // default height
   },
   text: {
     fontSize: 16,

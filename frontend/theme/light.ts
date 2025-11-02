@@ -52,6 +52,9 @@ export const lightTheme = {
         secondary: [colors.orange40, colors.yellow40],
         tertiary: colors.gray0,
       },
+      border: {
+        default: colors.gray30,
+      },
       label: {
         default: colors.gray0,
         secondary: colors.gray30,
@@ -88,6 +91,43 @@ export const lightTheme = {
       label: {
         default: colors.gray60,
         active: colors.blue70,
+      },
+    },
+
+    calendar: {
+      background: {
+        default: colors.gray10,
+        active: colors.blue0,
+      },
+      label: {
+        default: colors.gray60,
+        secondary: colors.gray40,
+        active: colors.blue60,
+        disabled: colors.gray30,
+      },
+    },
+
+    // input
+    input: {
+      background: {
+        default: colors.gray10,
+        active: colors.gray0,
+        error: colors.gray0,
+        success: colors.gray0,
+      },
+      border: {
+        default: colors.gray10,
+        active: colors.blue60,
+        error: colors.red50,
+        success: colors.green50,
+      },
+      label: {
+        default: colors.gray80,
+        active: colors.blue60,
+        secondary: colors.gray60,
+        disabled: colors.gray40,
+        error: colors.red50,
+        success: colors.green50,
       },
     },
   },
