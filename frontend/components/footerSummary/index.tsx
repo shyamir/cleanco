@@ -4,7 +4,7 @@ import Button from "@/components/button";
 import { useTheme } from "@/theme/useTheme";
 
 type FooterSummaryProps = {
-  total: number;
+  total?: number;
   currency?: string;
   primaryLabel: string;
   secondaryLabel: string;

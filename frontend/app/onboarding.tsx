@@ -83,7 +83,7 @@ export default function Onboarding() {
           style={[
             styles.skipText,
             {
-              ...theme.typography.body.sm.regular,
+              ...theme.typography.body.md.medium,
               color: theme.colors.button.label.secondary,
             },
           ]}

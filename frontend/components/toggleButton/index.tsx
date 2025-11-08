@@ -1,19 +1,27 @@
 import { useTheme } from "@/theme/useTheme";
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from "react-native";
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  View,
+} from "react-native";
 
 type ToggleButtonProps = {
   label: string;
   selected?: boolean;
   onPress?: () => void;
-  style?: ViewStyle; // ✅ already good
+  icon?: React.ReactNode;
+  style?: ViewStyle;
 };
 
 const ToggleButton: React.FC<ToggleButtonProps> = ({
   label,
+  icon,
   selected,
   onPress,
-  style, // ✅ make sure to include this here
+  style,
 }) => {
   const theme = useTheme();
 
@@ -21,7 +29,7 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({
     <TouchableOpacity
       style={[
         styles.button,
-        style, // ✅ this lets external styles (like height: 86) apply
+        style, 
         selected
           ? ({
               backgroundColor: theme.colors.toggle.background.active,
@@ -33,6 +41,12 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({
       onPress={onPress}
       activeOpacity={0.8}
     >
+      {icon &&
+        React.cloneElement(icon as React.ReactElement<any>, {
+          color: selected
+            ? theme.colors.toggle.label.active
+            : theme.colors.toggle.label.default,
+        })}
       <Text
         style={[
           styles.text,
@@ -63,9 +77,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     justifyContent: "center",
     alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
     marginVertical: 6,
     flex: 1,
-    height: 40, // default height
+    height: 40,
+  },
+  icon: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   text: {
     fontSize: 16,

@@ -15,6 +15,7 @@ type TextFieldProps = {
   minLength?: number;
   required?: boolean;
   showCharCount?: boolean;
+  variant?: "default" | "onCard";
 };
 
 const TextField: React.FC<TextFieldProps> = ({
@@ -30,6 +31,7 @@ const TextField: React.FC<TextFieldProps> = ({
   minLength,
   required = false,
   showCharCount = true,
+  variant,
 }) => {
   const theme = useTheme();
   const [isFocused, setIsFocused] = useState(false);
@@ -52,6 +54,9 @@ const TextField: React.FC<TextFieldProps> = ({
     if (success) return theme.colors.input.border.success;
     if (isFocused) return theme.colors.input.border.active;
     if (value.length > 0) return theme.colors.input.border.default;
+    if (variant === "onCard") {
+      return theme.colors.input.border.secondary;
+    }
     return theme.colors.input.border.default;
   };
 
@@ -66,6 +71,10 @@ const TextField: React.FC<TextFieldProps> = ({
     if (validationError || error) return theme.colors.input.background.error;
     if (success) return theme.colors.input.background.success;
     if (isFocused) return theme.colors.input.background.active;
+
+    if (variant === "onCard") {
+      return theme.colors.input.background.secondary;
+    }
     return theme.colors.input.background.default;
   };
 

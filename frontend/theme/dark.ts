@@ -9,12 +9,15 @@ export const darkTheme = {
         secondary: colors.gray80,
         tertiary: [colors.blue60, colors.blue40],
       },
+      border: {
+        default: colors.gray60,
+      },
       // body
       body: {
         default: colors.gray0,
         secondary: colors.gray30,
         tertiary: colors.gray10,
-        disabled: colors.gray30,
+        disabled: colors.gray50,
       },
       //  heading
       heading: {
@@ -82,6 +85,18 @@ export const darkTheme = {
       },
     },
 
+    segmentedButton: {
+      background: {
+        default: colors.gray70,
+        active: colors.gray90,
+      },
+
+      label: {
+        default: colors.gray20,
+        active: colors.blue30,
+      },
+    },
+
     // toggle
     toggle: {
       background: {
@@ -110,13 +125,15 @@ export const darkTheme = {
     // input
     input: {
       background: {
-        default: colors.gray90,
+        default: colors.gray80,
+        secondary: colors.gray90,
         active: colors.gray80,
         error: colors.gray0,
         success: colors.gray0,
       },
       border: {
-        default: colors.gray90,
+        default: colors.gray80,
+        secondary: colors.gray90,
         active: colors.blue20,
         error: colors.red40,
         success: colors.green40,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
 import dayjs from "dayjs";
@@ -23,7 +23,16 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
   );
   const [isOpen, setIsOpen] = useState(false);
 
+  useEffect(() => {
+    console.log("DatePicker mounted, selectedDate:", selectedDate);
+    if (selectedDate) {
+      console.log("Pushing initial date to context:", selectedDate);
+      onDateChange?.(selectedDate);
+    }
+  }, [selectedDate, onDateChange]);
+
   const handleSelect = (day: any) => {
+    console.log("User selected a date:", day.dateString);
     setSelectedDate(day.dateString);
     onDateChange?.(day.dateString);
     setIsOpen(false);

@@ -11,7 +11,7 @@ import LinearGradient from "react-native-linear-gradient";
 import { useTheme } from "@/theme/useTheme";
 
 type ButtonProps = {
-  variant?: "filled" | "tonal" | "outline";
+  variant: "filled" | "tonal" | "outline";
   label: string;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;

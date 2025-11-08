@@ -15,6 +15,7 @@ type TextAreaProps = {
   success?: boolean;
   error?: string;
   showCharCount?: boolean;
+  variant?: "default" | "onCard";
 };
 
 const TextArea: React.FC<TextAreaProps> = ({
@@ -29,7 +30,8 @@ const TextArea: React.FC<TextAreaProps> = ({
   maxLength,
   success = false,
   error,
-  showCharCount = true,
+    showCharCount = true,
+  variant
 }) => {
   const theme = useTheme();
   const [isFocused, setIsFocused] = useState(false);
@@ -52,9 +54,11 @@ const TextArea: React.FC<TextAreaProps> = ({
     if (success) return theme.colors.input.border.success;
     if (isFocused) return theme.colors.input.border.active;
     if (value.length > 0) return theme.colors.input.border.default;
+    if (variant === "onCard") {
+      return theme.colors.input.border.secondary;
+    }
     return theme.colors.input.border.default;
   };
-
   const getLabelColor = () => {
     if (validationError || error) return theme.colors.input.label.error;
     if (success) return theme.colors.input.label.success;
@@ -66,8 +70,13 @@ const TextArea: React.FC<TextAreaProps> = ({
     if (validationError || error) return theme.colors.input.background.error;
     if (success) return theme.colors.input.background.success;
     if (isFocused) return theme.colors.input.background.active;
+
+    if (variant === "onCard") {
+      return theme.colors.input.background.secondary;
+    }
     return theme.colors.input.background.default;
   };
+
 
   const showError = validationError || error;
 

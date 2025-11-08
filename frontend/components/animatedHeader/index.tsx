@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
 import { useTheme } from "@/theme/useTheme";
+import { Icon } from "@/constants/icon";
 
 const BACK_BUTTON_SIZE = 48;
 const SCROLL_DISTANCE = 100;
@@ -83,11 +84,7 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
-        <Ionicons
-          name="arrow-back-outline"
-          size={24}
-          color={theme.colors.system.heading.active}
-        />
+        <Icon.back color={theme.colors.system.heading.active} />
       </TouchableOpacity>
 
       <Animated.View

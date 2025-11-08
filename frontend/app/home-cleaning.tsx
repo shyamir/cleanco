@@ -1,15 +1,11 @@
-import React, { useRef, useState } from "react";
-import { View, StyleSheet, Animated } from "react-native";
+import React, { useRef } from "react";
+import { View, StyleSheet, Animated, Text } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-
-/* --- Theme ---*/
 import { useTheme } from "@/theme/useTheme";
-
-/* --- Routing ---*/
 import { useRouter } from "expo-router";
 
-/* --- Components ---*/
+/* --- Components --- */
 import AnimatedHeader from "@/components/animatedHeader";
 import ToggleCard from "@/components/card/toggleCard";
 import FooterSummary from "@/components/footerSummary";
@@ -17,8 +13,11 @@ import TextField from "@/components/inputs/textfield";
 import InstructionsCard from "@/components/card/instructionsCard";
 import ScheduleSelector from "@/components/scheduleSelector";
 import PropertyDetailsCard from "@/components/card/propertyDetailsCard";
+import AddressCard from "@/components/card/addressCard";
 
-  /* --- Hooks ---*/
+/* --- Context/Hooks --- */
+import { useAddress } from "../context/address-context";
+import { useBooking } from "@/context/booking-context";
 import useCleaningBooking from "./hooks/useCleaningBooking";
 
 const HomeCleaningScreen = () => {
@@ -26,24 +25,30 @@ const HomeCleaningScreen = () => {
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  /* --- Booking Context --- */
   const {
-    step,
-    setStep,
-    frequency,
-    setFrequency,
     bedrooms,
     setBedrooms,
     bathrooms,
     setBathrooms,
+    pet,
+    setPet,
+    otherPet,
+    setOtherPet,
+    instructions,
+    setInstructions,
+    frequency,
+    setFrequency,
     total,
-    setSlots,
-    handleNext,
-    isSelectionValid,
-  } = useCleaningBooking();
+    setTotal,
+  } = useBooking();
 
-  // Local-only state for pets
-  const [pet, setPet] = useState("None");
-  const [otherPet, setOtherPet] = useState("");
+  /* --- Address Context --- */
+  const { selected } = useAddress();
+
+  /* --- Cleaning Booking Hook --- */
+  const { step, setStep, slots, setSlots, handleNext, isSelectionValid } =
+    useCleaningBooking();
 
   return (
     <SafeAreaProvider>
@@ -54,12 +59,14 @@ const HomeCleaningScreen = () => {
         style={styles.gradientBackground}
       >
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          {/* Animated Header */}
           <AnimatedHeader
             title="Home Cleaning"
             scrollY={scrollY}
             animatedImage={require("@/assets/images/home-cleaning.png")}
           />
 
+          {/* Scrollable Content */}
           <Animated.ScrollView
             contentContainerStyle={{ paddingTop: 86, flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
@@ -77,6 +84,14 @@ const HomeCleaningScreen = () => {
             >
               {step === "selection" ? (
                 <View style={styles.body}>
+                  {/* Address */}
+                  <AddressCard
+                    title="Address"
+                    address={selected?.label || ""}
+                    onPress={() => router.push("/address-search")}
+                  />
+
+                  {/* Bedrooms/Bathrooms */}
                   <PropertyDetailsCard
                     title="Home Details"
                     primaryLabel="Bedrooms"
@@ -87,6 +102,7 @@ const HomeCleaningScreen = () => {
                     onSecondaryChange={setBathrooms}
                   />
 
+                  {/* Frequency */}
                   <ToggleCard
                     title="How Often"
                     options={["Once", "1x /week", "2x /week", "3x /week"]}
@@ -94,6 +110,7 @@ const HomeCleaningScreen = () => {
                     onChange={setFrequency}
                   />
 
+                  {/* Pets */}
                   <ToggleCard
                     title="Pets"
                     options={["None", "Cat", "Dog", "Fish", "Bird", "Other"]}
@@ -103,6 +120,7 @@ const HomeCleaningScreen = () => {
                     {pet === "Other" && (
                       <TextField
                         label="Please specify"
+                        variant="onCard"
                         placeholder="Type here..."
                         value={otherPet}
                         onChangeText={setOtherPet}
@@ -110,7 +128,12 @@ const HomeCleaningScreen = () => {
                     )}
                   </ToggleCard>
 
-                  <InstructionsCard title="Special Instructions" />
+                  {/* Special Instructions */}
+                  <InstructionsCard
+                    title="Special Instructions"
+                    value={instructions}
+                    onChangeText={setInstructions}
+                  />
                 </View>
               ) : (
                 <ScheduleSelector frequency={frequency} onChange={setSlots} />
@@ -119,26 +142,27 @@ const HomeCleaningScreen = () => {
           </Animated.ScrollView>
 
           {/* Footer */}
-          {step === "selection" ? (
-            <FooterSummary
-              total={total}
-              currency="MVR"
-              primaryLabel="Next"
-              onPrimaryPress={handleNext}
-              secondaryLabel="Back"
-              onSecondaryPress={() => router.push("/home")}
-            />
-          ) : (
-            <FooterSummary
-              total={total}
-              currency="MVR"
-              primaryLabel="Review"
-              onPrimaryPress={() => router.push("/review")}
-              secondaryLabel="Back"
-              onSecondaryPress={() => setStep("selection")}
-              disabled={!isSelectionValid()}
-            />
-          )}
+          <FooterSummary
+            total={total} // <-- Context total
+            currency="MVR"
+            primaryLabel={step === "selection" ? "Next" : "Review"}
+            onPrimaryPress={
+              step === "selection"
+                ? handleNext
+                : () =>
+                    router.push({
+                      pathname: "/review",
+                      params: { bedrooms, bathrooms, frequency, pet, otherPet },
+                    })
+            }
+            secondaryLabel="Back"
+            onSecondaryPress={
+              step === "selection"
+                ? () => router.push("/home")
+                : () => setStep("selection")
+            }
+            disabled={step === "schedule" && !isSelectionValid()}
+          />
         </SafeAreaView>
       </LinearGradient>
     </SafeAreaProvider>

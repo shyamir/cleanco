@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import ToggleCard from "@/components/card/toggleCard";
 import DatePickerCard from "../card/datePickerCard";
+import { useBooking } from "@/context/booking-context";
 
 type Slot = { day: string; time: string };
 
@@ -20,13 +21,34 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
     { day: "", time: "" },
     { day: "", time: "" },
   ]);
+const { setSchedule } = useBooking();
 
-  const updateSlot = (index: number, key: keyof Slot, value: string) => {
-    const updated = [...slots];
-    updated[index][key] = value;
-    setSlots(updated);
-    onChange?.(updated);
-  };
+  const { startDate, setStartDate } = useBooking();
+
+const updateSlot = (index: number, key: keyof Slot, value: string) => {
+  const updated = [...slots];
+  updated[index][key] = value;
+  setSlots(updated);
+  onChange?.(updated);
+
+  // Update context schedule for review
+  if (frequency === "Once") {
+    const time = updated[0].time;
+    const date = startDate;
+    if (date && time) {
+      setSchedule(`${date}, ${time}`);
+    } else if (date) {
+      setSchedule(date); // fallback if time not selected yet
+    }
+  } else {
+    // For recurring bookings, build schedule string
+    const scheduleStr = updated
+      .filter((s) => s.day && s.time)
+      .map((s) => `${s.day} ${s.time}`)
+      .join(" | ");
+    setSchedule(scheduleStr);
+  }
+};
 
   const renderSlotCard = (index: number) => (
     <ToggleCard
@@ -103,8 +125,14 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
 
   return (
     <View style={styles.container}>
-      <DatePickerCard label={frequency === "Once" ? "Date" : "Start Date"} />
-
+      <DatePickerCard
+        label={frequency === "Once" ? "Date" : "Start Date"}
+        initialDate={startDate}
+        onDateChange={(date) => {
+          console.log("Selected start date:", date); // <-- check this
+          setStartDate(date);
+        }}
+      />
       {frequency === "Once" && renderTimeCard(0)}
 
       {frequency === "1x /week" && (

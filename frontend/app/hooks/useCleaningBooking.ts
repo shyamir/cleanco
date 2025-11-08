@@ -1,13 +1,19 @@
-// src/hooks/useCleaningBooking.ts
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useBooking } from "@/context/booking-context";
 import { CLEANING_PRICING } from "@/constants/pricing";
 
 const useCleaningBooking = () => {
-  const [step, setStep] = useState<"selection" | "schedule">("selection");
-  const [frequency, setFrequency] = useState("Once");
-  const [bedrooms, setBedrooms] = useState(0);
-  const [bathrooms, setBathrooms] = useState(0);
-  const [total, setTotal] = useState(0);
+  const {
+    bedrooms,
+    setBedrooms,
+    bathrooms,
+    setBathrooms,
+    frequency,
+    setFrequency,
+    total,
+    setTotal,
+    setSchedule, // <-- get this from context
+  } = useBooking();
 
   type Slot = { day: string; time: string };
   const emptySlots: Slot[] = [
@@ -16,10 +22,21 @@ const useCleaningBooking = () => {
     { day: "", time: "" },
   ];
   const [slots, setSlots] = useState<Slot[]>(emptySlots);
+  const [step, setStep] = useState<"selection" | "schedule">("selection");
 
   const handleNext = () => {
     setStep("schedule");
     setSlots(emptySlots);
+  };
+
+  const handleScheduleChange = (newSlots: Slot[]) => {
+    setSlots(newSlots);
+    // Combine all slots into a display string
+    const scheduleStr = newSlots
+      .filter((s) => s.day && s.time)
+      .map((s) => `${s.day}, ${s.time}`)
+      .join(" | ");
+    setSchedule(scheduleStr); // <-- save to context
   };
 
   const isSelectionValid = () => {
@@ -33,11 +50,13 @@ const useCleaningBooking = () => {
     return false;
   };
 
+  // ✅ Update total whenever bedrooms or frequency change
   useEffect(() => {
     const price = CLEANING_PRICING[bedrooms]?.[frequency] || 435;
     setTotal(price);
-  }, [bedrooms, frequency]);
+  }, [bedrooms, frequency, setTotal]);
 
+  // Reset slots when frequency changes or step changes
   useEffect(() => setSlots(emptySlots), [frequency]);
   useEffect(() => {
     if (step === "selection") setSlots(emptySlots);
@@ -46,15 +65,15 @@ const useCleaningBooking = () => {
   return {
     step,
     setStep,
-    frequency,
-    setFrequency,
     bedrooms,
     setBedrooms,
     bathrooms,
     setBathrooms,
+    frequency,
+    setFrequency,
     total,
     slots,
-    setSlots,
+    setSlots: handleScheduleChange, // <-- override setter
     handleNext,
     isSelectionValid,
   };

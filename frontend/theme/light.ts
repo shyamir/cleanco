@@ -9,6 +9,9 @@ export const lightTheme = {
         secondary: colors.gray0,
         tertiary: [colors.blue60, colors.blue40],
       },
+      border: {
+        default: colors.gray30
+      },
       // body
       body: {
         default: colors.gray60,
@@ -82,6 +85,17 @@ export const lightTheme = {
       },
     },
 
+    segmentedButton: {
+      background: {
+        default: colors.gray20,
+        active: colors.gray0,
+      },
+      label: {
+        default: colors.gray60,
+        active: colors.blue60,
+      },
+    },
+
     // toggle
     toggle: {
       background: {
@@ -110,13 +124,15 @@ export const lightTheme = {
     // input
     input: {
       background: {
-        default: colors.gray10,
+        default: colors.gray20,
+        secondary: colors.gray10,
         active: colors.gray0,
         error: colors.gray0,
         success: colors.gray0,
       },
       border: {
-        default: colors.gray10,
+        default: colors.gray20,
+        secondary: colors.gray10,
         active: colors.blue60,
         error: colors.red50,
         success: colors.green50,

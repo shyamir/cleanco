@@ -16,11 +16,52 @@ import { useNavigation } from "expo-router";
 import Button from "../components/button";
 import { Icon } from "@/constants/icon";
 import InfoRow from "../components/infoRow";
+import { useAddress } from "../context/address-context";
+import { useBooking } from "@/context/booking-context";
+import useCleaningBooking from "./hooks/useCleaningBooking";
+import dayjs from "dayjs";
 
 const Review = () => {
   const theme = useTheme();
   const navigation = useNavigation();
+  const { selected } = useAddress();
+  const {
+    pet,
+    otherPet,
+    frequency,
+    schedule,
+    setSchedule,
+    instructions,
+    startDate,
+  } = useBooking();
+  const { bedrooms, bathrooms, total, slots } = useCleaningBooking();
 
+  const petDisplay =
+    pet && pet !== "None" ? (pet === "Other" ? otherPet : pet) : "No Pets";
+
+  const bedroomCount = Number(bedrooms);
+  const bathroomCount = Number(bathrooms);
+
+  let scheduleDisplay = "-";
+
+  if (frequency === "Once") {
+    if (schedule) {
+      // schedule contains "YYYY-MM-DD, HH:mm" or similar
+      const [datePart, timePart] = schedule.split(",");
+      const formattedDate = dayjs(datePart).format("D MMM YYYY");
+      scheduleDisplay = timePart
+        ? `${formattedDate},${timePart}`
+        : formattedDate;
+    } else {
+      scheduleDisplay = "-";
+    }
+  } else {
+    const start = startDate
+      ? `Starts: ${dayjs(startDate).format("D MMM YYYY") + " (" + frequency +")"}`
+      : "";
+    const repeat = schedule ? `\n${schedule}` : "";
+    scheduleDisplay = `${start}${repeat}`.trim() || "-";
+  }
   return (
     <LinearGradient
       colors={theme.colors.system.background.tertiary}
@@ -81,25 +122,27 @@ const Review = () => {
             <InfoRow
               icon={<Icon.location color={theme.colors.system.body.disabled} />}
               label="Address"
-              value="Hiyaa Towers H11, Nirolhu Magu, Male, Maldives"
+              value={selected?.label + ", " + selected?.address || "-"}
             />
 
             <InfoRow
               icon={<Icon.calendar color={theme.colors.system.body.disabled} />}
-              label="Schedule"
-              value="1 Sep 2025, 08:00"
+              label={frequency === "Once" ? "Date" : "Schedule"}
+              value={scheduleDisplay}
             />
-
             <InfoRow
               icon={<Icon.notes color={theme.colors.system.body.disabled} />}
               label="Details"
-              value="2 bedrooms, 1 bathroom, No Pets"
+              value={`${bedroomCount} bedroom${
+                bedroomCount > 1 ? "s" : ""
+              }, ${bathroomCount} bathroom${
+                bathroomCount > 1 ? "s" : ""
+              }, ${petDisplay}`}
             />
-
             <InfoRow
               icon={<Icon.notes color={theme.colors.system.body.disabled} />}
               label="Special Instructions"
-              value="-"
+              value={instructions || "-"}
             />
           </ScrollView>
 
@@ -124,7 +167,7 @@ const Review = () => {
                   ] as any
                 }
               >
-                435
+                {total}
               </Text>
               <Text
                 style={
@@ -176,46 +219,11 @@ const styles = StyleSheet.create({
     height: "85%",
     borderRadius: 16,
   },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 18,
-  },
-  label: {
-    color: "#777",
-    marginBottom: 4,
-  },
-  value: {
-    color: "#222",
-  },
-  promoButton: {
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  promoText: {
-    color: "#2E68F2",
-    fontWeight: "500",
-  },
   totalContainer: {
     paddingHorizontal: 32,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // marginBottom: 20,
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#222",
-  },
-  totalValue: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#2E68F2",
-  },
-  payButton: {
-    borderRadius: 30,
-    overflow: "hidden",
   },
   backButton: {
     width: 48,

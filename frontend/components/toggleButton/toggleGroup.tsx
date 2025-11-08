@@ -4,6 +4,7 @@ import ToggleButton from "./index";
 
 type ToggleGroupProps = {
   options: string[];
+  optionIcons?: { [key: string]: React.ReactNode }; // new
   initialValue?: string;
   onChange?: (value: string) => void;
   containerStyle?: ViewStyle;
@@ -12,6 +13,7 @@ type ToggleGroupProps = {
 const ToggleGroup: React.FC<ToggleGroupProps> = ({
   options,
   initialValue,
+  optionIcons,
   onChange,
   containerStyle,
 }) => {
@@ -21,13 +23,13 @@ const ToggleGroup: React.FC<ToggleGroupProps> = ({
       : -1 // means nothing selected
   );
 
-
   const handleSelect = (index: number) => {
     setSelectedIndex(index);
     onChange?.(options[index]);
   };
 
   const getItemsPerRow = () => {
+    if (options.length === 3) return 3;
     if (options.length === 4) return 2;
     if (options.length === 6) return 3;
     if (options.length === 7) return 7;
@@ -49,6 +51,7 @@ const ToggleGroup: React.FC<ToggleGroupProps> = ({
           return (
             <View key={`${option}-${index}`} style={{ width: itemWidth }}>
               <ToggleButton
+                icon={optionIcons?.[option]}
                 label={label}
                 selected={selectedIndex === index}
                 onPress={() => handleSelect(index)}

@@ -3,13 +3,13 @@ import { View, StyleSheet, Animated } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-  /* --- Theme ---*/
+/* --- Theme ---*/
 import { useTheme } from "@/theme/useTheme";
 
-  /* --- Routing ---*/
+/* --- Routing ---*/
 import { useRouter } from "expo-router";
 
-  /* --- Components ---*/
+/* --- Components ---*/
 import AnimatedHeader from "../components/animatedHeader";
 import ToggleCard from "@/components/card/toggleCard";
 import FooterSummary from "@/components/footerSummary";
@@ -18,8 +18,9 @@ import ScheduleSelector from "@/components/scheduleSelector";
 import PropertyDetailsCard from "@/components/card/propertyDetailsCard";
 import SquareFeetCard from "@/components/card/squareFeetCard";
 
-  /* --- Hook ---*/
+/* --- Hook ---*/
 import useCleaningBooking from "./hooks/useCleaningBooking";
+import { useBooking } from "@/context/booking-context";
 
 const OfficeCleaningScreen = () => {
   const theme = useTheme();
@@ -40,6 +41,13 @@ const OfficeCleaningScreen = () => {
     handleNext,
     isSelectionValid,
   } = useCleaningBooking();
+
+
+  const {
+
+    instructions,
+    setInstructions
+  } = useBooking();
 
   return (
     <SafeAreaProvider>
@@ -82,7 +90,6 @@ const OfficeCleaningScreen = () => {
                     onPrimaryChange={setBedrooms}
                     onSecondaryChange={setBathrooms}
                   />
-
                   <SquareFeetCard
                     initialValue={150}
                     onChange={(val) => {
@@ -90,15 +97,17 @@ const OfficeCleaningScreen = () => {
                       // Add pricing logic for square feet here if needed
                     }}
                   />
-
                   <ToggleCard
                     title="How Often"
                     options={["Once", "1x /week", "2x /week", "3x /week"]}
                     initialValue={frequency}
                     onChange={setFrequency}
                   />
-
-                  <InstructionsCard title="Special Instructions" />
+                  <InstructionsCard
+                    title="Special Instructions"
+                    value={instructions}
+                    onChangeText={setInstructions}
+                  />{" "}
                 </View>
               ) : (
                 <ScheduleSelector

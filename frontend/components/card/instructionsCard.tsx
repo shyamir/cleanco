@@ -8,12 +8,13 @@ import TextArea from "../inputs/textArea";
 
 type InstructionsCardProps = {
   title: string;
+  value: string;
+  onChangeText: (text: string) => void;
 };
 
-const InstructionsCard: React.FC<InstructionsCardProps> = ({ title }) => {
+const InstructionsCard: React.FC<InstructionsCardProps> = ({ title, value, onChangeText }) => {
   const theme = useTheme();
   const router = useRouter();
-  const [text, setText] = useState(""); // <-- add state
 
   return (
     <TouchableOpacity activeOpacity={0.9} style={styles.touchWrapper}>
@@ -30,8 +31,9 @@ const InstructionsCard: React.FC<InstructionsCardProps> = ({ title }) => {
             {title}
           </Text>
           <TextArea
-            value={text} // <-- bind state
-            onChangeText={setText} // <-- update state
+            variant="onCard"
+            value={value} // <-- use prop
+            onChangeText={onChangeText}
             placeholder=""
           />
         </View>
