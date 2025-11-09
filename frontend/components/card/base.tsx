@@ -4,9 +4,10 @@ import { View, StyleSheet } from "react-native";
 
 type BaseProps = {
   children: React.ReactNode;
+  style?:any,
 };
 
-const Base: React.FC<BaseProps> = ({ children }) => {
+const Base: React.FC<BaseProps> = ({ children, style}) => {
   const theme = useTheme();
 
   return (
@@ -17,6 +18,7 @@ const Base: React.FC<BaseProps> = ({ children }) => {
           backgroundColor: theme.colors.system.background.secondary,
         } as any,
         styles.card,
+        style, // apply custom styles here
       ]}
     >
       {children}
@@ -29,7 +31,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,

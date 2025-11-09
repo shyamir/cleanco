@@ -10,7 +10,8 @@ export const lightTheme = {
         tertiary: [colors.blue60, colors.blue40],
       },
       border: {
-        default: colors.gray30
+        default: colors.gray30,
+        active: colors.blue70,
       },
       // body
       body: {

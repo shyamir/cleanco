@@ -6,6 +6,7 @@ import { useTheme } from "@/theme/useTheme";
 type FooterSummaryProps = {
   total?: number;
   currency?: string;
+  frequency?: string;
   primaryLabel: string;
   secondaryLabel: string;
   onPrimaryPress: () => void;
@@ -16,6 +17,7 @@ type FooterSummaryProps = {
 const FooterSummary: React.FC<FooterSummaryProps> = ({
   total,
   currency = "MVR",
+  frequency,
   primaryLabel,
   secondaryLabel,
   onPrimaryPress,
@@ -23,6 +25,7 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
   disabled = false,
 }) => {
   const theme = useTheme();
+  const isOnce = frequency === "Once";
 
   return (
     <View
@@ -63,6 +66,22 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
           >
             {currency}
           </Text>
+
+          {/* Conditionally show /month */}
+          {!isOnce && (
+            <Text
+              style={
+                [
+                  theme.typography.body.sm.regular,
+                  {
+                    color: theme.colors.card.label.active,
+                  },
+                ] as any
+              }
+            >
+              / month
+            </Text>
+          )}
         </View>
       </View>
 

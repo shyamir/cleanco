@@ -41,6 +41,7 @@ const HomeCleaningScreen = () => {
     setFrequency,
     total,
     setTotal,
+    setService,
   } = useBooking();
 
   /* --- Address Context --- */
@@ -143,17 +144,16 @@ const HomeCleaningScreen = () => {
 
           {/* Footer */}
           <FooterSummary
-            total={total} // <-- Context total
-            currency="MVR"
+            total={total}
+            frequency={frequency}
             primaryLabel={step === "selection" ? "Next" : "Review"}
             onPrimaryPress={
               step === "selection"
                 ? handleNext
-                : () =>
-                    router.push({
-                      pathname: "/review",
-                      params: { bedrooms, bathrooms, frequency, pet, otherPet },
-                    })
+                : () => {
+                    setService("Home Cleaning"); // ← set the service in context here
+                    router.push("/review");
+                  }
             }
             secondaryLabel="Back"
             onSecondaryPress={

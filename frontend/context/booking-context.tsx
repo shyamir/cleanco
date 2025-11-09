@@ -20,6 +20,8 @@ type BookingContextType = {
   setFrequency: (value: string) => void;
   startDate: string;
   setStartDate: (value: string) => void;
+  service: string;
+  setService: (value: string) => void;
 };
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -34,6 +36,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   const [frequency, setFrequency] = useState("Once");
   const [total, setTotal] = useState(CLEANING_PRICING[1]?.["Once"] || 435);
   const [startDate, setStartDate] = useState("");
+  const [service, setService] = useState("");
 
   return (
     <BookingContext.Provider
@@ -56,6 +59,8 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         setFrequency,
         startDate,
         setStartDate,
+        service,
+        setService,
       }}
     >
       {children}

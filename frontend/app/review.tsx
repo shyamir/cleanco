@@ -12,7 +12,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/theme/useTheme";
 import GradientText from "../components/gradientText";
-import { useNavigation } from "expo-router";
+import {
+  useNavigation,
+  usePathname,
+  useRouter,
+} from "expo-router";
 import Button from "../components/button";
 import { Icon } from "@/constants/icon";
 import InfoRow from "../components/infoRow";
@@ -23,6 +27,8 @@ import dayjs from "dayjs";
 
 const Review = () => {
   const theme = useTheme();
+  const router = useRouter();
+
   const navigation = useNavigation();
   const { selected } = useAddress();
   const {
@@ -33,6 +39,7 @@ const Review = () => {
     setSchedule,
     instructions,
     startDate,
+    service,
   } = useBooking();
   const { bedrooms, bathrooms, total, slots } = useCleaningBooking();
 
@@ -57,7 +64,9 @@ const Review = () => {
     }
   } else {
     const start = startDate
-      ? `Starts: ${dayjs(startDate).format("D MMM YYYY") + " (" + frequency +")"}`
+      ? `Starts: ${
+          dayjs(startDate).format("D MMM YYYY") + " (" + frequency + ")"
+        }`
       : "";
     const repeat = schedule ? `\n${schedule}` : "";
     scheduleDisplay = `${start}${repeat}`.trim() || "-";
@@ -117,7 +126,7 @@ const Review = () => {
             <InfoRow
               icon={<Icon.sparkle color={theme.colors.system.body.disabled} />}
               label="Service"
-              value="Home Cleaning"
+              value={service}
             />
             <InfoRow
               icon={<Icon.location color={theme.colors.system.body.disabled} />}
@@ -146,45 +155,89 @@ const Review = () => {
             />
           </ScrollView>
 
-          {/* Total */}
-          <View style={styles.totalContainer}>
-            <Text
-              style={
-                [
-                  theme.typography.heading.xs2,
-                  { color: theme.colors.system.body.default },
-                ] as any
-              }
-            >
-              Total
-            </Text>
-            <View style={styles.priceWrapper}>
+          {/* Total + Message */}
+          <View style={styles.totalContainerWrapper}>
+            <View style={styles.totalContainer}>
               <Text
                 style={
                   [
-                    theme.typography.heading.xs,
-                    { color: theme.colors.card.label.active },
+                    theme.typography.heading.xs2,
+                    { color: theme.colors.system.body.default },
                   ] as any
                 }
               >
-                {total}
+                Total
               </Text>
-              <Text
-                style={
-                  [
-                    theme.typography.body.md.medium,
-                    { color: theme.colors.card.label.active },
-                  ] as any
-                }
-              >
-                MVR
-              </Text>
+              <View style={styles.priceWrapper}>
+                <Text
+                  style={
+                    [
+                      theme.typography.heading.xs,
+                      { color: theme.colors.card.label.active },
+                    ] as any
+                  }
+                >
+                  {total}
+                </Text>
+                <Text
+                  style={
+                    [
+                      theme.typography.body.md.medium,
+                      { color: theme.colors.card.label.active },
+                    ] as any
+                  }
+                >
+                  MVR
+                </Text>
+
+                {frequency !== "Once" && (
+                  <Text
+                    style={
+                      [
+                        theme.typography.body.md.regular,
+                        {
+                          color: theme.colors.card.label.active,
+                          fontSize: 14,
+                        },
+                      ] as any
+                    }
+                  >
+                    /month
+                  </Text>
+                )}
+              </View>
             </View>
+
+            {/* Show recurring charge message when not Once */}
+            {frequency !== "Once" && (
+              <Text
+                style={
+                  [
+                    theme.typography.body.xs.regular,
+                    {
+                      color: theme.colors.system.body.disabled,
+                      paddingHorizontal: 24,
+                      paddingTop: 4,
+                    },
+                  ] as any
+                }
+              >
+                By proceeding, you authorize Cleanco to charge {total} MVR on
+                the 1st every month. You can cancel your subscription under
+                Manage Subscription in Account.
+              </Text>
+            )}
           </View>
 
           {/* Button */}
           <View style={styles.buttonWrapper}>
-            <Button label="Confirm & Pay" variant="filled" onPress={() => {}} />
+            <Button
+              label="Confirm & Pay"
+              variant="filled"
+              onPress={() => {
+                router.push("/payment");
+              }}
+            />
           </View>
         </View>
       </SafeAreaView>
@@ -204,6 +257,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     zIndex: -10,
   },
+  info: {},
+  totalContainerWrapper: {
+    marginTop: 8,
+    marginBottom: 4,
+    flexDirection: "column",
+    gap: 8,
+  },
   buttonWrapper: { paddingHorizontal: 24, paddingVertical: 16 },
   titleContainer: {
     alignItems: "center",
@@ -220,7 +280,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   totalContainer: {
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",

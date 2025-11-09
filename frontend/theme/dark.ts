@@ -11,6 +11,7 @@ export const darkTheme = {
       },
       border: {
         default: colors.gray60,
+        active: colors.blue40,
       },
       // body
       body: {
