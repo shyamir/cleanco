@@ -18,6 +18,12 @@ import BriefcaseIcon from "@/app/icons/briefcaseIcon";
 import ArrowDownIcon from "@/app/icons/arrowDownIcon";
 import BuildingIcon from "@/app/icons/buildingIcon";
 import HotelIcon from "@/app/icons/hotelIcon";
+import BankIcon from "@/app/icons/bankIcon";
+import CardIcon from "@/app/icons/cardIcon";
+import CopyIcon from "@/app/icons/copyIcon";
+import UploadIcon from "@/app/icons/uploadIcon";
+import CheckFillIcon from "@/app/icons/checkFillIcon";
+import TrashIcon from "@/app/icons/trashIcon";
 
 
 export const Icon = {
@@ -47,4 +53,12 @@ export const Icon = {
   arrrowDown: (props: { color: string }) => (
     <ArrowDownIcon color={props.color} />
   ),
+  bank: (props: { color: string }) => <BankIcon color={props.color} />,
+  card: (props: { color: string }) => <CardIcon color={props.color} />,
+  copy: (props: { color: string }) => <CopyIcon color={props.color} />,
+  upload: (props: { color: string }) => <UploadIcon color={props.color} />,
+  checkFill: (props: { color: string }) => (
+    <CheckFillIcon color={props.color} />
+  ),
+  trash: (props: { color: string }) => <TrashIcon color={props.color} />,
 };

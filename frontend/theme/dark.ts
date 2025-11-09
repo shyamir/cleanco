@@ -11,7 +11,7 @@ export const darkTheme = {
       },
       border: {
         default: colors.gray60,
-        active: colors.blue40,
+        active: colors.yellow40,
       },
       // body
       body: {
@@ -19,6 +19,8 @@ export const darkTheme = {
         secondary: colors.gray30,
         tertiary: colors.gray10,
         disabled: colors.gray50,
+        error: colors.red50,
+        success: colors.green60,
       },
       //  heading
       heading: {

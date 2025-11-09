@@ -11,7 +11,7 @@ export const lightTheme = {
       },
       border: {
         default: colors.gray30,
-        active: colors.blue70,
+        active: colors.orange40,
       },
       // body
       body: {
@@ -19,6 +19,8 @@ export const lightTheme = {
         secondary: colors.gray50,
         tertiary: colors.gray80,
         disabled: colors.gray50,
+        error: colors.red70,
+        success: colors.green50,
       },
       //  heading
       heading: {

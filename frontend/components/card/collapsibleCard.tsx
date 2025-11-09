@@ -44,7 +44,8 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
     <Base
       style={[
         {
-          borderWidth: 1, 
+          shadowOpacity: 0.15,
+          borderWidth: 2,
           borderColor: expanded
             ? theme.colors.system.border.active
             : theme.colors.system.background.secondary,
@@ -58,11 +59,11 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
       >
         <View style={styles.header}>
           <View style={styles.titleRow}>
-            {icon && <View style={{ marginRight: 8 }}>{icon}</View>}
+            {icon && <View>{icon}</View>}
             <Text
               style={[
                 theme.typography.body.md.medium,
-                { color: theme.colors.system.heading.active },
+                { color: theme.colors.system.body.tertiary },
               ]}
             >
               {title}
@@ -85,9 +86,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
   },
   content: {
     marginTop: 12,

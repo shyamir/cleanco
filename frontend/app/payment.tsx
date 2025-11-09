@@ -15,19 +15,23 @@ import GradientText from "@/components/gradientText";
 import FooterSummary from "@/components/footerSummary";
 import useCleaningBooking from "./hooks/useCleaningBooking";
 import { useBooking } from "@/context/booking-context";
-import CollapsibleCardGroup from "@/components/paymentGroup";
-
+import PaymentGroup from "@/components/paymentGroup";
 
 const Payment = () => {
   const theme = useTheme();
   const navigation = useNavigation();
 
   const { total } = useCleaningBooking();
-  const { frequency } = useBooking(); 
+  const { frequency } = useBooking();
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: theme.colors.system.background.default },
+        ]}
+      >
         <SafeAreaView style={styles.safeAreaContent} edges={["top"]}>
           <View style={styles.contentWrapper}>
             <Image
@@ -57,9 +61,18 @@ const Payment = () => {
                   colors={theme.colors.system.heading.default}
                   variant={theme.typography.heading.sm}
                 />
+                {/* <Text
+                  style={[
+                    {
+                      ...theme.typography.heading.sm,
+                      color: theme.colors.system.body.tertiary,
+                    } as any,
+                  ]}
+                >
+                  Method
+                </Text> */}
               </View>
-              <CollapsibleCardGroup/>
-
+              <PaymentGroup />
             </ScrollView>
           </View>
         </SafeAreaView>
@@ -82,7 +95,6 @@ const Payment = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   safeAreaContent: {
     flex: 1,
