@@ -11,7 +11,7 @@ type FooterSummaryProps = {
   secondaryLabel: string;
   onPrimaryPress: () => void;
   onSecondaryPress: () => void;
-  disabled?: boolean;
+  disabledPrimary?: boolean; // <-- renamed and more specific
 };
 
 const FooterSummary: React.FC<FooterSummaryProps> = ({
@@ -22,7 +22,7 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
   secondaryLabel,
   onPrimaryPress,
   onSecondaryPress,
-  disabled = false,
+  disabledPrimary = false,
 }) => {
   const theme = useTheme();
   const isOnce = frequency === "Once";
@@ -73,9 +73,7 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
               style={
                 [
                   theme.typography.body.sm.regular,
-                  {
-                    color: theme.colors.card.label.active,
-                  },
+                  { color: theme.colors.card.label.active },
                 ] as any
               }
             >
@@ -85,7 +83,7 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
         </View>
       </View>
 
-      {/* Always show two buttons side by side */}
+      {/* Buttons */}
       <View style={styles.buttonRow}>
         <View style={styles.buttonContainer}>
           <Button
@@ -94,11 +92,14 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
             onPress={onSecondaryPress}
           />
         </View>
-        <View style={[styles.buttonContainer, disabled && { opacity: 0.5 }]}>
+
+        <View
+          style={[styles.buttonContainer, disabledPrimary && { opacity: 0.5 }]}
+        >
           <Button
             label={primaryLabel}
             variant="filled"
-            onPress={!disabled ? onPrimaryPress : undefined} // disable press
+            onPress={!disabledPrimary ? onPrimaryPress : undefined}
           />
         </View>
       </View>

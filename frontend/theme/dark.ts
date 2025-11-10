@@ -21,6 +21,7 @@ export const darkTheme = {
         disabled: colors.gray50,
         error: colors.red50,
         success: colors.green60,
+        accent: colors.yellow40,
       },
       //  heading
       heading: {

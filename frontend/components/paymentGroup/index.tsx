@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,14 +16,22 @@ import { useTheme } from "@/theme/useTheme";
 import TextField from "../inputs/textfield";
 import UploadImage from "../uploadImage";
 
-const PaymentGroup = () => {
+type PaymentGroupProps = {
+  onValidationChange?: (isValid: boolean) => void;
+};
+
+const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
   const theme = useTheme();
 
   const [expandedCard, setExpandedCard] = useState<"bank" | "card">("bank");
 
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCVC] = useState("");
+  // Card fields
+  // const [cardNumber, setCardNumber] = useState("");
+  // const [expiry, setExpiry] = useState("");
+  // const [cvc, setCVC] = useState("");
+
+  // Bank upload
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
 
   const [copied, setCopied] = useState(false);
 
@@ -52,8 +60,41 @@ const PaymentGroup = () => {
 
   const validateCardNumber = (number: string) =>
     number.replace(/\s/g, "").length === 16;
-  const validateExpiry = (text: string) => /^\d{2}\/\d{2}$/.test(text);
   const validateCVC = (text: string) => text.length >= 3 && text.length <= 4;
+
+  const validateExpiry = (text: string) => {
+    // Check MM/YY format
+    if (!/^\d{2}\/\d{2}$/.test(text)) return false;
+
+    const [monthStr, yearStr] = text.split("/");
+    const month = parseInt(monthStr, 10);
+    const year = parseInt(yearStr, 10);
+
+    if (month < 1 || month > 12) return false; // invalid month
+
+    // Get current month/year
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 0-indexed
+    const currentYear = now.getFullYear() % 100; // last 2 digits
+
+    // Expiry must be this month or later
+    if (year < currentYear) return false;
+    if (year === currentYear && month < currentMonth) return false;
+
+    return true;
+  };
+
+  useEffect(() => {
+    let isValid = false;
+
+    if (expandedCard === "bank") {
+      isValid = !!uploadedImage; // must have uploaded slip
+    } else if (expandedCard === "card") {
+      isValid = true; // ✅ always valid when card option is selected
+    }
+
+    onValidationChange?.(isValid);
+  }, [expandedCard, uploadedImage]);
 
   return (
     <View style={styles.container}>
@@ -137,7 +178,8 @@ const PaymentGroup = () => {
               )}
             </TouchableOpacity>
           </View>
-          <UploadImage />
+
+          <UploadImage onUploadSuccess={(uri) => setUploadedImage(uri)} />
         </View>
       </CollapsibleCard>
 
@@ -148,60 +190,14 @@ const PaymentGroup = () => {
         onToggle={() => toggleCard("card")}
       >
         <View style={styles.cardContainer}>
-          <TextField
-            ref={cardRef}
-            label="Card number*"
-            variant="onCard"
-            placeholder="1234 5678 1234 5678"
-            value={cardNumber}
-            keyboardType="numeric"
-            onChangeText={(text) => {
-              const formatted = text
-                .replace(/\D/g, "")
-                .slice(0, 16)
-                .replace(/(\d{4})/g, "$1 ")
-                .trim();
-              setCardNumber(formatted);
-              if (
-                formatted.replace(/\s/g, "").length === 16 &&
-                validateCardNumber(formatted)
-              ) {
-                expiryRef.current?.focus();
-              }
-            }}
-          />
-
-          <View style={styles.cardRow}>
-            <TextField
-              ref={expiryRef}
-              label="Exp. date*"
-              variant="onCard"
-              placeholder="MM/YY"
-              value={expiry}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                let formatted = text.replace(/\D/g, "");
-                if (formatted.length > 2)
-                  formatted =
-                    formatted.slice(0, 2) + "/" + formatted.slice(2, 4);
-                setExpiry(formatted);
-                if (validateExpiry(formatted)) cvcRef.current?.focus();
-              }}
-              style={{ flex: 7 }}
-            />
-            <TextField
-              ref={cvcRef}
-              label="CVC*"
-              variant="onCard"
-              placeholder="123"
-              value={cvc}
-              keyboardType="numeric"
-              onChangeText={(text) =>
-                setCVC(text.replace(/\D/g, "").slice(0, 4))
-              }
-              style={{ flex: 3 }}
-            />
-          </View>
+          <Text
+            style={[
+              theme.typography.body.md.regular,
+              { color: theme.colors.system.body.disabled },
+            ]}
+          >
+            Click confirm to open payment gateway
+          </Text>
         </View>
       </CollapsibleCard>
     </View>
@@ -209,13 +205,8 @@ const PaymentGroup = () => {
 };
 
 const styles = StyleSheet.create({
-  transferContainer: {
-    flexDirection: "column",
-    gap: 12,
-  },
-  wrapper: {
-    flexDirection: "column",
-  },
+  transferContainer: { flexDirection: "column", gap: 12 },
+  wrapper: { flexDirection: "column" },
   container: { flexDirection: "column", width: "100%", gap: 12 },
   cardContainer: { flexDirection: "column", gap: 12 },
   cardRow: { flexDirection: "row", gap: 12 },

@@ -161,7 +161,7 @@ const HomeCleaningScreen = () => {
                 ? () => router.push("/home")
                 : () => setStep("selection")
             }
-            disabled={step === "schedule" && !isSelectionValid()}
+            disabledPrimary={step === "schedule" && !isSelectionValid()}
           />
         </SafeAreaView>
       </LinearGradient>

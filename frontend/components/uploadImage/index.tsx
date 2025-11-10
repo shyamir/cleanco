@@ -11,7 +11,11 @@ import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "@/theme/useTheme";
 import { Icon } from "@/constants/icon";
 
-const UploadImage = () => {
+type UploadImageProps = {
+  onUploadSuccess?: (uri: string | null) => void; // ✅ new prop
+};
+
+const UploadImage: React.FC<UploadImageProps> = ({ onUploadSuccess }) => {
   const theme = useTheme();
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
@@ -34,6 +38,9 @@ const UploadImage = () => {
           setUploading(false);
           setUploaded(true);
           setImageUri(uri);
+
+          // ✅ notify parent
+          onUploadSuccess?.(uri);
         }, 2000);
       }
     } catch (err) {
@@ -44,6 +51,8 @@ const UploadImage = () => {
   const handleDelete = () => {
     setUploaded(false);
     setImageUri(null);
+    // ✅ notify parent that image is cleared
+    onUploadSuccess?.(null);
   };
 
   return (
@@ -67,41 +76,46 @@ const UploadImage = () => {
         </TouchableOpacity>
       )}
 
-      {uploading && (
-        <View style={styles.uploadingArea}>
-          <ActivityIndicator
-            size="small"
-            color={theme.colors.toggle.label.active}
-          />
-          <Text
-            style={[styles.text, { color: theme.colors.toggle.label.active }]}
-          >
-            Uploading slip...
-          </Text>
-        </View>
-      )}
-
-      {uploaded && imageUri && (
-        <View style={styles.uploadedArea}>
-          <View style={styles.uploadedArea}>
-            <Icon.checkFill color={theme.colors.system.body.success} />
+      <View style={styles.uploaderWrapper}>
+        {uploading && (
+          <View style={styles.uploadingArea}>
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.toggle.label.active}
+            />
             <Text
               style={[styles.text, { color: theme.colors.toggle.label.active }]}
             >
-              transferslip.jpg
+              Uploading slip...
             </Text>
           </View>
+        )}
 
-          <View style={styles.actions}>
-            <TouchableOpacity onPress={handlePickImage}>
-              <Icon.upload color={theme.colors.toggle.label.active} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete}>
-              <Icon.trash color={theme.colors.system.body.error} />
-            </TouchableOpacity>
+        {uploaded && imageUri && (
+          <View style={styles.uploadedArea}>
+            <View style={styles.uploadedArea}>
+              <Icon.checkFill color={theme.colors.system.body.success} />
+              <Text
+                style={[
+                  styles.text,
+                  { color: theme.colors.toggle.label.active },
+                ]}
+              >
+                transferslip.jpg
+              </Text>
+            </View>
+
+            <View style={styles.actions}>
+              <TouchableOpacity onPress={handlePickImage}>
+                <Icon.upload color={theme.colors.toggle.label.active} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDelete}>
+                <Icon.trash color={theme.colors.system.body.error} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 };
@@ -113,6 +127,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginTop: 8,
+  },
+  uploaderWrapper: {
+    flexDirection: "column",
+    gap: 12,
+    justifyContent: "space-between",
   },
   uploadArea: {
     alignItems: "center",

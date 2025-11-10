@@ -21,6 +21,7 @@ export const lightTheme = {
         disabled: colors.gray50,
         error: colors.red70,
         success: colors.green50,
+        accent: colors.yellow40,
       },
       //  heading
       heading: {

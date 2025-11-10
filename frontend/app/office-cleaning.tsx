@@ -160,7 +160,7 @@ const OfficeCleaningScreen = () => {
               step === "selection"
                 ? handleNext
                 : () => {
-                    setService("Office Cleaning"); 
+                    setService("Office Cleaning");
                     router.push("/review");
                   }
             }
@@ -170,7 +170,7 @@ const OfficeCleaningScreen = () => {
                 ? () => router.push("/home")
                 : () => setStep("selection")
             }
-            disabled={step === "schedule" && !isSelectionValid()}
+            disabledPrimary={step === "schedule" && !isSelectionValid()}
           />
         </SafeAreaView>
       </LinearGradient>

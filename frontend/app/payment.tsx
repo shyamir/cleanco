@@ -16,13 +16,18 @@ import FooterSummary from "@/components/footerSummary";
 import useCleaningBooking from "./hooks/useCleaningBooking";
 import { useBooking } from "@/context/booking-context";
 import PaymentGroup from "@/components/paymentGroup";
+import { useRouter } from "expo-router";
 
 const Payment = () => {
   const theme = useTheme();
+    const router = useRouter();
+
   const navigation = useNavigation();
 
   const { total } = useCleaningBooking();
   const { frequency } = useBooking();
+  const [isPaymentValid, setIsPaymentValid] = useState(false);
+
 
   return (
     <SafeAreaProvider>
@@ -72,7 +77,7 @@ const Payment = () => {
                   Method
                 </Text> */}
               </View>
-              <PaymentGroup />
+              <PaymentGroup onValidationChange={setIsPaymentValid} />
             </ScrollView>
           </View>
         </SafeAreaView>
@@ -84,8 +89,9 @@ const Payment = () => {
           currency="MVR"
           primaryLabel="Confirm"
           secondaryLabel="Back"
-          onPrimaryPress={() => console.log("Confirm pressed")}
+          onPrimaryPress={() => router.push("/confirmation")}
           onSecondaryPress={() => navigation.goBack()}
+          disabledPrimary={!isPaymentValid}
         />
       </View>
     </SafeAreaProvider>
