@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Dimensions } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
   /* --- Constants ---*/
 import { TABS_DATA } from "@/constants/tabData";
@@ -18,7 +19,16 @@ import ServiceCard from "../components/card/serviceCard";
 export default function Home() {
   const theme = useTheme();
   const { height } = Dimensions.get("window");
+  const [firstName, setFirstName] = useState(""); // default fallback
 
+  useEffect(() => {
+    const loadName = async () => {
+      const storedName = await AsyncStorage.getItem("firstName");
+      if (storedName) setFirstName(storedName);
+    };
+    loadName();
+  }, []);
+  
   return (
     <SafeAreaProvider>
       <SafeAreaView
@@ -41,7 +51,7 @@ export default function Home() {
               } as any,
             ]}
           >
-            Name
+            {firstName}
           </Text>
         </View>
         <ScrollView
@@ -88,7 +98,6 @@ export default function Home() {
                 price="435"
                 route="/office-cleaning"
               />
-            
             </View>
 
             <Text

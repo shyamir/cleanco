@@ -211,7 +211,7 @@ const renderNewItem = ({ item }: { item: any }) => (
           {/* New Tab */}
           {activeTab === "New" && (
             <>
-              <Animated.View style={{ transform: [{ translateY }] }}>
+              <Animated.View>
                 <SearchBar
                   ref={searchInputRef}
                   value={query}

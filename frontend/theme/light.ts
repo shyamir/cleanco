@@ -22,6 +22,7 @@ export const lightTheme = {
         error: colors.red70,
         success: colors.green50,
         accent: colors.yellow40,
+        active: colors.blue70,
       },
       //  heading
       heading: {

@@ -15,11 +15,35 @@ import LinearGradient from "react-native-linear-gradient";
 import Button from "@/components/button";
 import { useRouter } from "expo-router";
 import { Icon } from "@/constants/icon";
+import { useAddress } from "@/context/address-context";
+import { useBooking } from "@/context/booking-context";
+import dayjs from "dayjs";
 
 const Confirmation = ({}) => {
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
+
+  const { selected } = useAddress();
+  const { service, schedule, frequency, startDate } = useBooking();
+
+  let scheduleDisplay = "-";
+
+  if (frequency === "Once") {
+    if (schedule) {
+      const [datePart, timePart] = schedule.split(",");
+      const formattedDate = dayjs(datePart).format("D MMM YYYY");
+      scheduleDisplay = timePart
+        ? `${formattedDate},${timePart}`
+        : formattedDate;
+    }
+  } else {
+    const start = startDate
+      ? `Starts: ${dayjs(startDate).format("D MMM YYYY")} (${frequency})`
+      : "";
+    const repeat = schedule ? `\n${schedule}` : "";
+    scheduleDisplay = `${start}${repeat}`.trim() || "-";
+  }
 
   return (
     <SafeAreaProvider
@@ -61,7 +85,7 @@ const Confirmation = ({}) => {
                 style={[
                   {
                     ...theme.typography.heading.xs2,
-                    color: theme.colors.system.body.tertiary,
+                    color: theme.colors.card.label.default,
                   } as any,
                 ]}
               >
@@ -71,7 +95,7 @@ const Confirmation = ({}) => {
                 style={[
                   {
                     ...theme.typography.body.md.regular,
-                    color: theme.colors.system.body.tertiary,
+                    color: theme.colors.card.label.default,
                   } as any,
                 ]}
               >
@@ -86,11 +110,11 @@ const Confirmation = ({}) => {
                   style={[
                     {
                       ...theme.typography.body.md.medium,
-                      color: theme.colors.system.body.tertiary,
+                      color: theme.colors.card.label.default,
                     } as any,
                   ]}
                 >
-                  Home Cleaning
+                  {service || "-"}
                 </Text>
               </View>
               <View style={styles.row}>
@@ -99,11 +123,11 @@ const Confirmation = ({}) => {
                   style={[
                     {
                       ...theme.typography.body.md.medium,
-                      color: theme.colors.system.body.tertiary,
+                      color: theme.colors.card.label.default,
                     } as any,
                   ]}
                 >
-                  Location
+                  {selected?.label + ", " + selected?.address || "-"}
                 </Text>
               </View>
               <View style={styles.row}>
@@ -112,11 +136,11 @@ const Confirmation = ({}) => {
                   style={[
                     {
                       ...theme.typography.body.md.medium,
-                      color: theme.colors.system.body.tertiary,
+                      color: theme.colors.card.label.default,
                     } as any,
                   ]}
                 >
-                  Schedule
+                  {scheduleDisplay}
                 </Text>
               </View>
             </View>
@@ -164,12 +188,13 @@ const styles = StyleSheet.create({
   gradientBackground: {
     flex: 1,
     borderRadius: 16,
-    paddingVertical: 24,
+    paddingVertical: 16,
   },
   body: {
     flex: 1,
     flexDirection: "column",
     paddingHorizontal: 24,
+    paddingVertical: 24,
     gap: 32,
   },
   buttonRow: {
@@ -178,7 +203,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexDirection: "column",
-    paddingLeft: 32,
+    paddingHorizontal: 32,
     gap: 24,
   },
   image: {

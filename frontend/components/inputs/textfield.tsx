@@ -25,6 +25,8 @@ type TextFieldProps = {
   variant?: "default" | "onCard";
   keyboardType?: "default" | "numeric" | "email-address" | "phone-pad";
   style?: any;
+  autoFocus?: boolean;
+  onSubmitEditing?: () => void;
 };
 
 const TextField = forwardRef<RNTextInput, TextFieldProps>(
@@ -45,14 +47,19 @@ const TextField = forwardRef<RNTextInput, TextFieldProps>(
       variant,
       keyboardType,
       style,
+      autoFocus,
+      onSubmitEditing,
     },
     ref
   ) => {
     const theme = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
+    const [touched, setTouched] = useState(false);
 
     useEffect(() => {
+      if (!touched) return; // <-- skip validation until user interacts
+
       if (required && value.trim().length === 0) {
         setValidationError("This field is required");
       } else if (minLength && value.length < minLength) {
@@ -62,7 +69,7 @@ const TextField = forwardRef<RNTextInput, TextFieldProps>(
       } else {
         setValidationError(null);
       }
-    }, [value, required, minLength, maxLength]);
+    }, [value, touched, required, minLength, maxLength]);
 
     const getBorderColor = () => {
       if (validationError || error) return theme.colors.input.border.error;
@@ -99,9 +106,9 @@ const TextField = forwardRef<RNTextInput, TextFieldProps>(
               { color: getLabelColor(), marginBottom: 4 },
             ]}
           >
-            {label}{" "}
+            {label}
             {required && (
-              <Text style={{ color: theme.colors.input.label.error }}>*</Text>
+              <Text style={{ color: theme.colors.input.label.default }}>*</Text>
             )}
           </Text>
         )}
@@ -124,8 +131,11 @@ const TextField = forwardRef<RNTextInput, TextFieldProps>(
           secureTextEntry={secureTextEntry}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          onTouchStart={() => setTouched(true)}
           maxLength={maxLength}
           keyboardType={keyboardType}
+          autoFocus={autoFocus}
+          onSubmitEditing={onSubmitEditing}
         />
         <View style={styles.footer}>
           {showError ? (

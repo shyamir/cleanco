@@ -77,7 +77,7 @@ export default function Onboarding() {
     >
       <TouchableOpacity
         style={[styles.skipButton]}
-        onPress={() => router.push("/home")}
+        onPress={() => router.push("/login")}
       >
         <Text
           style={[
