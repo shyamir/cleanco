@@ -71,13 +71,13 @@ const updateSlot = (index: number, key: keyof Slot, value: string) => {
         {
           options: [
             "08:00",
-            "09:00",
-            "10:00",
-            "11:00",
-            "12:00",
-            "13:00",
+            "09:45",
+            "11:30",
             "14:00",
-            "15:00",
+            "15:45",
+            "17:30",
+            "19:15",
+            "",
           ],
           initialValue: slots[index].time,
           onChange: (value) => updateSlot(index, "time", value),
@@ -110,13 +110,13 @@ const updateSlot = (index: number, key: keyof Slot, value: string) => {
       title="Time"
       options={[
         "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
+        "09:45",
+        "11:30",
         "14:00",
-        "15:00",
+        "15:45",
+        "17:30",
+        "19:15",
+        "",
       ]}
       initialValue={slots[index].time}
       onChange={(value) => updateSlot(index, "time", value)}

@@ -45,18 +45,34 @@ const ToggleGroup: React.FC<ToggleGroupProps> = ({
     <View style={[styles.container, containerStyle]}>
       <View style={styles.buttonGrid}>
         {options.map((option, index) => {
-          const label =
-            options.length === 7 ? option.charAt(0).toUpperCase() : option;
+          // When there are 8 options, the 8th one is a blank placeholder
+          const isPlaceholder = options.length === 8 && index === 7;
 
           return (
             <View key={`${option}-${index}`} style={{ width: itemWidth }}>
-              <ToggleButton
-                icon={optionIcons?.[option]}
-                label={label}
-                selected={selectedIndex === index}
-                onPress={() => handleSelect(index)}
-                style={{ height: buttonHeight }}
-              />
+              {isPlaceholder ? (
+                // NON-CLICKABLE BLANK ITEM
+                <View
+                  style={{
+                    height: buttonHeight,
+                    borderRadius: 24,
+                    marginVertical: 6,
+                    opacity: 0, // make it invisible but keep layout
+                  }}
+                />
+              ) : (
+                <ToggleButton
+                  icon={optionIcons?.[option]}
+                  label={
+                    options.length === 7
+                      ? option.charAt(0).toUpperCase()
+                      : option
+                  }
+                  selected={selectedIndex === index}
+                  onPress={() => handleSelect(index)}
+                  style={{ height: buttonHeight }}
+                />
+              )}
             </View>
           );
         })}
