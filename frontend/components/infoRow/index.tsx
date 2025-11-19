@@ -4,7 +4,7 @@ import { useTheme } from "@/theme/useTheme";
 
 type InfoRowProps = {
   icon?: React.ReactNode;
-  label: string;
+  label?: string;
   value?: string;
   containerStyle?: ViewStyle;
   labelStyle?: TextStyle;
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     marginBottom: 12,
-    alignItems: "center",
+    // alignItems: "center",
   },
   iconWrapper: {
     marginRight: 12,

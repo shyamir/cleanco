@@ -1,7 +1,7 @@
 import { TABS_DATA } from "@/constants/tabData";
 import { useTheme } from "@/theme/useTheme";
 import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import Tabs from "@/components/tabs";
 
@@ -30,6 +30,14 @@ export default function Home() {
           </Text>
         </View>
 
+         <ScrollView
+                  contentContainerStyle={styles.scrollContainer}
+                  showsVerticalScrollIndicator={false}
+                >
+          <View style={styles.body}>
+          </View>
+          </ScrollView>
+
         <View>
           <Tabs tabs={TABS_DATA} />
         </View>
@@ -45,8 +53,17 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   header: {
-    flex: 1,
     flexDirection: "row",
     gap: 8,
+    height: 48,
+  },
+  body: {
+    flexDirection: "column",
+    gap: 16,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 80, // Space for bottom tabs
+    gap: 24,
   },
 });

@@ -24,6 +24,13 @@ import CopyIcon from "@/app/icons/copyIcon";
 import UploadIcon from "@/app/icons/uploadIcon";
 import CheckFillIcon from "@/app/icons/checkFillIcon";
 import TrashIcon from "@/app/icons/trashIcon";
+import HistoryIcon from "@/app/icons/historyIcon";
+import BroomIcon from "@/app/icons/broomIcon";
+import BillIcon from "@/app/icons/billIcon";
+import WarningIcon from "@/app/icons/warningIcon";
+import HelpIcon from "@/app/icons/helpIcon";
+import WhatsAppIcon from "@/app/icons/whatsappIcon";
+import CallIcon from "@/app/icons/callIcon";
 
 
 export const Icon = {
@@ -31,7 +38,9 @@ export const Icon = {
   activity: (props: { color: string }) => <ActivityIcon color={props.color} />,
   profile: (props: { color: string }) => <ProfileIcon color={props.color} />,
   sparkle: (props: { color: string }) => <SparkleIcon color={props.color} />,
-  location: (props: { color: string }) => <LocationIcon color={props.color} />,
+  location: (props: { color: string; width?: number; height?: number }) => (
+    <LocationIcon color={props.color} />
+  ),
   calendar: (props: { color: string }) => <CalendarIcon color={props.color} />,
   notes: (props: { color: string }) => <NotesIcon color={props.color} />,
   star: (props: { color: string }) => <StarIcon color={props.color} />,
@@ -61,4 +70,11 @@ export const Icon = {
     <CheckFillIcon color={props.color} />
   ),
   trash: (props: { color: string }) => <TrashIcon color={props.color} />,
+  history: (props: { color: string }) => <HistoryIcon color={props.color} />,
+  broom: (props: { color: string }) => <BroomIcon color={props.color} />,
+  bill: (props: { color: string }) => <BillIcon color={props.color} />,
+  warning: (props: { color: string }) => <WarningIcon color={props.color} />,
+  help: (props: { color: string }) => <HelpIcon color={props.color} />,
+  whatsapp: (props: { color: string }) => <WhatsAppIcon color={props.color} />,
+  call: (props: { color: string }) => <CallIcon color={props.color} />,
 };

@@ -11,6 +11,7 @@ export const darkTheme = {
       },
       border: {
         default: colors.gray60,
+        secondary: colors.blue20,
         active: colors.yellow40,
       },
       // body
@@ -127,6 +128,29 @@ export const darkTheme = {
         disabled: colors.gray60,
       },
     },
+
+    // pill
+    pill: {
+      background: {
+        default: colors.blue90,
+        error: colors.red90,
+        warning: colors.yellow80,
+        success: colors.green90,
+      },
+      label: {
+        default: colors.blue0,
+        error: colors.red0,
+        warning: colors.yellow0,
+        success: colors.green0,
+      },
+      border: {
+        default: colors.blue0,
+        error: colors.red0,
+        warning: colors.yellow0,
+        success: colors.green0,
+      },
+    },
+
     // input
     input: {
       background: {

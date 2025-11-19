@@ -10,8 +10,9 @@ import {
 } from "react-native";
 import { useTheme } from "@/theme/useTheme";
 import { Icon } from "@/constants/icon";
+import Base from "./base";
 
-type BottomSheetDropdownProps = {
+type DropdownProps = {
   /** Label shown above the dropdown field */
   label: string;
   /** Title shown at the top of the bottom sheet */
@@ -26,7 +27,7 @@ type BottomSheetDropdownProps = {
   optionIcons?: Record<string, keyof typeof Icon>;
 };
 
-const BottomSheetDropdown: React.FC<BottomSheetDropdownProps> = ({
+const Dropdown: React.FC<DropdownProps> = ({
   label,
   sheetTitle,
   options,
@@ -87,78 +88,49 @@ const BottomSheetDropdown: React.FC<BottomSheetDropdownProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Bottom Sheet Modal */}
-      <Modal
+      <Base
         visible={visible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setVisible(false)}
+        onClose={() => setVisible(false)}
+        backgroundColor={theme.colors.system.background.secondary}
+        title={sheetTitle || label}
       >
-        <Pressable style={styles.overlay} onPress={() => setVisible(false)} />
+        <FlatList
+          data={options}
+          keyExtractor={(item) => item}
+          renderItem={({ item }) => {
+            const IconComponent =
+              optionIcons && optionIcons[item] ? Icon[optionIcons[item]] : null;
 
-        <View
-          style={[
-            styles.sheet,
-            { backgroundColor: theme.colors.system.background.secondary },
-          ]}
-        >
-          <Text
-            style={[
-              theme.typography.heading.xs3.book,
-              styles.sheetTitle,
-              { color: theme.colors.system.body.default },
-            ]}
-          >
-            {sheetTitle || label}
-          </Text>
+            return (
+              <TouchableOpacity
+                style={styles.option}
+                onPress={() => handleSelect(item)}
+              >
+                <View style={styles.optionRow}>
+                  {IconComponent && (
+                    <View style={styles.iconWrapper}>
+                      <IconComponent color={theme.colors.system.body.default} />
+                    </View>
+                  )}
 
-          <FlatList
-            data={options}
-            keyExtractor={(item) => item}
-            renderItem={({ item }) => {
-              const IconComponent =
-                optionIcons && optionIcons[item]
-                  ? Icon[optionIcons[item]]
-                  : null;
+                  <Text
+                    style={[
+                      theme.typography.body.md.regular,
+                      { color: theme.colors.system.body.default, flex: 1 },
+                    ]}
+                  >
+                    {item}
+                  </Text>
 
-              return (
-                <TouchableOpacity
-                  style={styles.option}
-                  onPress={() => handleSelect(item)}
-                >
-                  <View style={styles.optionRow}>
-                    {IconComponent && (
-                      <View style={styles.iconWrapper}>
-                        <IconComponent
-                          color={theme.colors.system.body.default}
-                        />
-                      </View>
-                    )}
-
-                    <Text
-                      style={[
-                        theme.typography.body.md.regular,
-                        {
-                          color: theme.colors.system.body.default,
-                          flex: 1,
-                        },
-                      ]}
-                    >
-                      {item}
-                    </Text>
-
-                    {item === selected && (
-                      <Icon.check
-                        color={theme.colors.input.label.default}
-                      />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </View>
-      </Modal>
+                  {item === selected && (
+                    <Icon.check color={theme.colors.input.label.default} />
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </Base>
     </>
   );
 };
@@ -179,24 +151,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  sheet: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
-  sheetTitle: {
-    marginBottom: 12,
-  },
   option: {
     paddingVertical: 14,
   },
@@ -209,4 +163,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BottomSheetDropdown;
+export default Dropdown;

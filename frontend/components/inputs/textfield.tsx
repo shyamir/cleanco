@@ -172,10 +172,14 @@ const TextField = forwardRef<RNTextInput, TextFieldProps>(
 const styles = StyleSheet.create({
   container: { width: "100%" },
   input: {
+    height: 48,
     borderWidth: 1,
     borderRadius: 48,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    alignContent: "center",
+        paddingBottom: 4,
   },
   footer: {
     marginTop: 4,

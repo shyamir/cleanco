@@ -104,7 +104,7 @@ const OtpInputs: React.FC<OtpInputsProps> = ({ length = 4, onChange }) => {
               focusedIndex === i
                 ? theme.colors.input.border.active // blue active border on focus
                 : theme.colors.input.border.default, // default border
-            backgroundColor: theme.colors.system.background.default,
+            backgroundColor: theme.colors.input.background.default,
           }}
         />
       ))}

@@ -11,6 +11,7 @@ export const lightTheme = {
       },
       border: {
         default: colors.gray30,
+        secondary: colors.blue50,
         active: colors.orange40,
       },
       // body
@@ -90,6 +91,26 @@ export const lightTheme = {
       },
     },
 
+    pill: {
+      background: {
+        default: colors.blue0,
+        error: colors.red0,
+        warning: colors.yellow0,
+        success: colors.green0,
+      },
+      label: {
+        default: colors.blue60,
+        error: colors.red60,
+        warning: colors.yellow60,
+        success: colors.green60,
+      },
+      border: {
+        default: colors.blue60,
+        error: colors.red60,
+        warning: colors.yellow60,
+        success: colors.green60,
+      },
+    },
     segmentedButton: {
       background: {
         default: colors.gray20,

@@ -13,7 +13,7 @@ import { useTheme } from "@/theme/useTheme";
 import { useRouter } from "expo-router";
 import Button from "@/components/button";
 import TextField from "@/components/inputs/textfield";
-import BottomSheetDropdown from "@/components/bottomSheetDropdown";
+import BottomSheetDropdown from "@/components/bottomSheet/dropdown";
 import { useAddress } from "@/context/address-context";
 import ToggleGroup from "@/components/toggleButton/toggleGroup";
 

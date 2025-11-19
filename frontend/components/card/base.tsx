@@ -18,7 +18,7 @@ const Base: React.FC<BaseProps> = ({ children, style}) => {
           backgroundColor: theme.colors.system.background.secondary,
         } as any,
         styles.card,
-        style, // apply custom styles here
+        style, 
       ]}
     >
       {children}

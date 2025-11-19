@@ -38,7 +38,7 @@ const OnboardingButton: React.FC<Props> = ({
   const onPress = useCallback(() => {
     if (currentIndex.value === length - 1) {
       console.log("Get Started pressed");
-      router.push("/home");
+      router.push("/login");
     } else {
       flatListRef.current?.scrollToIndex({
         index: currentIndex.value + 1,

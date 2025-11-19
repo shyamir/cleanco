@@ -8,7 +8,7 @@ export default function RootLayout() {
       <BookingProvider>
         <Stack
           initialRouteName="splash"
-          screenOptions={{ headerShown: false }}
+          screenOptions={{ headerShown: false, animation: "fade" }}
         />
       </BookingProvider>
     </AddressProvider>

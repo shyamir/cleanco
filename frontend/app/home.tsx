@@ -131,8 +131,9 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
+    // paddingTop: 16,
     gap: 8,
-    height: "auto",
+    height: 48,
   },
   body: {
     flex: 1,
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
   topContainer: {
     flexDirection: "column",
     gap: 8,
-    alignSelf: "stretch", 
+    alignSelf: "stretch",
   },
 
   textWrapper: {

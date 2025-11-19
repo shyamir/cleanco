@@ -6,6 +6,7 @@ import {
   ViewStyle,
   TextStyle,
   StyleProp,
+  View
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { useTheme } from "@/theme/useTheme";
@@ -17,6 +18,9 @@ type ButtonProps = {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   disabled?: boolean;
+  icon?: React.ReactNode; // optional icon
+  iconPosition?: "left" | "right"; // default left
+  gradientColors?: string[]; // optional, for filled button
 };
 
 const Button: React.FC<ButtonProps> = ({
@@ -26,6 +30,9 @@ const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   disabled = false,
+  icon,
+  iconPosition = "left",
+  gradientColors,
 }) => {
   const theme = useTheme();
 
@@ -74,9 +81,18 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const content = (
-    <Text style={[{ color: getTextColor(), ...getTextStyle() }, textStyle]}>
-      {label}
-    </Text>
+    <View
+      style={{
+        flexDirection: icon && iconPosition === "left" ? "row" : "row-reverse",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      {icon && icon}
+      <Text style={[{ color: getTextColor(), ...getTextStyle() }, textStyle]}>
+        {label}
+      </Text>
+    </View>
   );
 
   const buttonStyle: ViewStyle = {
@@ -88,11 +104,11 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   if (variant === "filled" && !disabled) {
-    const gradient = theme.colors.button.background.primary;
+    const gradient = gradientColors || theme.colors.button.background.primary;
 
     return (
       <LinearGradient
-        colors={gradient}
+        colors={gradient} // use the passed gradientColors
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[{ borderRadius: 48 }, getBorder(), style]}
@@ -107,11 +123,7 @@ const Button: React.FC<ButtonProps> = ({
             justifyContent: "center",
           }}
         >
-          <Text
-            style={[{ color: getTextColor(), ...getTextStyle() }, textStyle]}
-          >
-            {label}
-          </Text>
+          {content}
         </TouchableOpacity>
       </LinearGradient>
     );
