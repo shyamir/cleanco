@@ -9,7 +9,7 @@ import {
   Pressable,
   GestureResponderEvent,
 } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type AnimatedSliderProps = {
   min: number;
@@ -24,7 +24,7 @@ const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
   initialValue = min,
   onChange,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const width = 335; // slider width in px (adjust as needed)
   const thumbRadius = 12;
   const trackHeight = 12;

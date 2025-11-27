@@ -12,7 +12,7 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import GradientText from "../gradientText";
 
 type Props = {
@@ -27,7 +27,7 @@ type Props = {
 };
 
 const ListItem: React.FC<Props> = ({ item, index, x }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const { width: SCREEN_WIDTH } = useWindowDimensions();
 
   // Animated style for the image

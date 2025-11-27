@@ -7,7 +7,7 @@ import {
   ViewStyle,
   TextInput as RNTextInput,
 } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type TextFieldProps = {
   label?: string;
@@ -52,7 +52,7 @@ const TextField = forwardRef<RNTextInput, TextFieldProps>(
     },
     ref
   ) => {
-    const theme = useTheme();
+    const {theme} = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
     const [touched, setTouched] = useState(false);
@@ -88,7 +88,7 @@ const TextField = forwardRef<RNTextInput, TextFieldProps>(
     };
 
     const getBackgroundColor = () => {
-      if (validationError || error) return theme.colors.input.background.error;
+      if (validationError || error) return theme.colors.input.background.active;
       if (success) return theme.colors.input.background.success;
       if (isFocused) return theme.colors.input.background.active;
       if (variant === "onCard") return theme.colors.input.background.secondary;
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignContent: "center",
-        paddingBottom: 4,
+        // paddingBottom: 4,
   },
   footer: {
     marginTop: 4,

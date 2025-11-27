@@ -1,5 +1,5 @@
 // src/components/bottomSheet/Base.tsx
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import React from "react";
 import { View, Modal, Text, StyleSheet, Pressable } from "react-native";
 
@@ -20,7 +20,7 @@ const Base: React.FC<BaseProps> = ({
   backgroundColor,
   sheetStyle,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <Modal
@@ -29,7 +29,6 @@ const Base: React.FC<BaseProps> = ({
       transparent
       onRequestClose={onClose}
     >
-      {/* Overlay moved here */}
       <Pressable style={styles.overlay} onPress={onClose} />
 
       <View style={[styles.sheet, { backgroundColor }, sheetStyle]}>
@@ -67,7 +66,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 24,
   },
 });
 

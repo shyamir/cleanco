@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Keyboard,
 } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Icon } from "@/constants/icon";
 
 type SearchBarProps = {
@@ -22,7 +22,7 @@ const SearchBar = forwardRef<TextInput, SearchBarProps>(
     { placeholder = "Search", value, onChangeText, onClear, autoFocus = false },
     ref
   ) => {
-    const theme = useTheme();
+    const {theme} = useTheme();
     const [text, setText] = useState(value || "");
     const [isFocused, setIsFocused] = useState(false);
 

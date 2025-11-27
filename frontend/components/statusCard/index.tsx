@@ -29,5 +29,5 @@ export const StatusCard: React.FC<StatusCardProps> = ({
     return <CleaningProgressCard status={cleaningStatus} />;
   }
 
-  return <UpcomingServiceCard />;
+  return <UpcomingServiceCard serviceType={"home"} />;
 };

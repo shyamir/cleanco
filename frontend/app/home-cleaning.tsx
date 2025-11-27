@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { View, StyleSheet, Animated, Text } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 
 /* --- Components --- */
@@ -21,7 +21,7 @@ import { useBooking } from "@/context/booking-context";
 import useCleaningBooking from "./hooks/useCleaningBooking";
 
 const HomeCleaningScreen = () => {
-  const theme = useTheme();
+const {theme} = useTheme();
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
 

@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/constants/icon";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 import SegmentedButton from "@/components/segmentedButton";
 import SearchBar from "@/components/searchBar";
@@ -23,7 +23,7 @@ import Button from "@/components/button";
 import { useAddress } from "@/context/address-context";
 
 const AddressSearch = () => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const router = useRouter();
   const { selected, setSelected } = useAddress();
 
@@ -118,36 +118,35 @@ const AddressSearch = () => {
     router.back(); // Go back to HomeCleaningScreen
   };
 
-const renderNewItem = ({ item }: { item: any }) => (
-  <TouchableOpacity
-    style={styles.suggestionItem}
-    onPress={() => {
-      setSelected({
-        label: item.main_text,
-        address: item.secondary_text,
-      });
-      router.push("/save-address");
-    }}
-  >
-    <Text
-      style={[
-        theme.typography.body.md.regular,
-        { color: theme.colors.system.body.default },
-      ]}
+  const renderNewItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.suggestionItem}
+      onPress={() => {
+        setSelected({
+          label: item.main_text,
+          address: item.secondary_text,
+        });
+        router.push("/save-address");
+      }}
     >
-      {item.main_text}
-    </Text>
-    <Text
-      style={[
-        theme.typography.body.md.regular,
-        { color: theme.colors.system.body.disabled },
-      ]}
-    >
-      {item.secondary_text}
-    </Text>
-  </TouchableOpacity>
-);
-
+      <Text
+        style={[
+          theme.typography.body.md.regular,
+          { color: theme.colors.system.body.default },
+        ]}
+      >
+        {item.main_text}
+      </Text>
+      <Text
+        style={[
+          theme.typography.body.md.regular,
+          { color: theme.colors.system.body.disabled },
+        ]}
+      >
+        {item.secondary_text}
+      </Text>
+    </TouchableOpacity>
+  );
 
   const renderSavedItem = ({ item }: { item: any }) => (
     <TouchableOpacity

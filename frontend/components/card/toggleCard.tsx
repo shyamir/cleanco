@@ -1,7 +1,7 @@
 import React from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, Text, View } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
 import ToggleGroup from "@/components/toggleButton/toggleGroup";
 
@@ -28,7 +28,7 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
   groups,
   children,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <SafeAreaProvider>

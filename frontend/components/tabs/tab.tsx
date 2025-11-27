@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
+import { useTheme } from "@/theme/ThemeProvider";
 
-import { useTheme } from "@/theme/useTheme";
 import { Icon } from "@/constants/icon";
 import { PressableScale } from "react-native-pressable-scale";
 import Animated, {
@@ -29,7 +29,7 @@ const Tab = ({
   onPress,
   icon,
 }: TabProps) => {
-  const theme = useTheme(); // 👈 use theme here
+  const { theme } = useTheme(); // 👈 use theme here
 
   // Create an animated progress value that transitions between 0 and 1
   // based on whether the tab is active or not
@@ -61,7 +61,7 @@ const Tab = ({
   const rTextStyle = useAnimatedStyle(() => {
     return {
       // opacity: progress.value ** 3, // Cubic easing for opacity
-      marginLeft: isActive ? gap.value : 0, 
+      marginLeft: isActive ? gap.value : 0,
       color: theme.colors.navbar.label.active,
       display: isActive ? "flex" : "none",
     };

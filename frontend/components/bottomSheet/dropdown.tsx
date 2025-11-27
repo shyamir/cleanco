@@ -8,7 +8,7 @@ import {
   FlatList,
   Pressable,
 } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Icon } from "@/constants/icon";
 import Base from "./base";
 
@@ -35,7 +35,7 @@ const Dropdown: React.FC<DropdownProps> = ({
   onSelect,
   optionIcons,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const [visible, setVisible] = useState(false);
   const [selected, setSelected] = useState<string>(value || options[0]);
 

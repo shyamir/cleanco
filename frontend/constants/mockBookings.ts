@@ -42,7 +42,7 @@ export const MOCK_BOOKINGS: Record<string, Booking> = {
     cleaner: "Manish Sureshkumar",
     total: "MVR 304.5",
     type: "home cleaning",
-    date: "20 Nov 2025",
+    date: "30 Nov 2025",
     time: "08:00",
   },
   "1003": {
@@ -56,7 +56,7 @@ export const MOCK_BOOKINGS: Record<string, Booking> = {
     cleaner: "Aisha Ibrahim",
     total: "MVR 450",
     type: "office cleaning",
-    date: "30 Dec 2025",
+    date: "28 Nov 2025",
     time: "12:00",
   },
   "1004": {

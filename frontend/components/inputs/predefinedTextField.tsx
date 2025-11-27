@@ -1,5 +1,5 @@
-import { useTheme } from "@/theme/useTheme";
-import React, { forwardRef, useState } from "react";
+import { useTheme } from "@/theme/ThemeProvider";
+import React, { forwardRef, useState, ReactNode } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,9 @@ type PrefixedTextFieldProps = {
   autoFocus?: boolean;
   error?: string;
   success?: boolean;
+  label?: string;
+  rightIcon?: ReactNode;
+  onPress?: () => void;
 };
 
 const PrefixedTextField = forwardRef<TextInput, PrefixedTextFieldProps>(
@@ -32,7 +35,7 @@ const PrefixedTextField = forwardRef<TextInput, PrefixedTextFieldProps>(
       prefix = "(+960)",
       value,
       onChangeText,
-      placeholder = "999-9999",
+      placeholder = "9999999",
       containerStyle,
       inputStyle,
       maxLength = 7,
@@ -42,14 +45,16 @@ const PrefixedTextField = forwardRef<TextInput, PrefixedTextFieldProps>(
       error,
       success = false,
       showCharCount = false,
+      label,
+      rightIcon,
+      onPress,
     },
     ref
   ) => {
-    const theme = useTheme();
+    const { theme } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
 
     const formatDigits = (digits: string) => digits.replace(/[^0-9]/g, "");
-
     const display = formatDigits(value || "");
 
     const handleChange = (text: string) => {
@@ -57,7 +62,6 @@ const PrefixedTextField = forwardRef<TextInput, PrefixedTextFieldProps>(
       onChangeText(digits);
     };
 
-    // dynamic border/background like TextField
     const getBorderColor = () => {
       if (error) return theme.colors.input.border.error;
       if (success) return theme.colors.input.border.success;
@@ -78,6 +82,17 @@ const PrefixedTextField = forwardRef<TextInput, PrefixedTextFieldProps>(
 
     return (
       <View style={[styles.outer, containerStyle]}>
+        {label && (
+          <Text
+            style={[
+              theme.typography.body.md.regular,
+              { color: theme.colors.input.label.default, marginBottom: 4 },
+            ]}
+          >
+            {label}
+          </Text>
+        )}
+
         <View
           style={[
             styles.inputPill,
@@ -91,10 +106,10 @@ const PrefixedTextField = forwardRef<TextInput, PrefixedTextFieldProps>(
           {/* Prefix */}
           <Text
             style={[
-              theme.typography.body.sm.regular,
+              theme.typography.body.md.regular,
               {
                 color: theme.colors.input.label.disabled,
-                // marginRight: 8, // spacing between prefix and input
+                marginRight: 8,
               },
             ]}
           >
@@ -112,19 +127,22 @@ const PrefixedTextField = forwardRef<TextInput, PrefixedTextFieldProps>(
             style={[
               styles.input,
               inputStyle,
+              theme.typography.body.md.regular,
               {
                 color: theme.colors.system.body.default,
-                flex: 1, // take remaining space
-                paddingVertical: 0, // let container handle vertical padding
-                textAlignVertical: "center",
+                flex: 1,
               },
             ]}
-            maxLength={maxLength + (display.includes("-") ? 1 : 0)}
+            maxLength={maxLength}
             selectionColor={theme.colors.input.label.active}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             autoFocus={autoFocus}
+            onPress={onPress}
           />
+
+          {/* Right icon */}
+          {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
         </View>
       </View>
     );
@@ -132,21 +150,28 @@ const PrefixedTextField = forwardRef<TextInput, PrefixedTextFieldProps>(
 );
 
 const styles = StyleSheet.create({
-  outer: { width: "100%", gap: 6 },
+  outer: { width: "100%", gap: 0 },
   inputPill: {
     flexDirection: "row",
-    alignItems: "center", // ensures vertical centering of prefix and input
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 48,
     paddingHorizontal: 14,
-    paddingVertical: 12, // this padding now centers both prefix and input
   },
   input: {
     flex: 1,
-    paddingHorizontal: 8,
-    textAlignVertical: "center", // important for Android
+    height: 48,
+    // paddingVertical: 8, // fixes vertical alignment for placeholder and typed text
+    textAlignVertical: "center",
   },
-  underlinePill: { borderWidth: 0, borderBottomWidth: 1, borderRadius: 0 },
+  underlinePill: {
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    borderRadius: 0,
+  },
+  rightIcon: {
+    marginLeft: 8,
+  },
 });
 
 export default PrefixedTextField;

@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 import { MOCK_BOOKINGS } from "@/constants/mockBookings";
 import { isPastBooking } from "@/utils/date";
@@ -9,7 +9,7 @@ import HistoryRow from "@/components/historyRow"; // 👈 updated import
 import { Icon } from "@/constants/icon";
 
 export default function History() {
-  const theme = useTheme();
+const {theme} = useTheme();
   const router = useRouter();
 
   // Filter past bookings
@@ -74,7 +74,7 @@ export default function History() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 16 },
+  container: { flex: 1, paddingHorizontal: 16, paddingTop: 16, },
   header: {
     flexDirection: "column",
     gap: 12,

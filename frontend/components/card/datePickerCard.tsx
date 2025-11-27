@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
 import dayjs from "dayjs";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
-import ToggleButton from "../toggleButton";
 
 type DatePickerCardProps = {
   label?: string;
@@ -17,7 +16,7 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
   onDateChange,
   initialDate,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const [selectedDate, setSelectedDate] = useState(
     initialDate || dayjs().format("YYYY-MM-DD")
   );

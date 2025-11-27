@@ -3,13 +3,13 @@ import { ScrollView, StyleSheet, Text, View, Dimensions } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-  /* --- Constants ---*/
+/* --- Constants ---*/
 import { TABS_DATA } from "@/constants/tabData";
 
-  /* --- Theme ---*/
-import { useTheme } from "@/theme/useTheme";
+/* --- Theme ---*/
+import { useTheme } from "@/theme/ThemeProvider";
 
-  /* --- Hook ---*/
+/* --- Hook ---*/
 import GradientText from "@/components/gradientText";
 import Tabs from "../components/tabs";
 import { StatusCard } from "@/components/statusCard";
@@ -17,7 +17,7 @@ import CouponCard from "../components/couponCard";
 import ServiceCard from "../components/card/serviceCard";
 
 export default function Home() {
-  const theme = useTheme();
+  const { theme } = useTheme();
   const { height } = Dimensions.get("window");
   const [firstName, setFirstName] = useState(""); // default fallback
 
@@ -28,7 +28,7 @@ export default function Home() {
     };
     loadName();
   }, []);
-  
+
   return (
     <SafeAreaProvider>
       <SafeAreaView
@@ -60,10 +60,10 @@ export default function Home() {
         >
           <View style={styles.topContainer}>
             <StatusCard
-              hasService={false}
+              hasService={true}
               hasOngoingJob={false}
-              hasPaymentDue={true}
-              cleaningStatus="done"
+              hasPaymentDue={false}
+              cleaningStatus="in-progress"
             />
 
             <CouponCard
@@ -134,6 +134,8 @@ const styles = StyleSheet.create({
     // paddingTop: 16,
     gap: 8,
     height: 48,
+    alignContent: "center",
+    alignItems: "center",
   },
   body: {
     flex: 1,

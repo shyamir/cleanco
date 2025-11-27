@@ -1,4 +1,4 @@
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
@@ -8,14 +8,13 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   SharedValue,
-  AnimatedRef
+  AnimatedRef,
 } from "react-native-reanimated";
-
 
 type Props = {
   currentIndex: SharedValue<number>;
   length: number;
-  flatListRef: AnimatedRef<Animated.FlatList<any>>; 
+  flatListRef: AnimatedRef<Animated.FlatList<any>>;
 };
 
 const OnboardingButton: React.FC<Props> = ({
@@ -23,8 +22,8 @@ const OnboardingButton: React.FC<Props> = ({
   length,
   flatListRef,
 }) => {
-  const theme = useTheme();
-  
+  const {theme} = useTheme();
+
   // Animated style for "Next" text
   const nextTextStyle = useAnimatedStyle(() => ({
     opacity: currentIndex.value === length - 1 ? withTiming(0) : withTiming(1),
@@ -100,8 +99,8 @@ const styles = StyleSheet.create({
   },
   text: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    // fontSize: 16,
+    // fontWeight: "600",
     position: "absolute", // stack "Next" and "Get Started"
     textAlign: "center",
   },

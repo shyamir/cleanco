@@ -8,7 +8,7 @@ import {
   Platform,
   UIManager,
 } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
 
 if (
@@ -33,7 +33,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   expanded,
   onToggle,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   const handleToggle = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);

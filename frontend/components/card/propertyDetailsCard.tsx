@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
 import { Icon } from "@/constants/icon";
 
@@ -25,7 +25,7 @@ const PropertyDetailsCard: React.FC<PropertyDetailsCardProps> = ({
   onSecondaryChange,
   max = 5,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   useEffect(() => {
     if (primaryValue < 1) onPrimaryChange(1);

@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/constants/icon";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 import Button from "@/components/button";
 import TextField from "@/components/inputs/textfield";
@@ -18,7 +18,7 @@ import { useAddress } from "@/context/address-context";
 import ToggleGroup from "@/components/toggleButton/toggleGroup";
 
 const SaveAddress = () => {
-  const theme = useTheme();
+const {theme} = useTheme();
   const router = useRouter();
   const { selected, setSelected } = useAddress();
 

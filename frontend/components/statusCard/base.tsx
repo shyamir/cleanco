@@ -1,7 +1,7 @@
 import React from "react";
 import LinearGradient from "react-native-linear-gradient";
 import { StyleSheet } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type BaseProps = {
   colors: string[];
@@ -10,7 +10,7 @@ type BaseProps = {
 };
 
 const Base: React.FC<BaseProps> = ({ children, customStyle }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <LinearGradient
@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 16,
     justifyContent: "center",
-    height: 255,
+    height: "auto",
   },
 });
 

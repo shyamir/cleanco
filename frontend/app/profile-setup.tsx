@@ -15,7 +15,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { TABS_DATA } from "@/constants/tabData";
 
 /* --- Theme ---*/
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 /* --- Hook ---*/
 import GradientText from "@/components/gradientText";
@@ -26,7 +26,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import TextField from "@/components/inputs/textfield";
 
 export default function ProfileSetup() {
-  const theme = useTheme();
+const {theme} = useTheme();
   const router = useRouter();
 
   const scheme = useColorScheme(); // detect light/dark
@@ -52,20 +52,20 @@ export default function ProfileSetup() {
   const emailError =
     email && !isEmailValid(email) ? "Please enter a valid email" : undefined;
 
-  // Inside handleNext function
+  // Inside handleNext
   const handleNext = async () => {
     if (!isFormValid) return;
 
-    // Extract first name from full name
     const firstName = fullName.trim().split(" ")[0];
 
-    // Save to AsyncStorage
-      await AsyncStorage.setItem("firstName", firstName);
-      console.log(firstName)
+    await AsyncStorage.setItem("firstName", firstName);
+    await AsyncStorage.setItem("fullName", fullName);
+    await AsyncStorage.setItem("email", email);
+    // await AsyncStorage.setItem("phone", phone);
 
-    // Navigate to home
     router.push("/home");
   };
+
 
   return (
     <SafeAreaProvider>
@@ -121,7 +121,7 @@ export default function ProfileSetup() {
             />
 
             {/* Email Field */}
-            <TextField
+            {/* <TextField
               ref={emailRef}
               label="Email"
               placeholder="Enter your email"
@@ -129,6 +129,45 @@ export default function ProfileSetup() {
               onChangeText={setEmail}
               keyboardType="email-address"
               error={emailError}
+              onSubmitEditing={handleNext}
+            /> */}
+            <TextField
+              ref={emailRef}
+              label="Email"
+              placeholder="Enter your email"
+              value={email}
+              keyboardType="email-address"
+              error={emailError}
+              onChangeText={(text) => {
+                // convert to lowercase
+                let cleaned = text.toLowerCase();
+
+                // allow only letters, @, and .
+                cleaned = cleaned.replace(/[^a-z@.]/g, "");
+
+                // prevent more than one "@"
+                const atParts = cleaned.split("@");
+                if (atParts.length > 2) {
+                  cleaned =
+                    atParts[0] +
+                    "@" +
+                    atParts.slice(1).join("").replace(/@/g, "");
+                }
+
+                // remove leading "@"
+                if (cleaned.startsWith("@")) cleaned = cleaned.substring(1);
+
+                // remove leading "."
+                if (cleaned.startsWith(".")) cleaned = cleaned.substring(1);
+
+                // collapse multiple dots → "."
+                cleaned = cleaned.replace(/\.\.+/g, ".");
+
+                // prevent "@." (email can't jump directly to dot)
+                cleaned = cleaned.replace(/@\.*/, "@");
+
+                setEmail(cleaned);
+              }}
               onSubmitEditing={handleNext}
             />
           </View>

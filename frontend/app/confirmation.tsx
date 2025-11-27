@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useNavigation } from "expo-router";
 import GradientText from "@/components/gradientText";
 import LinearGradient from "react-native-linear-gradient";
@@ -20,7 +20,7 @@ import { useBooking } from "@/context/booking-context";
 import dayjs from "dayjs";
 
 const Confirmation = ({}) => {
-  const theme = useTheme();
+const {theme} = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
 

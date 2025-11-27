@@ -1,9 +1,8 @@
 import { StyleSheet, useWindowDimensions } from "react-native";
 import { useRouter, usePathname, Href } from "expo-router";
 import LinearGradient from "react-native-linear-gradient";
-// import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "@/theme/ThemeProvider";
 
-import { useTheme } from "@/theme/useTheme";
 import Tab from "./tab";
 
 import { Icon } from "@/constants/icon";
@@ -22,7 +21,7 @@ const Tabs = ({ tabs }: TabsProps) => {
 
   const router = useRouter();
   const pathname = usePathname();
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   // remaining width for active tab
   const activeWidth =

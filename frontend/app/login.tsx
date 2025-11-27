@@ -11,11 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-/* --- Constants ---*/
-import { TABS_DATA } from "@/constants/tabData";
-
 /* --- Theme ---*/
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 /* --- Hook ---*/
 import GradientText from "@/components/gradientText";
@@ -23,9 +20,10 @@ import PrefixedTextField from "@/components/inputs/predefinedTextField";
 import Button from "@/components/button";
 import { useRouter } from "expo-router";
 import { setPhoneNumber } from "@/utils/otpStore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Login() {
-  const theme = useTheme();
+const {theme} = useTheme();
   const router = useRouter();
 
   const scheme = useColorScheme(); // detect light/dark
@@ -106,10 +104,13 @@ export default function Login() {
               label="Continue"
               variant="filled"
               onPress={
-                isPhoneValid() ? () => {
-                  setPhoneNumber(phone); // save phone before navigating
-                  router.push("/otp");
-                } : undefined
+                isPhoneValid()
+                  ? async () => {
+                      setPhoneNumber(phone); // in-memory for OTP screen
+                      await AsyncStorage.setItem("phone", phone); // persistent storage
+                      router.push("/otp");
+                    }
+                  : undefined
               }
             />
           </View>

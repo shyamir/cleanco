@@ -68,7 +68,6 @@ export const darkTheme = {
         secondary: colors.gray30,
         tertiary: colors.gray60,
         active: colors.blue30,
-        test: colors.orange40,
       },
     },
 
@@ -111,7 +110,6 @@ export const darkTheme = {
       },
       label: {
         default: colors.gray40,
-        secondary: colors.gray20,
         active: colors.blue20,
       },
     },
@@ -157,7 +155,7 @@ export const darkTheme = {
         default: colors.gray80,
         secondary: colors.gray90,
         active: colors.gray80,
-        error: colors.gray0,
+        error: colors.gray90,
         success: colors.gray0,
       },
       border: {
@@ -195,12 +193,12 @@ export const darkTheme = {
         medium: {
           fontFamily: "Inter-Medium",
           fontSize: units.unit16,
-          lineHeight: units.unit24,
+          lineHeight: units.unit20,
         },
         regular: {
           fontFamily: "Inter-Regular",
           fontSize: units.unit16,
-          lineHeight: units.unit24,
+          lineHeight: units.unit20,
         },
       },
       sm: {

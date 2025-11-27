@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 import Button from "../button";
 
@@ -19,7 +19,7 @@ type HistoryRowProps = {
 };
 
 export default function HistoryRow({ booking }: HistoryRowProps) {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const router = useRouter();
 
   const handleRebook = () => {

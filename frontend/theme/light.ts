@@ -21,7 +21,7 @@ export const lightTheme = {
         tertiary: colors.gray80,
         disabled: colors.gray50,
         error: colors.red70,
-        success: colors.green50,
+        success: colors.green60,
         accent: colors.yellow40,
         active: colors.blue70,
       },
@@ -185,19 +185,18 @@ export const lightTheme = {
           fontFamily: "Inter-Regular",
           fontSize: units.unit18,
           lineHeight: units.unit28,
-          fontWeight: "300",
         },
       },
       md: {
         medium: {
           fontFamily: "Inter-Medium",
           fontSize: units.unit16,
-          lineHeight: units.unit24,
+          lineHeight: units.unit20,
         },
         regular: {
           fontFamily: "Inter-Regular",
           fontSize: units.unit16,
-          lineHeight: units.unit24,
+          lineHeight: units.unit20,
         },
       },
       sm: {

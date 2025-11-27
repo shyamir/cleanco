@@ -8,7 +8,7 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 import Tabs from "@/components/tabs";
 import { TABS_DATA } from "@/constants/tabData";
@@ -23,7 +23,7 @@ import {
 } from "@/utils/date";
 
 export default function Activity() {
-  const theme = useTheme();
+const {theme} = useTheme();
   const router = useRouter();
 
   // All upcoming bookings (for grouping)
@@ -153,8 +153,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   header: {
-    flexDirection: "row",
     justifyContent: "space-between",
+    flexDirection: "row",
+    // paddingTop: 16,
+    gap: 8,
+    height: 48,
+    alignContent: "center",
     alignItems: "center",
   },
   body: { flexDirection: "column", gap: 0 },

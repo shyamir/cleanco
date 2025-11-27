@@ -1,7 +1,7 @@
 // src/components/card/squareFeetCard.tsx
 import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
 import AnimatedSlider from "../animatedSlider";
 
@@ -14,7 +14,7 @@ const SquareFeetCard: React.FC<SquareFeetCardProps> = ({
   initialValue = 100,
   onChange,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const [value, setValue] = useState(initialValue);
 
   const handleChange = (val: number) => {

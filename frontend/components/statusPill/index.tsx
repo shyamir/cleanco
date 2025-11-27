@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type StatusPillProps = {
   status: "upcoming" | "completed" | "cancelled" | "pending";
@@ -42,7 +42,7 @@ const getStatusStyle = (theme: any, status: string) => {
 };
 
 const StatusPill: React.FC<StatusPillProps> = ({ status }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const styles = getStatusStyle(theme, status);
 
   return (

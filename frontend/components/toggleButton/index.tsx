@@ -1,4 +1,4 @@
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import React from "react";
 import {
   TouchableOpacity,
@@ -23,13 +23,13 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({
   onPress,
   style,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <TouchableOpacity
       style={[
         styles.button,
-        style, 
+        style,
         selected
           ? ({
               backgroundColor: theme.colors.toggle.background.active,

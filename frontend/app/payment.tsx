@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useNavigation } from "expo-router";
 import { Icon } from "@/constants/icon";
 import GradientText from "@/components/gradientText";
@@ -19,15 +19,14 @@ import PaymentGroup from "@/components/paymentGroup";
 import { useRouter } from "expo-router";
 
 const Payment = () => {
-  const theme = useTheme();
-    const router = useRouter();
+  const {theme} = useTheme();
+  const router = useRouter();
 
   const navigation = useNavigation();
 
   const { total } = useCleaningBooking();
   const { frequency } = useBooking();
   const [isPaymentValid, setIsPaymentValid] = useState(false);
-
 
   return (
     <SafeAreaProvider>

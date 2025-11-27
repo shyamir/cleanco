@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
@@ -12,7 +12,7 @@ type ActivityCardProps = {
 };
 
 const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   const dayLabel = isTodayOrTomorrow(booking.date, booking.time);
   if (!dayLabel) return null;
@@ -45,7 +45,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
               style={[
                 {
                   ...theme.typography.heading.xs2,
-                  color: theme.colors.card.label.secondary,
+                  color: theme.colors.card.label.default,
                 } as any,
                 styles.text,
               ]}
@@ -57,6 +57,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
             style={styles.image}
             source={bookingImage}
             resizeMode="contain"
+            // style={{ width: 100, height: 100 }} // adjust as needed
           />
         </View>
 
@@ -73,7 +74,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
 
         <View style={styles.imageWrapper}>
           <Image
-            source={require("@/assets/images/activity.png")}
+            source={require("@/assets/images/activity-1.png")}
             resizeMode="contain"
           />
         </View>
@@ -83,7 +84,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
 };
 
 const styles = StyleSheet.create({
-  wrapper: { height: 180 },
+  wrapper: { height: "auto" },
   container: {
     alignItems: "flex-start",
     flexDirection: "column",
@@ -97,8 +98,14 @@ const styles = StyleSheet.create({
   },
   textWrapper: { gap: 8, paddingVertical: 12 },
   text: {},
-  imageWrapper: { zIndex: -10, position: "absolute", top: 0, right: -30, opacity: 0.9 },
-  image: { height: 70 },
+  imageWrapper: {
+    zIndex: -10,
+    position: "absolute",
+    top: 0,
+    right: -120,
+    opacity: 0.9,
+  },
+  image: { width: 100, height: 100 },
 });
 
 export default ActivityCard;

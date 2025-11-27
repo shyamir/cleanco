@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Icon } from "@/constants/icon";
 
 type UploadImageProps = {
@@ -16,7 +16,7 @@ type UploadImageProps = {
 };
 
 const UploadImage: React.FC<UploadImageProps> = ({ onUploadSuccess }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);

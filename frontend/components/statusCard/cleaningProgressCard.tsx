@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import BaseCard from "./base";
 import RatingStars from "../rating";
 import ProgressBar from "../progressBar";
@@ -12,7 +12,7 @@ type CleaningProgressCardProps = {
 const CleaningProgressCard: React.FC<CleaningProgressCardProps> = ({
   status,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const [rating, setRating] = React.useState(0);
 
   const getStatusText = () => {
@@ -94,6 +94,19 @@ const CleaningProgressCard: React.FC<CleaningProgressCardProps> = ({
 
   const { title, subtitle } = getStatusText();
 
+  const getStatusImage = () => {
+    switch (status) {
+      case "todo":
+        return require("@/assets/images/todo.png");
+      case "in-progress":
+        return require("@/assets/images/in-progress.png");
+      case "done":
+        return require("@/assets/images/done.png");
+      default:
+        return require("@/assets/images/todo.png");
+    }
+  };
+
   return (
     <BaseCard colors={theme.colors.card.background.primary}>
       <View style={styles.container}>
@@ -148,8 +161,9 @@ const CleaningProgressCard: React.FC<CleaningProgressCardProps> = ({
             )}
           </View>
           <Image
-            source={require("@/assets/images/trolley.png")}
+            source={getStatusImage()}
             resizeMode="contain"
+            style={{ width: 100, height: 100}} // adjust as needed
           />
         </View>
       </View>
@@ -162,6 +176,7 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: "column",
     justifyContent: "space-between",
+    // backgroundColor: "#ff0000",
   },
   header: {
     marginBottom: 8,

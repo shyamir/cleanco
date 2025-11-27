@@ -1,4 +1,4 @@
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import MaskedView from "@react-native-masked-view/masked-view";
 import React from "react";
 import { Text, TextStyle } from "react-native";
@@ -21,7 +21,7 @@ export default function GradientText({
   start = { x: 0.5, y: 0 },
   end = { x: 0.5, y: 1 },
 }: GradientTextProps) {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   // fallback to heading.lg if no variant is provided
   const textStyle = variant ?? theme.typography.heading.lg;

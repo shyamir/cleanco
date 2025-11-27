@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { TextInput, StyleSheet, View, Text, ViewStyle } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type TextAreaProps = {
   label?: string;
@@ -33,7 +33,7 @@ const TextArea: React.FC<TextAreaProps> = ({
     showCharCount = true,
   variant
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 

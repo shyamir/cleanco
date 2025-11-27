@@ -1,10 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import BaseCard from "./base";
 
 const BookServiceCard = () => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <BaseCard colors={theme.colors.card.background.primary}>
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "space-around",
-    height: "100%",
+    height: 255,
   },
   textWrapper: {
     alignItems: "center",

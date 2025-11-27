@@ -8,7 +8,7 @@ import Animated, {
   SharedValue,
 } from "react-native-reanimated";
 
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type Props = {
   length: number;
@@ -16,7 +16,7 @@ type Props = {
 };
 
 const Pagination: React.FC<Props> = ({ length, x }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const { width: SCREEN_WIDTH } = useWindowDimensions();
 
   const Dot: React.FC<{ index: number }> = ({ index }) => {

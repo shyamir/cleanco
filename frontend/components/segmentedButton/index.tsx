@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type SegmentedButtonProps = {
   tabs: string[];
@@ -13,7 +13,7 @@ const SegmentedButton: React.FC<SegmentedButtonProps> = ({
   activeTab,
   onTabPress,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <View

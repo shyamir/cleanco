@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Icon } from "@/constants/icon";
 import { useRouter } from "expo-router";
 import { Booking } from "@/constants/mockBookings";
@@ -10,7 +10,7 @@ type ActivityRowProps = {
 };
 
 const ActivityRow: React.FC<ActivityRowProps> = ({ booking }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const router = useRouter();
 
   const barColor =

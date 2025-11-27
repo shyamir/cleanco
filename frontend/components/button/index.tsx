@@ -2,17 +2,16 @@ import React from "react";
 import {
   TouchableOpacity,
   Text,
-  StyleSheet,
   ViewStyle,
   TextStyle,
   StyleProp,
   View
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type ButtonProps = {
-  variant: "filled" | "tonal" | "outline";
+  variant: "filled" | "tonal" | "outline" | "text";
   label: string;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
@@ -34,7 +33,7 @@ const Button: React.FC<ButtonProps> = ({
   iconPosition = "left",
   gradientColors,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   const getTextColor = () => {
     if (disabled) return theme.colors.button.label.secondary;
@@ -117,7 +116,7 @@ const Button: React.FC<ButtonProps> = ({
           onPress={onPress}
           activeOpacity={0.8}
           style={{
-            paddingVertical: 12,
+            height: 48,
             paddingHorizontal: 20,
             alignItems: "center",
             justifyContent: "center",

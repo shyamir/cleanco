@@ -1,4 +1,4 @@
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -40,7 +40,7 @@ const pages: Page[] = [
   },
 ];
 export default function Onboarding() {
-  const theme = useTheme();
+  const { theme } = useTheme();
   const x = useSharedValue(0);
   const currentIndex = useSharedValue(0);
   const flatListRef = useAnimatedRef<Animated.FlatList<Page>>();
@@ -77,7 +77,7 @@ export default function Onboarding() {
     >
       <TouchableOpacity
         style={[styles.skipButton]}
-        onPress={() => router.push("/home")}
+        onPress={() => router.push("/login")}
       >
         <Text
           style={[

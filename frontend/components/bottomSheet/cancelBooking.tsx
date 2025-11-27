@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
+
 import Base from "./base";
 import Button from "@/components/button";
 
@@ -17,14 +18,14 @@ const CancelBooking: React.FC<CancelBookingProps> = ({
   onCancelPress,
   onReschedulePress,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <Base
       visible={visible}
       onClose={onClose}
       title="Cancel Booking"
-      backgroundColor={theme.colors.system.background.secondary}
+      backgroundColor={theme.colors.system.background.default}
     >
       <Text
         style={[

@@ -1,4 +1,5 @@
-import { useTheme } from "@/theme/useTheme";
+// import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import React from "react";
 import { View, StyleSheet } from "react-native";
 
@@ -8,7 +9,7 @@ type BaseProps = {
 };
 
 const Base: React.FC<BaseProps> = ({ children, style}) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   return (
     <View

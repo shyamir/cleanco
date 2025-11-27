@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Button from "@/components/button";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type FooterSummaryProps = {
   total?: number;
@@ -24,7 +24,7 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
   onSecondaryPress,
   disabledPrimary = false,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const isOnce = frequency === "Once";
 
   return (

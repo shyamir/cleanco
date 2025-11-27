@@ -1,4 +1,4 @@
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
@@ -19,7 +19,7 @@ const CouponCard: React.FC<CouponCardProps> = ({
   variant = "orange",
   onPress,
 }) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   const gradientColors =
     variant === "blue"
@@ -30,7 +30,7 @@ const CouponCard: React.FC<CouponCardProps> = ({
     variant === "orange"
       ? require("@/assets/images/coupon-orange.png")
       : require("@/assets/images/coupon-blue.png");
-  
+
   return (
     <LinearGradient
       colors={gradientColors}
@@ -65,7 +65,7 @@ const CouponCard: React.FC<CouponCardProps> = ({
           <Button label={buttonText} variant="tonal" onPress={() => {}} />
         </View>
       </View>
-        <Image source={imageSource} style={styles.image} resizeMode="contain" />
+      <Image source={imageSource} style={styles.image} resizeMode="contain" />
     </LinearGradient>
   );
 };

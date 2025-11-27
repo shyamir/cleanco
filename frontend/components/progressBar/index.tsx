@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type CleaningProgressBarProps = {
   status: "todo" | "in-progress" | "done";
@@ -9,7 +9,7 @@ type CleaningProgressBarProps = {
 const CleaningProgressBar: React.FC<CleaningProgressBarProps> = ({
   status,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <View style={styles.progressBar}>

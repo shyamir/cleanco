@@ -10,7 +10,7 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import GradientText from "../components/gradientText";
 import {
   useNavigation,
@@ -26,7 +26,7 @@ import useCleaningBooking from "./hooks/useCleaningBooking";
 import dayjs from "dayjs";
 
 const Review = () => {
-  const theme = useTheme();
+const {theme} = useTheme();
   const router = useRouter();
 
   const navigation = useNavigation();

@@ -31,10 +31,16 @@ import WarningIcon from "@/app/icons/warningIcon";
 import HelpIcon from "@/app/icons/helpIcon";
 import WhatsAppIcon from "@/app/icons/whatsappIcon";
 import CallIcon from "@/app/icons/callIcon";
+import VerifyIcon from "@/app/icons/verifyIcon";
+import ChevronIcon from "@/app/icons/chevronIcon";
+import ListIcon from "@/app/icons/listIcon";
+import BellIcon from "@/app/icons/bellIcon";
+import SunIcon from "@/app/icons/sunIcon";
+import MoonIcon from "@/app/icons/moonIcon";
 
 
 export const Icon = {
-  home: (props: { color: string }) => <HomeIcon color={props.color} />,
+  home: (props: { color?: string }) => <HomeIcon color={props.color} />,
   activity: (props: { color: string }) => <ActivityIcon color={props.color} />,
   profile: (props: { color: string }) => <ProfileIcon color={props.color} />,
   sparkle: (props: { color: string }) => <SparkleIcon color={props.color} />,
@@ -77,4 +83,10 @@ export const Icon = {
   help: (props: { color: string }) => <HelpIcon color={props.color} />,
   whatsapp: (props: { color: string }) => <WhatsAppIcon color={props.color} />,
   call: (props: { color: string }) => <CallIcon color={props.color} />,
+  verify: (props: { color: string }) => <VerifyIcon color={props.color} />,
+  chevron: (props: { color: string }) => <ChevronIcon color={props.color} />,
+  list: (props: { color: string }) => <ListIcon color={props.color} />,
+  bell: (props: { color: string }) => <BellIcon color={props.color} />,
+  sun: (props: { color?: string }) => <SunIcon color={props.color} />,
+  moon: (props: { color?: string }) => <MoonIcon color={props.color} />,
 };

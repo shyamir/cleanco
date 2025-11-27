@@ -12,7 +12,7 @@ import {
 import * as Clipboard from "expo-clipboard";
 import { Icon } from "@/constants/icon";
 import CollapsibleCard from "../card/collapsibleCard";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import TextField from "../inputs/textfield";
 import UploadImage from "../uploadImage";
 
@@ -21,7 +21,7 @@ type PaymentGroupProps = {
 };
 
 const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   const [expandedCard, setExpandedCard] = useState<"bank" | "card">("bank");
 

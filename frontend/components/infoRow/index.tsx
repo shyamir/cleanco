@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type InfoRowProps = {
   icon?: React.ReactNode;
@@ -23,7 +23,7 @@ const InfoRow: React.FC<InfoRowProps> = ({
   labelColor,
   valueColor,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <View style={[styles.row, containerStyle]}>

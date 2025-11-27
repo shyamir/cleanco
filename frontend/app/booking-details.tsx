@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import InfoRow from "@/components/infoRow";
 import { Icon } from "@/constants/icon";
@@ -17,14 +17,16 @@ import StatusPill from "@/components/statusPill";
 import { MOCK_BOOKINGS, Booking } from "@/constants/mockBookings";
 import CustomerSupport from "@/components/bottomSheet/customerSupport";
 import CancelBooking from "@/components/bottomSheet/cancelBooking";
+import RescheduleBooking from "@/components/bottomSheet/rescheduleBooking";
 
 export default function BookingDetails() {
-  const theme = useTheme();
+const {theme} = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams();
 
   const [contactVisible, setContactVisible] = React.useState(false);
   const [cancelVisible, setCancelVisible] = React.useState(false);
+  const [rescheduleVisible, setRescheduleVisible] = React.useState(false);
 
   // Get the booking from MOCK_BOOKINGS using the id from params
   const booking: Booking | undefined = id
@@ -154,7 +156,11 @@ export default function BookingDetails() {
               label="Cancel"
               onPress={() => setCancelVisible(true)}
             />
-            <Button variant="outline" label="Reschedule" />
+            <Button
+              variant="outline"
+              label="Reschedule"
+              onPress={() => setRescheduleVisible(true)}
+            />
           </View>
         </View>
       ) : (
@@ -192,11 +198,28 @@ export default function BookingDetails() {
         onClose={() => setCancelVisible(false)}
         onCancelPress={() => {
           setCancelVisible(false);
-          Alert.alert("Booking Cancelled", "Your booking has been cancelled.");
+          Alert.alert(
+            "Booking Cancelled",
+            "Your booking has been cancelled successfully."
+          );
         }}
         onReschedulePress={() => {
           setCancelVisible(false);
-        //   router.push(`/reschedule/${id}`);
+          setRescheduleVisible(true);
+        }}
+      />
+      <RescheduleBooking
+        visible={rescheduleVisible}
+        onClose={() => setRescheduleVisible(false)}
+        onConfirmPress={() => {
+          setRescheduleVisible(false);
+          Alert.alert(
+            "Booking Rescheduled",
+            "Your booking has been rescheduled successfully."
+          );
+        }}
+        onCancelPress={() => {
+          setRescheduleVisible(false);
         }}
       />
     </SafeAreaProvider>

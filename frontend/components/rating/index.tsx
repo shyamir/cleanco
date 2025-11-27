@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Pressable, StyleSheet } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Icon } from "@/constants/icon";
 import StarFilledIcon from "@/app/icons/starFilledIcon";
 
@@ -17,7 +17,7 @@ const RatingStars: React.FC<RatingStarsProps> = ({
   max = 5,
   size = 36,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <View style={styles.container}>

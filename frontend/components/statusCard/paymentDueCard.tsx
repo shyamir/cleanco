@@ -1,13 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
-import GradientText from "../gradientText";
 
 const PaymentDueCard = () => {
-  const theme = useTheme();
+  const {theme} = useTheme();
 
   return (
     <BaseCard colors={theme.colors.card.background.primary}>
@@ -36,12 +35,6 @@ const PaymentDueCard = () => {
           >
             2 days
           </Text>
-
-          {/* <GradientText
-            text="2 days"
-            colors={theme.colors.system.heading.secondary}
-            variant={theme.typography.heading.xs3}
-          /> */}
         </View>
 
         <View style={styles.body}>

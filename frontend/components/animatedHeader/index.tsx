@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Icon } from "@/constants/icon";
 
 const BACK_BUTTON_SIZE = 48;
@@ -37,7 +37,7 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
   style,
   textStyle,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const navigation = useNavigation();
 
   // Font size and line height animation
@@ -124,8 +124,16 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
       {animatedImage && (
         <Animated.Image
           source={animatedImage}
-          style={[styles.headerImage, { opacity: newImageOpacity }]}
+          style={[
+            styles.headerImage,
+            {
+              opacity: newImageOpacity,
+              width: 100,
+              height: 100,
+            },
+          ]}
           resizeMode="contain"
+          // style={{ width: 100, height: 100 }} // adjust as needed
         />
       )}
     </View>

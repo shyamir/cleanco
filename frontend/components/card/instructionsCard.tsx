@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Href, useRouter } from "expo-router";
 import BaseCard from "./base"; // adjust the path if needed
 import TextArea from "../inputs/textArea";
@@ -13,7 +13,7 @@ type InstructionsCardProps = {
 };
 
 const InstructionsCard: React.FC<InstructionsCardProps> = ({ title, value, onChangeText }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const router = useRouter();
 
   return (

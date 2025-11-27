@@ -1,7 +1,7 @@
 import React from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
 import { useRouter } from "expo-router";
 
@@ -16,7 +16,7 @@ const AddressCard: React.FC<AddressCardProps> = ({
   address,
   onPress,
 }) => {
-  const theme = useTheme();
+  const {theme} = useTheme();
   const router = useRouter();
 
   return (

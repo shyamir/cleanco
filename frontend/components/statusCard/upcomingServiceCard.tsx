@@ -1,13 +1,30 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
 import GradientText from "../gradientText";
 
-const UpcomingServiceCard = () => {
-  const theme = useTheme();
+type UpcomingServiceCardProps = {
+  serviceType: "home" | "office";
+};
+
+const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
+  serviceType,
+}) => {
+  const {theme} = useTheme();
+
+  const getServiceImage = () => {
+    switch (serviceType) {
+      case "home":
+        return require("@/assets/images/home-cleaning.png");
+      case "office":
+        return require("@/assets/images/office-cleaning.png");
+      default:
+        return require("@/assets/images/home-cleaning.png");
+    }
+  };
 
   return (
     <BaseCard colors={theme.colors.card.background.primary}>
@@ -48,10 +65,10 @@ const UpcomingServiceCard = () => {
               Tomorrow
             </Text>
           </View>
-          {/* change image */}
           <Image
-            source={require("@/assets/images/home-cleaning.png")}
+            source={getServiceImage()}
             resizeMode="contain"
+            style={{ width: 100, height: 100,}} // optional
           />
         </View>
         <View style={styles.footer}>
@@ -78,7 +95,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
     flexDirection: "column",
-    gap: 16,
+    // gap: 16,
   },
   header: {},
   footer: {
@@ -90,6 +107,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     width: "100%",
+    // backgroundColor: "#ff0000"
   },
   textWrapper: {
     flexDirection: "column",
