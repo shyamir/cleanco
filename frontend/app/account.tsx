@@ -110,9 +110,15 @@ export default function Home() {
               </Text>
               <View style={styles.cardContainer}>
                 <AccountRow
-                  icon={<Icon.sun color={theme.colors.system.body.default} />}
+                  icon={
+                    mode === "dark" ? (
+                      <Icon.moon color={theme.colors.system.body.default} />
+                    ) : (
+                      <Icon.sun color={theme.colors.system.body.default} />
+                    )
+                  }
                   title="Appearance"
-                  subtitle="Light mode"
+                  subtitle={mode === "dark" ? "Dark mode" : "Light mode"}
                   onPress={() => setAppearanceVisible(true)}
                 />
                 <AccountRow
