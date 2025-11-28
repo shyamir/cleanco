@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { View, StyleSheet } from "react-native";
 import Base from "./base";
 import ToggleButton from "@/components/toggleButton";
 import Button from "@/components/button";
-import { useTheme } from "@/theme/useTheme";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Icon } from "@/constants/icon";
 
 type AppearanceProps = {
@@ -11,6 +11,7 @@ type AppearanceProps = {
   onClose: () => void;
   onSave: (mode: "light" | "dark") => void;
   currentTheme: "light" | "dark";
+  initialValue?: boolean;
 };
 
 const Appearance: React.FC<AppearanceProps> = ({
@@ -18,8 +19,12 @@ const Appearance: React.FC<AppearanceProps> = ({
   onClose,
   onSave,
   currentTheme,
+  initialValue = false,
 }) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
+  const [enabled, setEnabled] = useState(initialValue);
+  const initialRef = useRef(initialValue);
+  const isDisabled = enabled === initialRef.current; // 🔥 Save button disabled until change
 
   // Set the selected option based on current theme
   const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">(
@@ -27,6 +32,15 @@ const Appearance: React.FC<AppearanceProps> = ({
   );
 
   const isChanged = selectedTheme !== currentTheme;
+
+  //   const handleSave = () => {
+  //     if (!isDisabled) {
+  //     //   onSave(enabled);
+  //       onClose();
+  //       if (isChanged) onSave(selectedTheme); // Trigger theme update
+  //       onClose(); // Close bottom sheet
+  //     }
+  //   };
 
   return (
     <Base
@@ -53,14 +67,18 @@ const Appearance: React.FC<AppearanceProps> = ({
       </View>
 
       <View style={styles.buttonContainer}>
-        <Button
-          label="Save"
-          variant="filled"
-          onPress={() => {
-            if (isChanged) onSave(selectedTheme); // Trigger theme update
-            onClose(); // Close bottom sheet
-          }}
-        />
+        <View style={{ opacity: isChanged ? 1 : 0.5 }}>
+          <Button
+            label="Save"
+            variant="filled"
+            onPress={() => {
+              if (isChanged) {
+                onSave(selectedTheme);
+                onClose();
+              }
+            }}
+          />
+        </View>
 
         <Button label="Cancel" variant="outline" onPress={onClose} />
       </View>

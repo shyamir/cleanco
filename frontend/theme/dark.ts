@@ -77,16 +77,16 @@ export const darkTheme = {
         primary: [colors.blue60, colors.blue40],
         secondary: colors.gray0,
         tertiary: colors.gray40,
-        error: colors.red70,
+        error: colors.red60,
       },
       border: {
         default: colors.gray30,
-        error: colors.red70,
+        error: colors.red50,
       },
       label: {
         default: colors.gray0,
         secondary: colors.blue30,
-        error: colors.red70,
+        error: colors.red50,
       },
     },
 

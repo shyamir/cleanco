@@ -1,5 +1,5 @@
 // src/components/bottomSheet/NotificationBottomSheet.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { View, StyleSheet, Text, Switch } from "react-native";
 import Base from "./base";
 import Button from "@/components/button";
@@ -20,10 +20,15 @@ const Notification: React.FC<NotificationProps> = ({
 }) => {
   const {theme} = useTheme();
   const [enabled, setEnabled] = useState(initialValue);
+  const initialRef = useRef(initialValue);
+
+  const isDisabled = enabled === initialRef.current; // 🔥 Save button disabled until change
 
   const handleSave = () => {
-    onSave(enabled);
-    onClose();
+    if (!isDisabled) {
+      onSave(enabled);
+      onClose();
+    }
   };
 
   return (
@@ -55,7 +60,15 @@ const Notification: React.FC<NotificationProps> = ({
       </View>
 
       <View style={styles.buttonContainer}>
-        <Button label="Save" variant="filled" onPress={handleSave} />
+        <View style={{ opacity: isDisabled ? 0.5 : 1 }}>
+          <Button
+            label="Save"
+            variant="filled"
+            onPress={handleSave}
+            // disabled={isDisabled} // prevents interaction
+          />
+        </View>
+
         <Button label="Cancel" variant="outline" onPress={onClose} />
       </View>
     </Base>

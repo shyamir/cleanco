@@ -21,8 +21,6 @@ export default function Home() {
   const [signOutVisible, setSignOutVisible] = useState(false); // 👈
   const [notificationVisible, setNotificationVisible] = useState(false);
 
-  // const theme = useTheme();
-
   // State to control bottom sheet visibility
   const [appearanceVisible, setAppearanceVisible] = useState(false);
 
@@ -89,7 +87,7 @@ export default function Home() {
                 icon={<Icon.list color={theme.colors.system.body.default} />}
                 title="Manage Subscriptions"
                 subtitle="View or cancel subscriptions"
-                onPress={() => router.push("/home")}
+                onPress={() => router.push("/subscription")}
               />
               <AccountRow
                 icon={<Icon.help color={theme.colors.system.body.default} />}
@@ -160,19 +158,6 @@ export default function Home() {
         }}
         onCancelPress={() => setSignOutVisible(false)}
       />
-
-      {/* <Appearance
-        visible={appearanceVisible}
-        onClose={() => setAppearanceVisible(false)}
-        currentTheme={scheme}
-        onSave={(mode) => setScheme(mode)}
-      /> */}
-      {/* <Appearance
-        visible={appearanceVisible}
-        onClose={() => setAppearanceVisible(false)}
-        currentTheme={appTheme}
-        onSave={(mode) => setAppTheme(mode)}
-      /> */}
       <Appearance
         visible={appearanceVisible}
         onClose={() => setAppearanceVisible(false)}

@@ -1,4 +1,3 @@
-// import { useTheme } from "@/theme/useTheme";
 import { useTheme } from "@/theme/ThemeProvider";
 import React from "react";
 import { View, StyleSheet } from "react-native";
