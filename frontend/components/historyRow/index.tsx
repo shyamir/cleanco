@@ -19,29 +19,26 @@ type HistoryRowProps = {
 };
 
 export default function HistoryRow({ booking }: HistoryRowProps) {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
 
   const handleRebook = () => {
     // router.push(`/booking-details/${booking.id}`);
   };
-    
+
   const handlePress = () => {
     router.push(`/booking-details?id=${booking.id}`);
   };
 
   const bookingImage =
     booking.type === "home cleaning"
-      ? require("@/assets/images/sofa.png")
-      : require("@/assets/images/table.png");
+      ? require("@/assets/images/home-cleaning.png")
+      : require("@/assets/images/office-cleaning.png");
 
   const isCancelled = booking.status === "cancelled";
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
       <View
         style={[
           styles.container,
@@ -54,11 +51,15 @@ export default function HistoryRow({ booking }: HistoryRowProps) {
         <View style={styles.leftSection}>
           <View
             style={[
-              styles.image,
+              styles.imageCtn,
               { backgroundColor: theme.colors.system.background.secondary },
             ]}
           >
-            <Image source={bookingImage} resizeMode="contain" />
+            <Image
+              source={bookingImage}
+              resizeMode="contain"
+              style={styles.image}
+            />
           </View>
 
           <View style={{ gap: 2 }}>
@@ -140,13 +141,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 16,
   },
-  image: {
+  imageCtn: {
     width: 65,
     height: 65,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
   },
+  image: { width: 50, height: 50 },
   title: {
     width: "50%",
   },
