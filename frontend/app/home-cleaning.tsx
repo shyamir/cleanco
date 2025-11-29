@@ -88,8 +88,13 @@ const {theme} = useTheme();
                   {/* Address */}
                   <AddressCard
                     title="Address"
-                    address={selected?.label || ""}
-                    onPress={() => router.push("/address-search")}
+                    address={selected?.label || "No address selected"}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/address-search",
+                        params: { returnTo: "home-cleaning" },
+                      })
+                    }
                   />
 
                   {/* Bedrooms/Bathrooms */}
@@ -161,7 +166,10 @@ const {theme} = useTheme();
                 ? () => router.push("/home")
                 : () => setStep("selection")
             }
-            disabledPrimary={step === "schedule" && !isSelectionValid()}
+            disabledPrimary={
+              (step === "selection" && !selected?.label) || // ⛔ disable when no address
+              (step === "schedule" && !isSelectionValid()) // ⛔ disable on schedule step
+            }
           />
         </SafeAreaView>
       </LinearGradient>

@@ -27,7 +27,7 @@ type OtpInputsProps = {
 };
 
 export default function Otp() {
-const {theme} = useTheme();
+const { theme, mode } = useTheme();
   const router = useRouter();
   const scheme = useColorScheme();
   // const phone = getPhoneNumber();
@@ -54,7 +54,7 @@ const {theme} = useTheme();
       >
         <Image
           source={
-            scheme === "dark"
+            mode === "dark"
               ? require("@/assets/images/dark-logo.png")
               : require("@/assets/images/light-logo.png")
           }

@@ -17,8 +17,7 @@ import PrefixedTextField from "@/components/inputs/predefinedTextField";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Verification() {
-  const {theme} = useTheme();
-  const scheme = useColorScheme();
+  const {theme, mode} = useTheme();
   const router = useRouter();
   const [mobileNumber, setMobileNumber] = useState("");
 

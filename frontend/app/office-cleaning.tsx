@@ -89,8 +89,13 @@ const OfficeCleaningScreen = () => {
                   {/* Address */}
                   <AddressCard
                     title="Address"
-                    address={selected?.label || ""}
-                    onPress={() => router.push("/address-search")}
+                    address={selected?.label || "No address selected"}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/address-search",
+                        params: { returnTo: "office-cleaning" },
+                      })
+                    }
                   />
 
                   {/* Bedrooms/Bathrooms */}

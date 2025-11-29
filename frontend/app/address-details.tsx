@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -11,19 +11,14 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/constants/icon";
 import { useTheme } from "@/theme/ThemeProvider";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import Button from "@/components/button";
 import TextField from "@/components/inputs/textfield";
 import BottomSheetDropdown from "@/components/bottomSheet/dropdown";
 import { useAddress } from "@/context/address-context";
-import ToggleGroup from "@/components/toggleButton/toggleGroup";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import Geocoder from "react-native-geocoding"; // optional, if you want to get coordinates from address
-import lightMapStyle from "@/constants/lightMap.json";
-import darkMapStyle from "@/constants/darkMap.json";
 
-const SaveAddress = () => {
-  const { theme, mode } = useTheme();
+const AddressDetails = () => {
+  const { theme } = useTheme();
   const router = useRouter();
   const { selected, setSelected } = useAddress();
 
@@ -34,19 +29,6 @@ const SaveAddress = () => {
   const [floor, setFloor] = useState("");
   const [room, setRoom] = useState("");
   const [label, setLabel] = useState("");
-
-  const [coords, setCoords] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-
-  const { source, returnTo } = useLocalSearchParams<{
-    source?: string;
-    returnTo?: string;
-  }>();
-
-  Geocoder.init("AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg"); // same API key you used for Places
-  const isDark = mode === "dark";
 
   // --- Generate dynamic fields ---
   const renderFields = () => {
@@ -157,40 +139,16 @@ const SaveAddress = () => {
         return null;
     }
   };
+
+  // SaveAddress.tsx -> handleSave
   const handleSave = () => {
-    // Save the selected address
     setSelected({
-      label: label || selected.label,
-      address: selected.address,
+      label: label || selected.label, // keep existing label if not changed
+      address: selected.address, // use the address from AddressSearch
     });
 
-    // Navigate based on source
-    if (source === "address-search") {
-      if (returnTo === "home-cleaning") {
-        router.replace("/home-cleaning");
-      } else if (returnTo === "office-cleaning") {
-        router.replace("/office-cleaning");
-      } else {
-        router.back(); // fallback
-      }
-    } else if (source === "add-home" || source === "add-work") {
-      router.replace("/account");
-    } else {
-      router.back(); // fallback
-    }
+    router.replace("/account");
   };
-
-  useEffect(() => {
-    if (selected.address) {
-      Geocoder.from(selected.address)
-        .then((json) => {
-          const location = json.results[0].geometry.location;
-          console.log("Geocoded location:", location); // debug
-          setCoords({ latitude: location.lat, longitude: location.lng });
-        })
-        .catch((error) => console.log("Geocoding error:", error));
-    }
-  }, [selected.address]);
 
   return (
     <SafeAreaProvider>
@@ -211,66 +169,16 @@ const SaveAddress = () => {
               <TouchableOpacity onPress={() => router.back()}>
                 <Icon.back color={theme.colors.system.body.default} />
               </TouchableOpacity>
-
-              <TouchableOpacity
-                // style={[styles.skipButton]}
-                onPress={() => {
-                  // Navigate based on the source / returnTo
-                  if (source === "address-search") {
-                    if (returnTo === "home-cleaning") {
-                      router.replace("/home-cleaning");
-                    } else if (returnTo === "office-cleaning") {
-                      router.replace("/office-cleaning");
-                    } else {
-                      router.back();
-                    }
-                  } else if (source === "add-home" || source === "add-work") {
-                    router.replace("/account");
-                  } else {
-                    router.back();
-                  }
-                }}
-              >
-                <Text
-                  style={[
-                    // styles.skipText,
-                    {
-                      ...theme.typography.body.md.medium,
-                      color: theme.colors.button.label.secondary,
-                    },
-                  ]}
-                >
-                  Skip
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Body */}
             <View style={styles.body}>
               <View style={styles.address}>
-                <View
-                  style={{ height: 200, borderRadius: 12, overflow: "hidden" }}
-                >
-                  {coords && (
-                    <MapView
-                      provider={PROVIDER_GOOGLE}
-                      style={{ flex: 1 }}
-                      initialRegion={{
-                        latitude: coords.latitude,
-                        longitude: coords.longitude,
-                        latitudeDelta: 0.005,
-                        longitudeDelta: 0.005,
-                      }}
-                      customMapStyle={isDark ? darkMapStyle : lightMapStyle}
-                    >
-                      <Marker
-                        coordinate={coords}
-                        pinColor={theme.colors.system.body.active}
-                      />
-                    </MapView>
-                  )}
-                </View>
-
+                {/* change to map */}
+                <Image
+                  source={require("@/assets/images/map.png")}
+                  resizeMode="contain"
+                />
                 <Text
                   style={[
                     theme.typography.body.md.regular,
@@ -305,46 +213,6 @@ const SaveAddress = () => {
               />
 
               {renderFields()}
-
-              {source === "address-search" && (
-                <View
-                  style={[
-                    styles.labelGroup,
-                    {
-                      borderColor: theme.colors.system.border.default,
-                      backgroundColor: theme.colors.system.background.default,
-                    },
-                  ]}
-                >
-                  <ToggleGroup
-                    options={["Home", "Work", "Other"]}
-                    initialValue="Home"
-                    onChange={(value) => setLabel(value)}
-                    optionIcons={{
-                      Home: (
-                        <Icon.home color={theme.colors.system.body.default} />
-                      ),
-                      Work: (
-                        <Icon.briefcase
-                          color={theme.colors.system.body.default}
-                        />
-                      ),
-                      Other: (
-                        <Icon.pin color={theme.colors.system.body.default} />
-                      ),
-                    }}
-                  />
-
-                  {label === "Other" && (
-                    <TextField
-                      label="Address label"
-                      placeholder="e.g. Mom’s Place"
-                      value={buildingName}
-                      onChangeText={setBuildingName}
-                    />
-                  )}
-                </View>
-              )}
             </View>
           </View>
         </ScrollView>
@@ -356,11 +224,7 @@ const SaveAddress = () => {
             { backgroundColor: theme.colors.system.background.secondary },
           ]}
         >
-          <Button
-            label={source === "search" ? "Save and Continue" : "Save"}
-            variant="filled"
-            onPress={handleSave}
-          />
+          <Button label="Save" variant="filled" onPress={handleSave} />
         </View>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -395,11 +259,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 12,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+  header: { flexDirection: "row", alignItems: "center" },
   footer: {
     position: "absolute",
     bottom: 0,
@@ -416,4 +276,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SaveAddress;
+export default AddressDetails;

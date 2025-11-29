@@ -17,79 +17,68 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 import SegmentedButton from "@/components/segmentedButton";
 import SearchBar from "@/components/searchBar";
-import { useFocusEffect } from "@react-navigation/native";
-import { InteractionManager } from "react-native";
-import Button from "@/components/button";
+import axios from "axios";
 import { useAddress } from "@/context/address-context";
 
+// Replace this with your actual API key or import from env
+const GOOGLE_MAPS_API_KEY = "AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg";
+
 const AddressSearch = () => {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
   const { selected, setSelected } = useAddress();
 
   const [activeTab, setActiveTab] = useState("New");
   const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const searchInputRef = useRef<TextInput>(null);
   const translateY = useRef(new Animated.Value(0)).current;
-
-  // Hardcoded address data
-  const hardcodedData = [
-    {
-      main_text: "Hiyaa Tower H11",
-      secondary_text: "Nirolhu Magu, Male, Maldives",
-    },
-    {
-      main_text: "Hiyaa Tower H3",
-      secondary_text: "Hulhumale Phase 2, Maldives",
-    },
-    { main_text: "Hiyaa Tower H6", secondary_text: "Maldives" },
-    {
-      main_text: "Hiyaa Tower H15",
-      secondary_text: "Hitihgas Magu, Male, Maldives",
-    },
-    {
-      main_text: "Hiyaa Tower H4",
-      secondary_text: "Hulhumale Phase 2, Nirolhu Magu, Male, Maldives",
-    },
-  ];
-
-  const savedAddresses = [
-    { id: "home", label: "Home", address: "Hiyaa Tower H15", icon: Icon.home },
-    {
-      id: "work",
-      label: "Work",
-      address: "Hiyaa Tower H13",
-      icon: Icon.briefcase,
-    },
-    {
-      id: "commercial",
-      label: "Commercial",
-      address: "Hiyaa Tower H14",
-      icon: Icon.pin,
-    },
-  ];
-
-  // Filter suggestions
-  const filteredSuggestions = hardcodedData.filter((item) =>
-    item.main_text.toLowerCase().includes(query.toLowerCase())
-  );
+  const savedAddresses: any[] = [];
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (activeTab === "New") searchInputRef.current?.focus();
-    }, 200);
+      searchInputRef.current?.focus();
+    }, 100); // small delay ensures the component is mounted
+
     return () => clearTimeout(timeout);
-  }, [activeTab]);
+  }, []);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const task = InteractionManager.runAfterInteractions(() => {
-        if (activeTab === "New") searchInputRef.current?.focus();
-      });
-      return () => task.cancel?.();
-    }, [activeTab])
-  );
+  // Fetch Google Places suggestions
+  useEffect(() => {
+    if (!query) {
+      setSuggestions([]);
+      return;
+    }
 
+    const delayDebounce = setTimeout(async () => {
+      try {
+        console.log("Query:", query); // ✅ log the query as user types
+
+        const res = await axios.get(
+          `https://maps.googleapis.com/maps/api/place/autocomplete/json`,
+          {
+            params: {
+              input: query,
+              key: GOOGLE_MAPS_API_KEY,
+              // types: "address",
+              components: "country:mv", // Maldives only
+            },
+          }
+        );
+
+        if (res.data?.predictions) {
+          setSuggestions(res.data.predictions);
+          console.log("Suggestions:", res.data.predictions); // ✅ log results
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [query]);
+
+  // Keyboard animation
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardWillShow", (e) => {
       Animated.timing(translateY, {
@@ -99,10 +88,10 @@ const AddressSearch = () => {
       }).start();
     });
 
-    const hideSub = Keyboard.addListener("keyboardWillHide", (e) => {
+    const hideSub = Keyboard.addListener("keyboardWillHide", () => {
       Animated.timing(translateY, {
         toValue: 0,
-        duration: e.duration || 250,
+        duration: 250,
         useNativeDriver: true,
       }).start();
     });
@@ -115,18 +104,29 @@ const AddressSearch = () => {
 
   const handleSelectAddress = (label: string, address: string) => {
     setSelected({ label, address });
-    router.back(); // Go back to HomeCleaningScreen
+    router.back(); // return to previous screen
   };
 
   const renderNewItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.suggestionItem}
       onPress={() => {
-        setSelected({
-          label: item.main_text,
-          address: item.secondary_text,
+        // Extract main_text and secondary_text
+        const label = item.structured_formatting?.main_text || item.description;
+        const address =
+          item.structured_formatting?.secondary_text || item.description;
+
+        // Save in context
+        setSelected({ label, address });
+
+        // Navigate to SaveAddress screen with params
+        router.push({
+          pathname: "/save-address",
+          params: {
+            source: "address-search",
+            returnTo: "home-cleaning", // or whatever logic you need
+          },
         });
-        router.push("/save-address");
       }}
     >
       <Text
@@ -135,7 +135,7 @@ const AddressSearch = () => {
           { color: theme.colors.system.body.default },
         ]}
       >
-        {item.main_text}
+        {item.structured_formatting?.main_text || item.description}
       </Text>
       <Text
         style={[
@@ -143,7 +143,7 @@ const AddressSearch = () => {
           { color: theme.colors.system.body.disabled },
         ]}
       >
-        {item.secondary_text}
+        {item.structured_formatting?.secondary_text || ""}
       </Text>
     </TouchableOpacity>
   );
@@ -181,6 +181,24 @@ const AddressSearch = () => {
     </TouchableOpacity>
   );
 
+  const handleSetLocationOnMap = () => {
+    // Use the current query as label/address
+    const label = query || "Selected location";
+    const address = query || "";
+
+    // Save in context (optional, you can also handle this in SaveAddress)
+    setSelected({ label, address });
+
+    // Navigate to SaveAddress screen
+    router.push({
+      pathname: "/save-address",
+      params: {
+        source: "address-search",
+        returnTo: "home-cleaning", // adjust based on your flow
+      },
+    });
+  };
+
   return (
     <SafeAreaProvider>
       <KeyboardAvoidingView
@@ -210,7 +228,7 @@ const AddressSearch = () => {
           {/* New Tab */}
           {activeTab === "New" && (
             <>
-              <Animated.View>
+              <Animated.View style={{ transform: [{ translateY }] }}>
                 <SearchBar
                   ref={searchInputRef}
                   value={query}
@@ -220,12 +238,15 @@ const AddressSearch = () => {
               </Animated.View>
 
               <FlatList
-                data={filteredSuggestions}
+                data={suggestions}
                 keyExtractor={(item, index) => index.toString()}
                 renderItem={renderNewItem}
                 keyboardShouldPersistTaps="handled"
                 ListFooterComponent={
-                  <TouchableOpacity style={styles.setLocationBtn}>
+                  <TouchableOpacity
+                    style={styles.setLocationBtn}
+                    onPress={() => router.push("/set-location")}
+                  >
                     <Icon.pin color={theme.colors.system.body.default} />
                     <Text
                       style={[
@@ -243,14 +264,26 @@ const AddressSearch = () => {
 
           {/* Saved Tab */}
           {activeTab === "Saved" && (
-            <>
-              <FlatList
-                data={savedAddresses}
-                keyExtractor={(item) => item.id}
-                renderItem={renderSavedItem}
-                contentContainerStyle={{ paddingTop: 8 }}
-              />
-            </>
+            <FlatList
+              data={savedAddresses}
+              keyExtractor={(item) => item.id}
+              renderItem={renderSavedItem}
+              contentContainerStyle={{ paddingTop: 8 }}
+              ListEmptyComponent={
+                <Text
+                  style={[
+                    theme.typography.body.md.regular,
+                    {
+                      color: theme.colors.system.body.disabled,
+                      textAlign: "center",
+                      marginTop: 32,
+                    },
+                  ]}
+                >
+                  No saved addresses
+                </Text>
+              }
+            />
           )}
         </SafeAreaView>
       </KeyboardAvoidingView>

@@ -13,6 +13,9 @@
       "bundleIdentifier": "com.shyamir.cleanco",
       "infoPlist": {
         "LSApplicationQueriesSchemes": ["whatsapp"]
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg"
       }
     },
     "android": {
@@ -24,7 +27,12 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.shyamir.cleanco"
+      "package": "com.shyamir.cleanco",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg"
+        }
+      }
     },
     "web": {
       "output": "static",

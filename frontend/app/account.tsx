@@ -65,7 +65,7 @@ export default function Home() {
                 icon={<Icon.home color={theme.colors.system.body.default} />}
                 title="Home"
                 subtitle="Hiyaa Tower H12"
-                onPress={() => router.push("/home")}
+                onPress={() => router.push("/add-home")}
               />
               <AccountRow
                 icon={
@@ -73,7 +73,7 @@ export default function Home() {
                 }
                 title="Work"
                 subtitle="Hiyaa Tower H12"
-                onPress={() => router.push("/home")}
+                onPress={() => router.push("/add-work")}
               />
               <AccountRow
                 icon={

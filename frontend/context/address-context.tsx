@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 type Address = {
+  longitude?: number;
+  latitude?: number;
   label: string;
   address: string;
 };
@@ -15,8 +17,8 @@ const AddressContext = createContext<AddressContextType | null>(null);
 
 export const AddressProvider = ({ children }: { children: ReactNode }) => {
   const [selected, setSelected] = useState<Address>({
-    label: "Home",
-    address: "Hiyaa Tower H12",
+    label: "",
+    address: "",
   });
 
   return (

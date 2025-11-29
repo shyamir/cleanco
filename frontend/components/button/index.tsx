@@ -12,7 +12,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 
 type ButtonProps = {
   variant: "filled" | "tonal" | "outline" | "text";
-  label: string;
+  label?: string;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;

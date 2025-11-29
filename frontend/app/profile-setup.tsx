@@ -26,7 +26,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import TextField from "@/components/inputs/textfield";
 
 export default function ProfileSetup() {
-const {theme} = useTheme();
+const {theme, mode} = useTheme();
   const router = useRouter();
 
   const scheme = useColorScheme(); // detect light/dark
@@ -77,7 +77,7 @@ const {theme} = useTheme();
       >
         <Image
           source={
-            scheme === "dark"
+            mode === "dark"
               ? require("@/assets/images/dark-logo.png")
               : require("@/assets/images/light-logo.png")
           }
