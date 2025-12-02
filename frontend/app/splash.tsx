@@ -2,6 +2,8 @@ import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authService } from "@/services/auth";
 
 const videoSource = "../assets/videos/splash.mp4";
 
@@ -13,6 +15,27 @@ export default function Splash() {
     player.play();
   });
 
+  const handleNavigation = async () => {
+    const hasLaunched = await AsyncStorage.getItem("hasLaunched");
+
+    if (hasLaunched === null) {
+      // First time - show onboarding
+      router.replace("/onboarding");
+    } else {
+      // Not first launch - check auth status
+      const isAuthenticated = await authService.isAuthenticated();
+      if (isAuthenticated) {
+        const user = await authService.getUser();
+        if (user?.firstName) {
+          router.replace("/home");
+        } else {
+          router.replace("/profile-setup");
+        }
+      } else {
+        router.replace("/login");
+      }
+    }
+  };
 
   useEffect(() => {
     if (!player) return;
@@ -26,7 +49,7 @@ export default function Splash() {
 
         // Navigate after actual video duration
         setTimeout(() => {
-          router.replace("/onboarding");
+          handleNavigation();
         }, duration * 1000); // duration is in seconds
       }
     }, 100);

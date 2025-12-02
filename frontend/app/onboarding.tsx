@@ -2,6 +2,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Animated, {
   useAnimatedRef,
   useAnimatedScrollHandler,
@@ -77,7 +78,10 @@ export default function Onboarding() {
     >
       <TouchableOpacity
         style={[styles.skipButton]}
-        onPress={() => router.push("/login")}
+        onPress={async () => {
+          await AsyncStorage.setItem("hasLaunched", "true");
+          router.replace("/login");
+        }}
       >
         <Text
           style={[

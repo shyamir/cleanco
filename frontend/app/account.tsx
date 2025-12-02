@@ -3,6 +3,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 
 import React, { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { authService } from "@/services/auth";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import Tabs from "@/components/tabs";
 import AccountCard from "@/components/statusCard/accountCard";
@@ -158,9 +159,10 @@ export default function Home() {
       <SignOut
         visible={signOutVisible}
         onClose={() => setSignOutVisible(false)}
-        onSignOutPress={() => {
+        onSignOutPress={async () => {
           setSignOutVisible(false);
-          router.replace("/");
+          await authService.logout();
+          router.replace("/login");
         }}
         onCancelPress={() => setSignOutVisible(false)}
       />

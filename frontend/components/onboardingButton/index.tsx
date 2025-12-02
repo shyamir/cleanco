@@ -1,8 +1,9 @@
 import { useTheme } from "@/theme/ThemeProvider";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Animated, {
   useAnimatedStyle,
@@ -34,10 +35,10 @@ const OnboardingButton: React.FC<Props> = ({
     opacity: currentIndex.value === length - 1 ? withTiming(1) : withTiming(0),
   }));
 
-  const onPress = useCallback(() => {
+  const onPress = useCallback(async () => {
     if (currentIndex.value === length - 1) {
-      console.log("Get Started pressed");
-      router.push("/login");
+      await AsyncStorage.setItem("hasLaunched", "true");
+      router.replace("/login");
     } else {
       flatListRef.current?.scrollToIndex({
         index: currentIndex.value + 1,

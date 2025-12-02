@@ -11,8 +11,9 @@ export default function Index() {
   });
 
   if (!fontsLoaded) {
-    return null; // or <AppLoading /> if you prefer
+    return null;
   }
 
-  return <Splash />; // render splash UI
+  // Always show splash - it will handle navigation after video ends
+  return <Splash />;
 }
