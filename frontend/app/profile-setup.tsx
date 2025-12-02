@@ -125,7 +125,11 @@ export default function ProfileSetup() {
               label="Full Name"
               placeholder="Enter your full name"
               value={fullName}
-              onChangeText={setFullName}
+              onChangeText={(text) => {
+                // Allow only letters and spaces
+                const cleaned = text.replace(/[^a-zA-Z\s]/g, "");
+                setFullName(cleaned);
+              }}
               required
               autoFocus
               onSubmitEditing={() => emailRef.current?.focus()}
@@ -153,8 +157,8 @@ export default function ProfileSetup() {
                 // convert to lowercase
                 let cleaned = text.toLowerCase();
 
-                // allow only letters, @, and .
-                cleaned = cleaned.replace(/[^a-z@.]/g, "");
+                // allow only letters, numbers, @, and .
+                cleaned = cleaned.replace(/[^a-z0-9@.]/g, "");
 
                 // prevent more than one "@"
                 const atParts = cleaned.split("@");
