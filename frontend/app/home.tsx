@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import { ScrollView, StyleSheet, Text, View, Dimensions } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 
 /* --- Constants ---*/
 import { TABS_DATA } from "@/constants/tabData";
@@ -21,13 +22,15 @@ export default function Home() {
   const { height } = Dimensions.get("window");
   const [firstName, setFirstName] = useState(""); // default fallback
 
-  useEffect(() => {
-    const loadName = async () => {
-      const storedName = await AsyncStorage.getItem("firstName");
-      if (storedName) setFirstName(storedName);
-    };
-    loadName();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const loadName = async () => {
+        const storedName = await AsyncStorage.getItem("firstName");
+        if (storedName) setFirstName(storedName);
+      };
+      loadName();
+    }, [])
+  );
 
   return (
     <SafeAreaProvider>
@@ -44,10 +47,13 @@ export default function Home() {
             variant={theme.typography.heading.xs}
           />
           <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
             style={[
               {
                 ...theme.typography.heading.xs,
                 color: theme.colors.system.body.tertiary,
+                flex: 1,
               } as any,
             ]}
           >

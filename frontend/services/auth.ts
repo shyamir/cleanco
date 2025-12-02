@@ -62,9 +62,19 @@ export const authService = {
     await AsyncStorage.setItem('user', JSON.stringify(user));
     if (user.firstName) {
       await AsyncStorage.setItem('firstName', user.firstName);
+      // Store full name for account card
+      const fullName = user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.firstName;
+      await AsyncStorage.setItem('fullName', fullName);
     }
     if (user.email) {
       await AsyncStorage.setItem('email', user.email);
+    }
+    if (user.phoneNumber) {
+      // Store phone without country code for display
+      const phone = user.phoneNumber.replace('+960', '');
+      await AsyncStorage.setItem('phone', phone);
     }
   },
 
@@ -97,6 +107,7 @@ export const authService = {
       'refreshToken',
       'user',
       'firstName',
+      'fullName',
       'email',
       'phone',
     ]);

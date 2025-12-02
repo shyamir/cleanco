@@ -1,29 +1,33 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
-import BaseCard from "./base";
-import Button from "../button";
-import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Image, StyleSheet, Text, View } from "react-native";
+import Button from "../button";
+import BaseCard from "./base";
 
 const AccountCard: React.FC = () => {
   const {theme} = useTheme();
   const router = useRouter();
 
-  const [fullName, setFullName] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
   const [email, setEmail] = useState<string | null>(null);
   const [phone, setPhone] = useState<string | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
       const loadData = async () => {
-        const storedName = await AsyncStorage.getItem("fullName");
-        const storedEmail = await AsyncStorage.getItem("email");
+        const userStr = await AsyncStorage.getItem("user");
         const storedPhone = await AsyncStorage.getItem("phone");
 
-        setFullName(storedName);
-        setEmail(storedEmail);
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setFirstName(user.firstName || "");
+          setLastName(user.lastName || "");
+          setEmail(user.email);
+        }
         setPhone(storedPhone);
       };
 
@@ -38,17 +42,32 @@ const AccountCard: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.body}>
           <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
             style={[
               {
                 ...theme.typography.heading.xs,
                 color: theme.colors.card.label.default,
-                flexShrink: 1, // allow shrinking
-                flexWrap: "wrap", // allow wrapping
-                maxWidth: 200, // optional: control width
+                maxWidth: 250,
               },
             ]}
           >
-            {fullName ?? "Loading..."}
+            {firstName || "Loading..."}
+          </Text>
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[
+              {
+                ...theme.typography.heading.xs,
+                color: theme.colors.card.label.default,
+                maxWidth: 280,
+                height: lastName ? undefined : 0,
+                overflow: "hidden",
+              },
+            ]}
+          >
+            {lastName}
           </Text>
 
           <View style={styles.textWrapper}>
@@ -93,7 +112,6 @@ const styles = StyleSheet.create({
   body: {
     flexDirection: "column",
     alignContent: "center",
-
     gap: 12,
   },
   textWrapper: {
