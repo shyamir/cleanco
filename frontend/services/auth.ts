@@ -97,4 +97,23 @@ export const authService = {
     const token = await AsyncStorage.getItem('accessToken');
     return !!token;
   },
+
+  /**
+   * Update user profile
+   * @param firstName - First name (required)
+   * @param lastName - Last name (optional)
+   * @param email - Email address (optional)
+   */
+  async updateProfile(data: {
+    firstName: string;
+    lastName?: string;
+    email?: string;
+  }): Promise<User> {
+    const response = await api.put<User>('/users/me', data);
+
+    // Update stored user data
+    await this.storeUser(response.data);
+
+    return response.data;
+  },
 };

@@ -42,8 +42,8 @@ export default function Otp() {
       await authService.storeTokens(response.accessToken, response.refreshToken);
       await authService.storeUser(response.user);
 
-      // Navigate based on whether user is new or existing
-      if (response.isNewUser) {
+      // Navigate to profile-setup if user is new OR hasn't completed profile
+      if (response.isNewUser || !response.user.firstName) {
         router.push("/profile-setup");
       } else {
         router.push("/home");

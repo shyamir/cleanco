@@ -4,45 +4,38 @@ import {
   StyleSheet,
   Text,
   View,
-  Dimensions,
   Image,
-  useColorScheme,
-  TextInput,
+  Alert,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-
-/* --- Constants ---*/
-import { TABS_DATA } from "@/constants/tabData";
 
 /* --- Theme ---*/
 import { useTheme } from "@/theme/ThemeProvider";
 
-/* --- Hook ---*/
+/* --- Components ---*/
 import GradientText from "@/components/gradientText";
-import PrefixedTextField from "@/components/inputs/predefinedTextField";
 import Button from "@/components/button";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import TextField from "@/components/inputs/textfield";
+import { authService } from "@/services/auth";
 
 export default function ProfileSetup() {
-const {theme, mode} = useTheme();
+  const { theme, mode } = useTheme();
   const router = useRouter();
 
-  const scheme = useColorScheme(); // detect light/dark
-
-  const [phone, setPhone] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const fullNameRef = useRef<any>(null);
   const emailRef = useRef<any>(null);
 
   // Helper for email validation
-  const isEmailValid = (email: string) => {
-    if (!email) return true; // optional, empty is fine
+  const isEmailValid = (emailValue: string) => {
+    if (!emailValue) return true; // optional, empty is fine
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
+    return regex.test(emailValue);
   };
 
   // Form is valid if fullName is filled
@@ -52,18 +45,36 @@ const {theme, mode} = useTheme();
   const emailError =
     email && !isEmailValid(email) ? "Please enter a valid email" : undefined;
 
-  // Inside handleNext
   const handleNext = async () => {
-    if (!isFormValid) return;
+    if (!isFormValid || isLoading) return;
 
-    const firstName = fullName.trim().split(" ")[0];
+    // Split full name into first and last name
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
 
-    await AsyncStorage.setItem("firstName", firstName);
-    await AsyncStorage.setItem("fullName", fullName);
-    await AsyncStorage.setItem("email", email);
-    // await AsyncStorage.setItem("phone", phone);
+    setIsLoading(true);
+    try {
+      await authService.updateProfile({
+        firstName,
+        lastName,
+        email: email || undefined,
+      });
 
-    router.push("/home");
+      // Also store locally for quick access
+      await AsyncStorage.setItem("firstName", firstName);
+      await AsyncStorage.setItem("fullName", fullName);
+      if (email) {
+        await AsyncStorage.setItem("email", email);
+      }
+
+      router.push("/home");
+    } catch (error: any) {
+      const message = error.response?.data?.message || "Failed to update profile. Please try again.";
+      Alert.alert("Error", message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
 
@@ -173,14 +184,11 @@ const {theme, mode} = useTheme();
           </View>
 
           <View style={styles.footer}>
-            <View style={{ opacity: !isFormValid ? 0.5 : 1 }}>
+            <View style={{ opacity: !isFormValid || isLoading ? 0.5 : 1 }}>
               <Button
-                label="Next"
+                label={isLoading ? "Saving..." : "Next"}
                 variant="filled"
-                // onPress={() => {
-                //   if (isFormValid) router.push("/home"); // only fullName is required
-                // }}
-                onPress={handleNext}
+                onPress={isFormValid && !isLoading ? handleNext : undefined}
               />
             </View>
           </View>
