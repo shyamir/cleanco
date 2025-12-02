@@ -1,48 +1,60 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  ScrollView,
   StyleSheet,
   Text,
   View,
   Image,
-  useColorScheme,
-  TextInput,
-  NativeSyntheticEvent,
-  TextInputKeyPressEventData,
   Alert,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CORRECT_OTP } from "@/constants/otp";
 import { useTheme } from "@/theme/ThemeProvider";
 import GradientText from "@/components/gradientText";
 import Button from "@/components/button";
 import { useRouter } from "expo-router";
 import { getPhoneNumber } from "@/utils/otpStore";
 import OtpInputs from "@/components/otpInputs";
-
-type OtpInputsProps = {
-  length?: number;
-  onChange: (code: string) => void;
-};
+import { authService } from "@/services/auth";
 
 export default function Otp() {
-const { theme, mode } = useTheme();
+  const { theme, mode } = useTheme();
   const router = useRouter();
-  const scheme = useColorScheme();
-  // const phone = getPhoneNumber();
   const [otp, setOtp] = useState("");
-
   const [phone, setPhone] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const loadPhone = async () => {
       const storedPhone = await getPhoneNumber();
       setPhone(storedPhone);
     };
-
     loadPhone();
   }, []);
+
+  const handleVerifyOtp = async () => {
+    if (otp.length !== 4 || !phone) return;
+
+    setIsLoading(true);
+    try {
+      const formattedPhone = `+960${phone}`;
+      const response = await authService.verifyOtp(formattedPhone, otp);
+
+      // Store tokens and user data
+      await authService.storeTokens(response.accessToken, response.refreshToken);
+      await authService.storeUser(response.user);
+
+      // Navigate based on whether user is new or existing
+      if (response.isNewUser) {
+        router.push("/profile-setup");
+      } else {
+        router.push("/home");
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || "Invalid OTP. Please try again.";
+      Alert.alert("Verification Failed", message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   return (
     <SafeAreaProvider>
@@ -94,26 +106,11 @@ const { theme, mode } = useTheme();
         </View>
 
         <View style={styles.footer}>
-          <View style={{ opacity: otp.length === 4 ? 1 : 0.5 }}>
+          <View style={{ opacity: otp.length === 4 && !isLoading ? 1 : 0.5 }}>
             <Button
-              label="Verify"
+              label={isLoading ? "Verifying..." : "Verify"}
               variant="filled"
-              onPress={
-                otp.length === 4
-                  ? async () => {
-                      if (otp === CORRECT_OTP) {
-                        const verifiedPhone = await getPhoneNumber(); // user's phone
-                        await AsyncStorage.setItem("phone", verifiedPhone); // save verified phone
-                        router.push("/profile-setup"); // navigate after verification
-                      } else {
-                        Alert.alert(
-                          "Invalid OTP",
-                          "The OTP you entered is incorrect."
-                        );
-                      }
-                    }
-                  : undefined
-              }
+              onPress={otp.length === 4 && !isLoading ? handleVerifyOtp : undefined}
             />
           </View>
         </View>

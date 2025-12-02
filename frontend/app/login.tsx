@@ -1,26 +1,27 @@
 import React, { useRef, useState } from "react";
 import {
-  ScrollView,
   StyleSheet,
   Text,
   View,
-  Dimensions,
   Image,
   useColorScheme,
   TextInput,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 /* --- Theme ---*/
 import { useTheme } from "@/theme/ThemeProvider";
 
-/* --- Hook ---*/
+/* --- Components ---*/
 import GradientText from "@/components/gradientText";
 import PrefixedTextField from "@/components/inputs/predefinedTextField";
 import Button from "@/components/button";
 import { useRouter } from "expo-router";
 import { setPhoneNumber } from "@/utils/otpStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authService } from "@/services/auth";
 
 export default function Login() {
 const {theme, mode} = useTheme();
@@ -30,12 +31,39 @@ const {theme, mode} = useTheme();
 
   const [phone, setPhone] = useState("");
   const [touched, setTouched] = useState(false); // track if user interacted
+  const [isLoading, setIsLoading] = useState(false);
   const phoneRef = useRef<TextInput>(null); // ref to autoFocus
 
   const isPhoneValid = () => {
     const digitsOnly = phone.replace(/[^0-9]/g, "");
-    const maldivianPhoneRegex = /^\d{7}$/;
+    const maldivianPhoneRegex = /^[79]\d{6}$/; // Must start with 7 or 9, followed by 6 digits
     return maldivianPhoneRegex.test(digitsOnly);
+  };
+
+  const hasInvalidPrefix = () => {
+    const digitsOnly = phone.replace(/[^0-9]/g, "");
+    return digitsOnly.length > 0 && !['7', '9'].includes(digitsOnly[0]);
+  };
+
+  const handleSendOtp = async () => {
+    if (!isPhoneValid()) return;
+
+    setIsLoading(true);
+    try {
+      const formattedPhone = `+960${phone}`;
+      await authService.sendOtp(formattedPhone);
+
+      // Store phone for OTP screen
+      setPhoneNumber(phone);
+      await AsyncStorage.setItem("phone", phone);
+
+      router.push("/otp");
+    } catch (error: any) {
+      const message = error.response?.data?.message || "Failed to send OTP. Please try again.";
+      Alert.alert("Error", message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,29 +117,32 @@ const {theme, mode} = useTheme();
             showCharCount
           />
 
-          <Text
-            style={[
-              theme.typography.body.xs.regular,
-              { color: theme.colors.system.body.secondary, marginTop: 8 },
-            ]}
-          >
-            A verification code will be sent to this number
-          </Text>
+          {hasInvalidPrefix() ? (
+            <Text
+              style={[
+                theme.typography.body.xs.regular,
+                { color: "#E53935", marginTop: 8 },
+              ]}
+            >
+              Phone number must start with 7 or 9
+            </Text>
+          ) : (
+            <Text
+              style={[
+                theme.typography.body.xs.regular,
+                { color: theme.colors.system.body.secondary, marginTop: 8 },
+              ]}
+            >
+              A verification code will be sent to this number
+            </Text>
+          )}
         </View>
         <View style={styles.footer}>
-          <View style={{ opacity: !isPhoneValid() ? 0.5 : 1 }}>
+          <View style={{ opacity: !isPhoneValid() || isLoading ? 0.5 : 1 }}>
             <Button
-              label="Continue"
+              label={isLoading ? "Sending..." : "Continue"}
               variant="filled"
-              onPress={
-                isPhoneValid()
-                  ? async () => {
-                      setPhoneNumber(phone); // in-memory for OTP screen
-                      await AsyncStorage.setItem("phone", phone); // persistent storage
-                      router.push("/otp");
-                    }
-                  : undefined
-              }
+              onPress={isPhoneValid() && !isLoading ? handleSendOtp : undefined}
             />
           </View>
           <Text
