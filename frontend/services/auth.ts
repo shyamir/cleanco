@@ -77,9 +77,21 @@ export const authService = {
   },
 
   /**
-   * Logout - clear all auth data
+   * Logout - revoke refresh token on backend and clear all auth data
    */
   async logout(): Promise<void> {
+    try {
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      if (refreshToken) {
+        // Call backend to revoke the refresh token
+        await api.post('/auth/logout', { refreshToken });
+      }
+    } catch (error) {
+      // Continue with local logout even if backend call fails
+      console.warn('Failed to revoke token on server:', error);
+    }
+
+    // Clear local storage
     await AsyncStorage.multiRemove([
       'accessToken',
       'refreshToken',
