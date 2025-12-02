@@ -68,8 +68,11 @@ export const authService = {
         : user.firstName;
       await AsyncStorage.setItem('fullName', fullName);
     }
+    // Handle email - set if exists, remove if null
     if (user.email) {
       await AsyncStorage.setItem('email', user.email);
+    } else {
+      await AsyncStorage.removeItem('email');
     }
     if (user.phoneNumber) {
       // Store phone without country code for display
@@ -124,15 +127,32 @@ export const authService = {
   /**
    * Update user profile
    * @param firstName - First name (required)
-   * @param lastName - Last name (optional)
-   * @param email - Email address (optional)
+   * @param lastName - Last name (optional, pass null to clear)
+   * @param email - Email address (optional, pass null to clear)
    */
   async updateProfile(data: {
     firstName: string;
-    lastName?: string;
-    email?: string;
+    lastName?: string | null;
+    email?: string | null;
   }): Promise<User> {
     const response = await api.put<User>('/users/me', data);
+
+    // Update stored user data
+    await this.storeUser(response.data);
+
+    return response.data;
+  },
+
+  /**
+   * Update user phone number with OTP verification
+   * @param newPhoneNumber - New phone number with country code (e.g., "+9607123456")
+   * @param otp - OTP code sent to the new phone number
+   */
+  async updatePhone(newPhoneNumber: string, otp: string): Promise<User> {
+    const response = await api.put<User>('/users/me/phone', {
+      newPhoneNumber,
+      otp,
+    });
 
     // Update stored user data
     await this.storeUser(response.data);
