@@ -32,14 +32,27 @@ export default function Profile() {
 
   // Validation
   const isNameValid = fullName.trim() !== "";
-  const phoneChanged = phone !== originalPhone && phone.length === 7;
+
+  // Phone validation - same as login page
+  const isPhoneValid = () => {
+    const digitsOnly = phone.replace(/[^0-9]/g, "");
+    const maldivianPhoneRegex = /^[79]\d{6}$/; // Must start with 7 or 9, followed by 6 digits
+    return maldivianPhoneRegex.test(digitsOnly);
+  };
+
+  const hasInvalidPrefix = () => {
+    const digitsOnly = phone.replace(/[^0-9]/g, "");
+    return digitsOnly.length > 0 && !['7', '9'].includes(digitsOnly[0]);
+  };
+
+  const phoneChanged = phone !== originalPhone;
 
   // Email validation - empty is allowed, but if provided must be valid format
   const emailRegex = /^[a-z0-9.]+@[a-z0-9]+\.[a-z]{2,}$/;
   const isEmailValid = email === "" || emailRegex.test(email);
 
-  // Form is valid when name is valid AND email is valid (or empty)
-  const isFormValid = isNameValid && isEmailValid;
+  // Form is valid when name is valid AND email is valid (or empty) AND phone is valid (if changed)
+  const isFormValid = isNameValid && isEmailValid && (!phoneChanged || isPhoneValid());
 
   useEffect(() => {
     const loadData = async () => {
@@ -67,7 +80,7 @@ export default function Profile() {
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(" ") || undefined;
 
-      if (phoneChanged) {
+      if (phoneChanged && isPhoneValid()) {
         // Phone number changed - need OTP verification
         // Store pending profile data for after OTP verification
         await AsyncStorage.setItem("pendingProfile", JSON.stringify({
@@ -233,27 +246,38 @@ export default function Profile() {
                     ) : undefined
                   }
                 />
-                <Text
-                  style={[
-                    theme.typography.body.xs.regular,
-                    { color: phoneChanged ? theme.colors.system.body.warning || "#f59e0b" : theme.colors.system.body.disabled, marginTop: 4 },
-                  ]}
-                >
-                  {phoneChanged
-                    ? "Phone number changed - verification required on save"
-                    : "Changing the mobile number will require verification"}
-                </Text>
+                {hasInvalidPrefix() ? (
+                  <Text
+                    style={[
+                      theme.typography.body.xs.regular,
+                      { color: theme.colors.system.body.error || "#E53935", marginTop: 4 },
+                    ]}
+                  >
+                    Phone number must start with 7 or 9
+                  </Text>
+                ) : (
+                  <Text
+                    style={[
+                      theme.typography.body.xs.regular,
+                      { color: phoneChanged ? theme.colors.system.body.warning || "#f59e0b" : theme.colors.system.body.disabled, marginTop: 4 },
+                    ]}
+                  >
+                    {phoneChanged
+                      ? "Phone number changed - verification required on save"
+                      : "Changing the mobile number will require verification"}
+                  </Text>
+                )}
               </View>
             </View>
 
             <View style={styles.footer}>
-              {isFormValid && (
+              <View style={{ opacity: isFormValid && !isLoading ? 1 : 0.5 }}>
                 <Button
                   label={isLoading ? "Saving..." : "Save"}
                   variant="filled"
-                  onPress={!isLoading ? handleSave : undefined}
+                  onPress={isFormValid && !isLoading ? handleSave : undefined}
                 />
-              )}
+              </View>
               <Button
                 label="Cancel"
                 variant="outline"

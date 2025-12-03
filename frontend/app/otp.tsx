@@ -144,7 +144,7 @@ export default function Otp() {
         <View style={styles.header}>
           <GradientText
             variant={theme.typography.heading.md}
-            text={isPhoneChangeMode ? "Verify" : "Verify"}
+            text="Verify"
             colors={theme.colors.system.heading.secondary}
           />
           <Text
@@ -155,7 +155,7 @@ export default function Otp() {
               } as any,
             ]}
           >
-            {isPhoneChangeMode ? "New Number" : "Code"}
+            Code
           </Text>
         </View>
 
@@ -166,9 +166,7 @@ export default function Otp() {
               { color: theme.colors.system.body.default, marginTop: 8 },
             ]}
           >
-            {isPhoneChangeMode
-              ? `Enter the OTP sent to your new number +960 ${phone}`
-              : `We have sent you an OTP on +960 ${phone}`}
+            {`We have sent you an OTP on +960 ${phone}`}
           </Text>
 
           <OtpInputs length={4} onChange={(code) => setOtp(code)} />
