@@ -17,6 +17,14 @@ export class ServicesController {
     return this.servicesService.findAll();
   }
 
+  @Get('pricing/minimums')
+  @Public()
+  @ApiOperation({ summary: 'Get minimum prices for each service type' })
+  @ApiResponse({ status: 200, description: 'Minimum prices for HOME and OFFICE services' })
+  getMinimumPrices() {
+    return this.servicesService.getMinimumPrices();
+  }
+
   @Get(':id')
   @Public()
   @ApiOperation({ summary: 'Get service details by ID' })

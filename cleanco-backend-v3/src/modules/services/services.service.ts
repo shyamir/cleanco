@@ -133,6 +133,41 @@ export class ServicesService {
   }
 
   /**
+   * Get minimum prices for each service type
+   * Returns the lowest price for HOME and OFFICE services
+   */
+  async getMinimumPrices() {
+    // Get minimum price for HOME service
+    const homeMinPrice = await this.prisma.pricingRule.findFirst({
+      where: {
+        serviceType: ServiceType.HOME,
+        isActive: true,
+      },
+      orderBy: { price: 'asc' },
+    });
+
+    // Get minimum price for OFFICE service
+    const officeMinPrice = await this.prisma.pricingRule.findFirst({
+      where: {
+        serviceType: ServiceType.OFFICE,
+        isActive: true,
+      },
+      orderBy: { price: 'asc' },
+    });
+
+    return {
+      home: {
+        minPrice: homeMinPrice ? Number(homeMinPrice.price) : null,
+        currency: 'MVR',
+      },
+      office: {
+        minPrice: officeMinPrice ? Number(officeMinPrice.price) : null,
+        currency: 'MVR',
+      },
+    };
+  }
+
+  /**
    * Find the best matching pricing rule
    * Matches based on all non-null parameters
    */

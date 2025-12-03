@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { ScrollView, StyleSheet, Text, View, Dimensions } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -10,7 +10,10 @@ import { TABS_DATA } from "@/constants/tabData";
 /* --- Theme ---*/
 import { useTheme } from "@/theme/ThemeProvider";
 
-/* --- Hook ---*/
+/* --- Services ---*/
+import { servicesApi } from "@/services/services";
+
+/* --- Components ---*/
 import GradientText from "@/components/gradientText";
 import Tabs from "../components/tabs";
 import { StatusCard } from "@/components/statusCard";
@@ -21,6 +24,27 @@ export default function Home() {
   const { theme } = useTheme();
   const { height } = Dimensions.get("window");
   const [firstName, setFirstName] = useState(""); // default fallback
+  const [homePrice, setHomePrice] = useState<string>("--");
+  const [officePrice, setOfficePrice] = useState<string>("--");
+
+  // Fetch minimum prices from backend
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const prices = await servicesApi.getMinimumPrices();
+        if (prices.home.minPrice !== null) {
+          setHomePrice(prices.home.minPrice.toString());
+        }
+        if (prices.office.minPrice !== null) {
+          setOfficePrice(prices.office.minPrice.toString());
+        }
+      } catch (error) {
+        console.error("Failed to fetch prices:", error);
+        // Keep default "--" on error
+      }
+    };
+    fetchPrices();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -95,13 +119,13 @@ export default function Home() {
               <ServiceCard
                 title="Home Cleaning"
                 duration="1–4h"
-                price="435"
+                price={homePrice}
                 route="/home-cleaning"
               />
               <ServiceCard
                 title="Office Cleaning"
                 duration="1–4h"
-                price="435"
+                price={officePrice}
                 route="/office-cleaning"
               />
             </View>
