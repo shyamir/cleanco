@@ -13,16 +13,19 @@ import * as Clipboard from "expo-clipboard";
 import { Icon } from "@/constants/icon";
 import CollapsibleCard from "../card/collapsibleCard";
 import { useTheme } from "@/theme/ThemeProvider";
-import TextField from "../inputs/textfield";
 import UploadImage from "../uploadImage";
+import { useBooking } from "@/context/booking-context";
+import { PaymentMethod } from "@/services/bookingService";
 
 type PaymentGroupProps = {
   onValidationChange?: (isValid: boolean) => void;
 };
 
 const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
+  const { setPaymentMethod } = useBooking();
 
+  // Only bank transfer is enabled for now
   const [expandedCard, setExpandedCard] = useState<"bank" | "card">("bank");
 
   // Card fields
@@ -36,7 +39,15 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
   const [copied, setCopied] = useState(false);
 
   const toggleCard = (card: "bank" | "card") => {
-    if (expandedCard !== card) setExpandedCard(card);
+    // Credit card is disabled for now
+    if (card === "card") {
+      return;
+    }
+    if (expandedCard !== card) {
+      setExpandedCard(card);
+      // Update payment method in booking context
+      setPaymentMethod(PaymentMethod.BANK_TRANSFER);
+    }
   };
 
   const bankAccountNumber = "1234 5678 9087"; // Replace with your account number
@@ -186,8 +197,10 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
       <CollapsibleCard
         title="Credit/Debit Card"
         icon={<Icon.card color={theme.colors.system.body.disabled} />}
-        expanded={expandedCard === "card"}
+        expanded={false}
         onToggle={() => toggleCard("card")}
+        disabled
+        badge="Coming soon"
       >
         <View style={styles.cardContainer}>
           <Text
@@ -196,7 +209,7 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
               { color: theme.colors.system.body.disabled },
             ]}
           >
-            Click confirm to open payment gateway
+            Credit/Debit card payments coming soon
           </Text>
         </View>
       </CollapsibleCard>

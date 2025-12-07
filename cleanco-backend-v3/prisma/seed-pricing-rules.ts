@@ -36,7 +36,6 @@ async function seedPricingRules() {
       const ruleData = {
         serviceType: ServiceType.HOME,
         bedrooms,
-        bathrooms: null, // Ignore bathrooms as per requirements
         officeSize: null,
         floors: null,
         rooms: null,

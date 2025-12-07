@@ -65,6 +65,11 @@ const {theme} = useTheme();
             title="Home Cleaning"
             scrollY={scrollY}
             animatedImage={require("@/assets/images/home-cleaning.png")}
+            onBack={
+              step === "selection"
+                ? () => router.push("/home")
+                : () => setStep("selection")
+            }
           />
 
           {/* Scrollable Content */}
@@ -88,7 +93,7 @@ const {theme} = useTheme();
                   {/* Address */}
                   <AddressCard
                     title="Address"
-                    address={selected?.label || "No address selected"}
+                    address={selected?.id ? selected.label : "No address selected"}
                     onPress={() =>
                       router.push({
                         pathname: "/address-search",
@@ -154,9 +159,11 @@ const {theme} = useTheme();
             primaryLabel={step === "selection" ? "Next" : "Review"}
             onPrimaryPress={
               step === "selection"
-                ? handleNext
+                ? () => {
+                    setService("Home Cleaning"); // Set service when entering schedule step
+                    handleNext();
+                  }
                 : () => {
-                    setService("Home Cleaning"); // ← set the service in context here
                     router.push("/review");
                   }
             }

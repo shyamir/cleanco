@@ -79,7 +79,6 @@ export class AdminServicesService {
         serviceType: createDto.serviceType,
         frequency: createDto.frequency || null,
         bedrooms: createDto.bedrooms || null,
-        bathrooms: createDto.bathrooms || null,
         officeSize: createDto.officeSize || null,
         floors: createDto.floors || null,
         rooms: createDto.rooms || null,
@@ -94,7 +93,6 @@ export class AdminServicesService {
       data: {
         ...createDto,
         bedrooms: createDto.bedrooms || null,
-        bathrooms: createDto.bathrooms || null,
         officeSize: createDto.officeSize || null,
         floors: createDto.floors || null,
         rooms: createDto.rooms || null,
@@ -148,7 +146,6 @@ export class AdminServicesService {
       data: {
         ...updateDto,
         bedrooms: updateDto.bedrooms !== undefined ? updateDto.bedrooms : undefined,
-        bathrooms: updateDto.bathrooms !== undefined ? updateDto.bathrooms : undefined,
         officeSize: updateDto.officeSize !== undefined ? updateDto.officeSize : undefined,
         floors: updateDto.floors !== undefined ? updateDto.floors : undefined,
         rooms: updateDto.rooms !== undefined ? updateDto.rooms : undefined,

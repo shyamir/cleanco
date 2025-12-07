@@ -1,7 +1,22 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AvailableSlotsQueryDto } from './dto/available-slots-query.dto';
-import { startOfDay, parse, isBefore } from 'date-fns';
+import { SubscriptionAvailabilityQueryDto } from './dto/subscription-availability-query.dto';
+import { isBefore, addWeeks, setDay, format } from 'date-fns';
+import { ServiceType } from '@prisma/client';
+
+// Helper to create a date at noon UTC from a date string (YYYY-MM-DD)
+// Using noon UTC ensures the calendar date is correct regardless of server timezone
+function parseToNoonUTC(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+}
+
+// Get today's date as noon UTC
+function getTodayNoonUTC(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0));
+}
 
 @Injectable()
 export class TimeSlotsService {
@@ -13,9 +28,12 @@ export class TimeSlotsService {
   async getAvailableSlots(query: AvailableSlotsQueryDto) {
     const { date: dateString } = query;
 
-    // Parse the date string
-    const requestedDate = parse(dateString, 'yyyy-MM-dd', new Date());
-    const today = startOfDay(new Date());
+    // Calculate required cleaners based on booking details
+    const requiredCleaners = this.calculateRequiredCleaners(query);
+
+    // Parse the date string to noon UTC for consistent date handling
+    const requestedDate = parseToNoonUTC(dateString);
+    const today = getTodayNoonUTC();
 
     // Check if date is in the past
     if (isBefore(requestedDate, today)) {
@@ -67,8 +85,23 @@ export class TimeSlotsService {
         });
 
         // Calculate available capacity
-        // If no cache exists, assume default capacity of 10 cleaners
-        const totalCapacity = cache?.totalCapacity || 10;
+        let totalCapacity: number;
+        if (cache) {
+          totalCapacity = cache.totalCapacity;
+        } else {
+          // Count cleaners who are available and not on vacation for this date
+          totalCapacity = await this.prisma.cleanerProfile.count({
+            where: {
+              isAvailable: true,
+              vacations: {
+                none: {
+                  startDate: { lte: requestedDate },
+                  endDate: { gte: requestedDate },
+                },
+              },
+            },
+          });
+        }
         const bookedCapacity = cache?.bookedCapacity || bookingCount;
         const availableCapacity = totalCapacity - bookedCapacity;
 
@@ -77,8 +110,9 @@ export class TimeSlotsService {
           startTime: slot.startTime,
           endTime: slot.endTime,
           displayTime: slot.displayStartTime,
-          isAvailable: availableCapacity > 0,
+          isAvailable: availableCapacity >= requiredCleaners,
           availableCapacity: Math.max(0, availableCapacity),
+          requiredCleaners,
         };
       }),
     );
@@ -86,6 +120,152 @@ export class TimeSlotsService {
     return {
       date: dateString,
       isBlackoutDate: false,
+      availableSlots: slotsWithAvailability,
+    };
+  }
+
+  /**
+   * Get available time slots for a subscription across 12 weeks
+   * Checks that the slot has enough capacity on each occurrence
+   */
+  async getSubscriptionAvailability(query: SubscriptionAvailabilityQueryDto) {
+    const { startDate: startDateString, dayOfWeek } = query;
+
+    // Calculate required cleaners
+    const requiredCleaners = this.calculateRequiredCleanersForSubscription(query);
+
+    // Parse start date to noon UTC for consistent date handling
+    const startDate = parseToNoonUTC(startDateString);
+    const today = getTodayNoonUTC();
+
+    if (isBefore(startDate, today)) {
+      throw new BadRequestException('Start date cannot be in the past');
+    }
+
+    // Generate all 12 dates to check (same day of week for 12 weeks)
+    const datesToCheck: Date[] = [];
+    let currentDate = setDay(startDate, dayOfWeek, { weekStartsOn: 0 });
+
+    // If the calculated date is before the start date, move to next week
+    if (isBefore(currentDate, startDate)) {
+      currentDate = addWeeks(currentDate, 1);
+    }
+
+    // Generate 12 weekly dates, converting each to noon UTC for consistent comparison
+    for (let i = 0; i < 12; i++) {
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
+      datesToCheck.push(parseToNoonUTC(dateStr));
+      currentDate = addWeeks(currentDate, 1);
+    }
+
+    const dateStrings = datesToCheck.map((d) => format(d, 'yyyy-MM-dd'));
+
+    // Check for blackout dates
+    const blackoutDates = await this.prisma.blackoutDate.findMany({
+      where: {
+        date: {
+          in: datesToCheck,
+        },
+      },
+    });
+
+    const blackoutDateStrings = blackoutDates.map((bd) =>
+      format(bd.date, 'yyyy-MM-dd'),
+    );
+
+    // Get all active time slots
+    const allTimeSlots = await this.prisma.timeSlot.findMany({
+      where: { isActive: true },
+      orderBy: { orderIndex: 'asc' },
+    });
+
+    // For each time slot, check availability across all 12 dates
+    const slotsWithAvailability = await Promise.all(
+      allTimeSlots.map(async (slot) => {
+        const unavailableDates: string[] = [];
+        let minCapacity = Infinity;
+
+        for (const date of datesToCheck) {
+          const dateStr = format(date, 'yyyy-MM-dd');
+
+          // Skip blackout dates (they're automatically unavailable)
+          if (blackoutDateStrings.includes(dateStr)) {
+            unavailableDates.push(dateStr);
+            minCapacity = 0;
+            continue;
+          }
+
+          // Count confirmed bookings for this date and time slot
+          const bookingCount = await this.prisma.booking.count({
+            where: {
+              date: date,
+              timeSlotId: slot.id,
+              status: {
+                in: ['PENDING', 'CONFIRMED', 'ASSIGNED', 'IN_PROGRESS'],
+              },
+            },
+          });
+
+          // Get or calculate capacity
+          const cache = await this.prisma.availabilityCache.findUnique({
+            where: {
+              date_timeSlotId: {
+                date: date,
+                timeSlotId: slot.id,
+              },
+            },
+          });
+
+          let totalCapacity: number;
+          if (cache) {
+            totalCapacity = cache.totalCapacity;
+          } else {
+            // Count available cleaners not on vacation
+            totalCapacity = await this.prisma.cleanerProfile.count({
+              where: {
+                isAvailable: true,
+                vacations: {
+                  none: {
+                    startDate: { lte: date },
+                    endDate: { gte: date },
+                  },
+                },
+              },
+            });
+          }
+
+          const bookedCapacity = cache?.bookedCapacity || bookingCount;
+          const availableCapacity = totalCapacity - bookedCapacity;
+
+          minCapacity = Math.min(minCapacity, availableCapacity);
+
+          if (availableCapacity < requiredCleaners) {
+            unavailableDates.push(dateStr);
+          }
+        }
+
+        return {
+          id: slot.id,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          displayTime: slot.displayStartTime,
+          isAvailableFor12Weeks: unavailableDates.length === 0,
+          unavailableDates:
+            unavailableDates.length > 0 ? unavailableDates : undefined,
+          availableCapacityMin: Math.max(
+            0,
+            minCapacity === Infinity ? 0 : minCapacity,
+          ),
+          requiredCleaners,
+        };
+      }),
+    );
+
+    return {
+      startDate: startDateString,
+      dayOfWeek,
+      datesToCheck: dateStrings,
+      blackoutDatesFound: blackoutDateStrings,
       availableSlots: slotsWithAvailability,
     };
   }
@@ -112,5 +292,63 @@ export class TimeSlotsService {
     }
 
     return timeSlot;
+  }
+
+  /**
+   * Calculate number of cleaners required based on booking details
+   */
+  private calculateRequiredCleaners(query: AvailableSlotsQueryDto): number {
+    const { serviceType, bedrooms, floors, rooms } = query;
+
+    // Default to 1 if no service type provided
+    if (!serviceType) return 1;
+
+    if (serviceType === ServiceType.HOME) {
+      if (!bedrooms || bedrooms <= 2) return 1;
+      if (bedrooms === 3) return 2;
+      if (bedrooms === 4) return 2;
+      return 3; // 5+ bedrooms
+    }
+
+    if (serviceType === ServiceType.OFFICE) {
+      const roomCount = rooms ?? 0;
+      const floorCount = floors ?? 1;
+
+      if (roomCount <= 3 && floorCount === 1) return 1;
+      if (roomCount <= 6 || floorCount === 2) return 2;
+      return 3;
+    }
+
+    return 1;
+  }
+
+  /**
+   * Calculate number of cleaners required for subscription availability
+   */
+  private calculateRequiredCleanersForSubscription(
+    query: SubscriptionAvailabilityQueryDto,
+  ): number {
+    const { serviceType, bedrooms, floors, rooms } = query;
+
+    // Default to 1 if no service type provided
+    if (!serviceType) return 1;
+
+    if (serviceType === ServiceType.HOME) {
+      if (!bedrooms || bedrooms <= 2) return 1;
+      if (bedrooms === 3) return 2;
+      if (bedrooms === 4) return 2;
+      return 3; // 5+ bedrooms
+    }
+
+    if (serviceType === ServiceType.OFFICE) {
+      const roomCount = rooms ?? 0;
+      const floorCount = floors ?? 1;
+
+      if (roomCount <= 3 && floorCount === 1) return 1;
+      if (roomCount <= 6 || floorCount === 2) return 2;
+      return 3;
+    }
+
+    return 1;
   }
 }

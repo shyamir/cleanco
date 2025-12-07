@@ -38,16 +38,6 @@ export class CalculateQuoteDto {
   @ValidateIf((o) => o.serviceType === ServiceType.HOME)
   bedrooms?: number;
 
-  @ApiPropertyOptional({
-    example: 2,
-    description: 'Number of bathrooms',
-  })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  bathrooms?: number;
-
   // Office cleaning parameters
   @ApiPropertyOptional({
     example: 'Medium',

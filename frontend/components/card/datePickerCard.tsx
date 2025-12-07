@@ -23,15 +23,13 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    console.log("DatePicker mounted, selectedDate:", selectedDate);
     if (selectedDate) {
-      console.log("Pushing initial date to context:", selectedDate);
       onDateChange?.(selectedDate);
     }
-  }, [selectedDate, onDateChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
   const handleSelect = (day: any) => {
-    console.log("User selected a date:", day.dateString);
     setSelectedDate(day.dateString);
     onDateChange?.(day.dateString);
     setIsOpen(false);
@@ -87,6 +85,7 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
         <View style={styles.calendarWrapper}>
           <Calendar
             current={selectedDate}
+            minDate={dayjs().format("YYYY-MM-DD")}
             onDayPress={handleSelect}
             markedDates={{
               [selectedDate]: {

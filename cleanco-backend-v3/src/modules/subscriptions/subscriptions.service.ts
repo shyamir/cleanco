@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CleanerAssignmentService } from '../cleaner-assignment/cleaner-assignment.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { ServiceType, SubscriptionFrequency, SubscriptionStatus, BookingType, BookingStatus, PaymentStatus } from '@prisma/client';
@@ -15,7 +16,10 @@ import { addMonths, startOfDay, addDays, addWeeks, getDay, setDay, differenceInW
 export class SubscriptionsService {
   private readonly logger = new Logger(SubscriptionsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cleanerAssignmentService: CleanerAssignmentService,
+  ) {}
 
   /**
    * Create a new subscription for a customer
@@ -64,7 +68,6 @@ export class SubscriptionsService {
       serviceType,
       frequency,
       bedrooms,
-      bathrooms,
       officeSize,
       floors,
       rooms,
@@ -372,7 +375,6 @@ export class SubscriptionsService {
     serviceType: ServiceType,
     frequency: SubscriptionFrequency,
     bedrooms?: number,
-    bathrooms?: number,
     officeSize?: string,
     floors?: number,
     rooms?: number,
@@ -384,7 +386,6 @@ export class SubscriptionsService {
         frequency,
         ...(serviceType === ServiceType.HOME && {
           bedrooms,
-          bathrooms,
         }),
         ...(serviceType === ServiceType.OFFICE && {
           officeSize,
@@ -478,6 +479,25 @@ export class SubscriptionsService {
       });
 
       this.logger.log(`Generated ${bookings.length} bookings for subscription ${subscription.id}`);
+
+      // Auto-assign cleaners to the newly created bookings
+      const createdBookings = await this.prisma.booking.findMany({
+        where: {
+          subscriptionId: subscription.id,
+          date: { gte: startOfDay(new Date()) },
+          status: BookingStatus.PENDING,
+        },
+        orderBy: { date: 'asc' },
+      });
+
+      for (const booking of createdBookings) {
+        try {
+          await this.cleanerAssignmentService.autoAssignCleaners(booking.id);
+        } catch (error) {
+          this.logger.error(`Auto-assignment failed for subscription booking ${booking.id}: ${error.message}`);
+          // Don't fail the subscription creation if auto-assignment fails
+        }
+      }
     }
 
     return bookings.length;

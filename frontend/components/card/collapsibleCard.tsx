@@ -24,6 +24,8 @@ type CollapsibleCardProps = {
   children?: React.ReactNode;
   expanded: boolean;
   onToggle: () => void;
+  disabled?: boolean;
+  badge?: string;
 };
 
 const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
@@ -32,10 +34,13 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   children,
   expanded,
   onToggle,
+  disabled = false,
+  badge,
 }) => {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
 
   const handleToggle = () => {
+    if (disabled) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onToggle();
   };
@@ -44,18 +49,20 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
     <Base
       style={[
         {
-          shadowOpacity: 0.15,
+          shadowOpacity: disabled ? 0.05 : 0.15,
           borderWidth: 2,
           borderColor: expanded
             ? theme.colors.system.border.active
             : theme.colors.system.background.secondary,
+          opacity: disabled ? 0.6 : 1,
         },
       ]}
     >
       <TouchableOpacity
-        activeOpacity={0.9}
+        activeOpacity={disabled ? 1 : 0.9}
         onPress={handleToggle}
         style={styles.touchable}
+        disabled={disabled}
       >
         <View style={styles.header}>
           <View style={styles.titleRow}>
@@ -63,14 +70,35 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
             <Text
               style={[
                 theme.typography.body.md.medium,
-                { color: theme.colors.system.body.tertiary },
+                {
+                  color: disabled
+                    ? theme.colors.system.body.disabled
+                    : theme.colors.system.body.tertiary,
+                },
               ]}
             >
               {title}
             </Text>
           </View>
+          {badge && (
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: theme.colors.system.background.tertiary },
+              ]}
+            >
+              <Text
+                style={[
+                  theme.typography.body.xs.medium,
+                  { color: theme.colors.system.body.disabled },
+                ]}
+              >
+                {badge}
+              </Text>
+            </View>
+          )}
         </View>
-        {expanded && <View style={styles.content}>{children}</View>}
+        {expanded && !disabled && <View style={styles.content}>{children}</View>}
       </TouchableOpacity>
     </Base>
   );
@@ -86,7 +114,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -94,6 +121,11 @@ const styles = StyleSheet.create({
   },
   content: {
     marginTop: 12,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
 });
 

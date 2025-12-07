@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ViewStyle, DimensionValue } from "react-native";
 import ToggleButton from "./index";
 
 type ToggleGroupProps = {
   options: string[];
-  optionIcons?: { [key: string]: React.ReactNode }; // new
+  optionIcons?: { [key: string]: React.ReactNode };
+  disabledOptions?: string[];  // Options that should be disabled
   initialValue?: string;
   onChange?: (value: string) => void;
   containerStyle?: ViewStyle;
@@ -14,6 +15,7 @@ const ToggleGroup: React.FC<ToggleGroupProps> = ({
   options,
   initialValue,
   optionIcons,
+  disabledOptions = [],
   onChange,
   containerStyle,
 }) => {
@@ -23,23 +25,45 @@ const ToggleGroup: React.FC<ToggleGroupProps> = ({
       : -1 // means nothing selected
   );
 
+  // Sync selectedIndex when initialValue changes
+  useEffect(() => {
+    if (initialValue && options.includes(initialValue)) {
+      setSelectedIndex(options.indexOf(initialValue));
+    } else {
+      setSelectedIndex(-1);
+    }
+  }, [initialValue, options]);
+
   const handleSelect = (index: number) => {
     setSelectedIndex(index);
     onChange?.(options[index]);
   };
 
+  // Check if options are day names (to show abbreviated single letter)
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const isDayOptions = options.length === 7 && dayNames.includes(options[0]);
+
   const getItemsPerRow = () => {
     if (options.length === 3) return 3;
     if (options.length === 4) return 2;
     if (options.length === 6) return 3;
-    if (options.length === 7) return 7;
+    if (options.length === 7) return isDayOptions ? 7 : 4; // Days: 7 per row, Time slots: 4 per row
     if (options.length === 8) return 4;
     return 2;
   };
 
   const itemsPerRow = getItemsPerRow();
-  const itemWidth = `${100 / itemsPerRow - 2}%` as DimensionValue;
-  const buttonHeight = options.length === 7 ? 86 : undefined;
+  // Calculate width accounting for gaps (8px gap between items)
+  // For flex-start with gap, we need slightly smaller widths
+  const getItemWidth = () => {
+    if (isDayOptions) return '12%'; // 7 items per row for days
+    if (itemsPerRow === 4) return '23%'; // 4 items per row
+    if (itemsPerRow === 3) return '31%'; // 3 items per row
+    if (itemsPerRow === 2) return '48%'; // 2 items per row
+    return '48%';
+  };
+  const itemWidth = getItemWidth() as DimensionValue;
+  const buttonHeight = isDayOptions ? 86 : undefined;
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -64,11 +88,12 @@ const ToggleGroup: React.FC<ToggleGroupProps> = ({
                 <ToggleButton
                   icon={optionIcons?.[option]}
                   label={
-                    options.length === 7
+                    isDayOptions
                       ? option.charAt(0).toUpperCase()
                       : option
                   }
                   selected={selectedIndex === index}
+                  disabled={disabledOptions.includes(option)}
                   onPress={() => handleSelect(index)}
                   style={{ height: buttonHeight }}
                 />
@@ -88,7 +113,8 @@ const styles = StyleSheet.create({
   buttonGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
+    gap: 8,
   },
 });
 

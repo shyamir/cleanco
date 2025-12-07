@@ -28,6 +28,7 @@ type AnimatedHeaderProps = {
   animatedImage?: ImageSourcePropType; // NEW: image to fade out
   style?: ViewStyle;
   textStyle?: TextStyle;
+  onBack?: () => void; // Custom back handler
 };
 
 const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
@@ -36,6 +37,7 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
   animatedImage,
   style,
   textStyle,
+  onBack,
 }) => {
   const {theme} = useTheme();
   const navigation = useNavigation();
@@ -82,7 +84,7 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
     <View style={[styles.headerContainer, style]}>
       <TouchableOpacity
         style={styles.backButton}
-        onPress={() => navigation.goBack()}
+        onPress={onBack || (() => navigation.goBack())}
       >
         <Icon.back color={theme.colors.system.heading.active} />
       </TouchableOpacity>

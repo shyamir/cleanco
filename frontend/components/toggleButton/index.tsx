@@ -11,6 +11,7 @@ import {
 type ToggleButtonProps = {
   label: string;
   selected?: boolean;
+  disabled?: boolean;
   onPress?: () => void;
   icon?: React.ReactNode;
   style?: ViewStyle;
@@ -20,48 +21,51 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({
   label,
   icon,
   selected,
+  disabled,
   onPress,
   style,
 }) => {
   const {theme} = useTheme();
+
+  const getBackgroundColor = () => {
+    if (disabled) return theme.colors.toggle.background.default;
+    if (selected) return theme.colors.toggle.background.active;
+    return theme.colors.toggle.background.default;
+  };
+
+  const getTextColor = () => {
+    if (disabled) return theme.colors.system.body.disabled;
+    if (selected) return theme.colors.toggle.label.active;
+    return theme.colors.toggle.label.default;
+  };
 
   return (
     <TouchableOpacity
       style={[
         styles.button,
         style,
-        selected
-          ? ({
-              backgroundColor: theme.colors.toggle.background.active,
-            } as any)
-          : ({
-              backgroundColor: theme.colors.toggle.background.default,
-            } as any),
+        { backgroundColor: getBackgroundColor() },
+        disabled && { opacity: 0.5 },
       ]}
-      onPress={onPress}
-      activeOpacity={0.8}
+      onPress={disabled ? undefined : onPress}
+      activeOpacity={disabled ? 1 : 0.8}
+      disabled={disabled}
     >
       {icon &&
         React.cloneElement(icon as React.ReactElement<any>, {
-          color: selected
-            ? theme.colors.toggle.label.active
-            : theme.colors.toggle.label.default,
+          color: getTextColor(),
         })}
       <Text
         style={[
           styles.text,
-          selected
+          selected && !disabled
             ? ([
                 theme.typography.body.md.medium,
-                {
-                  color: theme.colors.toggle.label.active,
-                },
+                { color: getTextColor() },
               ] as any)
             : ([
                 theme.typography.body.md.regular,
-                {
-                  color: theme.colors.toggle.label.default,
-                },
+                { color: getTextColor() },
               ] as any),
         ]}
       >

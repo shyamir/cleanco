@@ -2,6 +2,12 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Helper to create a date at noon UTC - always the correct calendar date
+// regardless of server timezone (works for UTC-12 to UTC+11)
+function dateAtNoonUTC(year: number, month: number, day: number): Date {
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+}
+
 async function seedTimeSlots() {
   console.log('🌱 Seeding time slots...');
 
@@ -89,17 +95,17 @@ async function seedBlackoutDates() {
 
   const blackoutDates = [
     {
-      date: new Date('2025-01-01'),
+      date: dateAtNoonUTC(2025, 1, 1),
       reason: "New Year's Day",
       isRecurring: true,
     },
     {
-      date: new Date('2025-07-26'),
+      date: dateAtNoonUTC(2025, 7, 26),
       reason: 'Independence Day',
       isRecurring: true,
     },
     {
-      date: new Date('2025-12-25'),
+      date: dateAtNoonUTC(2025, 12, 25),
       reason: 'Christmas Day',
       isRecurring: true,
     },

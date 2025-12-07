@@ -66,6 +66,11 @@ const OfficeCleaningScreen = () => {
             title="Office Cleaning"
             scrollY={scrollY}
             animatedImage={require("@/assets/images/office-cleaning.png")}
+            onBack={
+              step === "selection"
+                ? () => router.push("/home")
+                : () => setStep("selection")
+            }
           />
 
           {/* Scrollable Content */}
@@ -89,7 +94,7 @@ const OfficeCleaningScreen = () => {
                   {/* Address */}
                   <AddressCard
                     title="Address"
-                    address={selected?.label || "No address selected"}
+                    address={selected?.id ? selected.label : "No address selected"}
                     onPress={() =>
                       router.push({
                         pathname: "/address-search",
@@ -163,9 +168,11 @@ const OfficeCleaningScreen = () => {
             primaryLabel={step === "selection" ? "Next" : "Review"}
             onPrimaryPress={
               step === "selection"
-                ? handleNext
+                ? () => {
+                    setService("Office Cleaning"); // Set service when entering schedule step
+                    handleNext();
+                  }
                 : () => {
-                    setService("Office Cleaning");
                     router.push("/review");
                   }
             }

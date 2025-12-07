@@ -102,7 +102,32 @@ const Button: React.FC<ButtonProps> = ({
     justifyContent: "center",
   };
 
-  if (variant === "filled" && !disabled) {
+  if (variant === "filled") {
+    if (disabled) {
+      // Disabled filled button - show gray background
+      return (
+        <TouchableOpacity
+          onPress={onPress}
+          disabled={true}
+          activeOpacity={1}
+          style={[
+            {
+              borderRadius: 48,
+              height: 48,
+              paddingHorizontal: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: theme.colors.system.border.default,
+              opacity: 0.6,
+            },
+            style,
+          ]}
+        >
+          {content}
+        </TouchableOpacity>
+      );
+    }
+
     const gradient = gradientColors || theme.colors.button.background.primary;
 
     return (
@@ -138,7 +163,7 @@ const Button: React.FC<ButtonProps> = ({
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled}
-      style={[buttonStyle, { backgroundColor }, getBorder(), style]}
+      style={[buttonStyle, { backgroundColor, opacity: disabled ? 0.5 : 1 }, getBorder(), style]}
     >
       {content}
     </TouchableOpacity>

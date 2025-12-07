@@ -170,10 +170,10 @@ model Address {
   id            String   @id @default(uuid())
   userId        String
   label         String?  // "Home", "Office", etc.
-  streetAddress String
-  city          String
-  island        String
-  postalCode    String?
+  address       String   // House/Apt number, floor, etc.
+  street        String   // Street/Magu
+  landmark      String   // Landmark/Goalhi
+  zoneId        String   // Reference to Zone
   latitude      Float?
   longitude     Float?
   isPrimary     Boolean  @default(false)
@@ -182,9 +182,11 @@ model Address {
   updatedAt     DateTime @updatedAt
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zone          Zone     @relation(fields: [zoneId], references: [id])
   bookings      Booking[]
 
   @@index([userId])
+  @@index([zoneId])
   @@map("addresses")
 }
 
@@ -215,16 +217,13 @@ model PricingRule {
   floors          Int?
   rooms           Int?
 
-  // Common parameters
-  bathrooms       Int?
-
   price           Decimal  @db.Decimal(10, 2)
   isActive        Boolean  @default(true)
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([serviceType, frequency, bedrooms, officeSize, floors, rooms, bathrooms])
+  @@unique([serviceType, frequency, bedrooms, officeSize, floors, rooms])
   @@index([serviceType])
   @@map("pricing_rules")
 }
@@ -647,4 +646,20 @@ model SystemConfig {
   updatedAt DateTime @updatedAt
 
   @@map("system_configs")
+}
+
+// Zone for address selection (Male, Hulhumale, etc.)
+model Zone {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  orderIndex Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses Address[]
+
+  @@index([orderIndex])
+  @@map("zones")
 }

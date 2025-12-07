@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -17,16 +19,99 @@ import useCleaningBooking from "./hooks/useCleaningBooking";
 import { useBooking } from "@/context/booking-context";
 import PaymentGroup from "@/components/paymentGroup";
 import { useRouter } from "expo-router";
+import {
+  bookingApi,
+  ServiceType,
+  BookingType,
+  mapFrequencyToBackend,
+  CreateBookingRequest,
+  CreateSubscriptionRequest,
+} from "@/services/bookingService";
 
 const Payment = () => {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
-
   const navigation = useNavigation();
 
   const { total } = useCleaningBooking();
-  const { frequency } = useBooking();
+  const {
+    frequency,
+    bedrooms,
+    bathrooms,
+    pet,
+    instructions,
+    startDate,
+    addressId,
+    timeSlotId,
+    selectedDays,
+    paymentMethod,
+    resetBooking,
+  } = useBooking();
+
   const [isPaymentValid, setIsPaymentValid] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
+    // Validate required fields
+    if (!addressId) {
+      Alert.alert("Error", "Please select an address before confirming.");
+      return;
+    }
+
+    if (!timeSlotId) {
+      Alert.alert("Error", "Please select a time slot before confirming.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { isSubscription, subscriptionFrequency } = mapFrequencyToBackend(frequency);
+
+      if (isSubscription && subscriptionFrequency) {
+        // Create a subscription
+        const subscriptionRequest: CreateSubscriptionRequest = {
+          serviceType: ServiceType.HOME,
+          frequency: subscriptionFrequency,
+          addressId,
+          timeSlotId,
+          selectedDays: selectedDays.length > 0 ? selectedDays : [1], // Default to Monday if no days selected
+          bedrooms,
+          bathrooms,
+          hasPets: pet !== "None",
+        };
+
+        await bookingApi.createSubscription(subscriptionRequest);
+      } else {
+        // Create a one-time booking
+        const bookingRequest: CreateBookingRequest = {
+          serviceType: ServiceType.HOME,
+          bookingType: BookingType.ONE_TIME,
+          addressId,
+          date: startDate || new Date().toISOString().split("T")[0],
+          timeSlotId,
+          bedrooms,
+          bathrooms,
+          hasPets: pet !== "None",
+          paymentMethod,
+          specialInstructions: instructions || undefined,
+        };
+
+        await bookingApi.createBooking(bookingRequest);
+      }
+
+      // Navigate to confirmation (resetBooking is called when leaving confirmation page)
+      router.push("/confirmation");
+    } catch (error: any) {
+      console.error("Failed to create booking:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to create booking. Please try again.";
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaProvider>
@@ -86,11 +171,11 @@ const Payment = () => {
           total={total}
           frequency={frequency}
           currency="MVR"
-          primaryLabel="Confirm"
+          primaryLabel={isSubmitting ? "Processing..." : "Confirm"}
           secondaryLabel="Back"
-          onPrimaryPress={() => router.push("/confirmation")}
+          onPrimaryPress={handleConfirm}
           onSecondaryPress={() => navigation.goBack()}
-          disabledPrimary={!isPaymentValid}
+          disabledPrimary={!isPaymentValid || isSubmitting}
         />
       </View>
     </SafeAreaProvider>

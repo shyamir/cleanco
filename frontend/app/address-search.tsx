@@ -10,6 +10,7 @@ import {
   TextInput,
   Animated,
   Keyboard,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/constants/icon";
@@ -19,6 +20,7 @@ import SegmentedButton from "@/components/segmentedButton";
 import SearchBar from "@/components/searchBar";
 import axios from "axios";
 import { useAddress } from "@/context/address-context";
+import { useBooking } from "@/context/booking-context";
 
 // Replace this with your actual API key or import from env
 const GOOGLE_MAPS_API_KEY = "AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg";
@@ -26,14 +28,21 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg";
 const AddressSearch = () => {
   const { theme } = useTheme();
   const router = useRouter();
-  const { selected, setSelected } = useAddress();
+  const { selected, setSelected, savedAddresses, loadAddresses, isLoading } = useAddress();
+  const { setAddressId } = useBooking();
 
   const [activeTab, setActiveTab] = useState("New");
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const searchInputRef = useRef<TextInput>(null);
   const translateY = useRef(new Animated.Value(0)).current;
-  const savedAddresses: any[] = [];
+
+  // Load saved addresses when Saved tab is selected
+  useEffect(() => {
+    if (activeTab === "Saved") {
+      loadAddresses();
+    }
+  }, [activeTab, loadAddresses]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -102,8 +111,12 @@ const AddressSearch = () => {
     };
   }, []);
 
-  const handleSelectAddress = (label: string, address: string) => {
-    setSelected({ label, address });
+  const handleSelectAddress = (id: string | undefined, label: string, address: string) => {
+    setSelected({ id, label, address });
+    // Store the addressId in booking context if it exists
+    if (id) {
+      setAddressId(id);
+    }
     router.back(); // return to previous screen
   };
 
@@ -116,8 +129,12 @@ const AddressSearch = () => {
         const address =
           item.structured_formatting?.secondary_text || item.description;
 
-        // Save in context
-        setSelected({ label, address });
+        // Save in context with place_id for reliable geocoding
+        setSelected({
+          placeId: item.place_id,
+          label,
+          address
+        });
 
         // Navigate to SaveAddress screen with params
         router.push({
@@ -148,38 +165,55 @@ const AddressSearch = () => {
     </TouchableOpacity>
   );
 
-  const renderSavedItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.savedItem}
-      onPress={() => handleSelectAddress(item.label, item.address)}
-    >
-      <View style={styles.savedRow}>
-        <item.icon color={theme.colors.system.body.default} />
-        <View>
-          <Text
-            style={[
-              theme.typography.body.md.regular,
-              { color: theme.colors.system.body.default },
-            ]}
-          >
-            {item.label}
-          </Text>
-          <Text
-            style={[
-              theme.typography.body.md.regular,
-              { color: theme.colors.system.body.disabled },
-            ]}
-          >
-            {item.address}
-          </Text>
-        </View>
-      </View>
+  // Get icon based on label
+  const getAddressIcon = (label?: string) => {
+    switch (label?.toLowerCase()) {
+      case "home":
+        return Icon.home;
+      case "work":
+        return Icon.briefcase;
+      default:
+        return Icon.pin;
+    }
+  };
 
-      {selected.address === item.address && (
-        <Icon.check color={theme.colors.system.body.default} />
-      )}
-    </TouchableOpacity>
-  );
+  const renderSavedItem = ({ item }: { item: any }) => {
+    const AddressIcon = getAddressIcon(item.label);
+    const displayAddress = item.streetAddress || item.address;
+
+    return (
+      <TouchableOpacity
+        style={styles.savedItem}
+        onPress={() => handleSelectAddress(item.id, item.label || "Address", displayAddress)}
+      >
+        <View style={styles.savedRow}>
+          <AddressIcon color={theme.colors.system.body.default} />
+          <View>
+            <Text
+              style={[
+                theme.typography.body.md.regular,
+                { color: theme.colors.system.body.default },
+              ]}
+            >
+              {item.label || "Address"}
+            </Text>
+            <Text
+              style={[
+                theme.typography.body.md.regular,
+                { color: theme.colors.system.body.disabled },
+              ]}
+            >
+              {displayAddress}
+            </Text>
+          </View>
+        </View>
+
+        {selected.id === item.id && (
+          <Icon.check color={theme.colors.system.body.default} />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const handleSetLocationOnMap = () => {
     // Use the current query as label/address
@@ -233,6 +267,10 @@ const AddressSearch = () => {
                   ref={searchInputRef}
                   value={query}
                   onChangeText={setQuery}
+                  onClear={() => {
+                    setQuery("");
+                    setSuggestions([]);
+                  }}
                   placeholder="Search address"
                 />
               </Animated.View>
@@ -245,7 +283,17 @@ const AddressSearch = () => {
                 ListFooterComponent={
                   <TouchableOpacity
                     style={styles.setLocationBtn}
-                    onPress={() => router.push("/set-location")}
+                    onPress={() => {
+                      // Clear selected address to trigger current location in save-address
+                      setSelected({ label: "Current Location", address: "" });
+                      router.push({
+                        pathname: "/save-address",
+                        params: {
+                          source: "set-location",
+                          returnTo: "home-cleaning",
+                        },
+                      });
+                    }}
                   >
                     <Icon.pin color={theme.colors.system.body.default} />
                     <Text
@@ -264,26 +312,42 @@ const AddressSearch = () => {
 
           {/* Saved Tab */}
           {activeTab === "Saved" && (
-            <FlatList
-              data={savedAddresses}
-              keyExtractor={(item) => item.id}
-              renderItem={renderSavedItem}
-              contentContainerStyle={{ paddingTop: 8 }}
-              ListEmptyComponent={
-                <Text
-                  style={[
-                    theme.typography.body.md.regular,
-                    {
-                      color: theme.colors.system.body.disabled,
-                      textAlign: "center",
-                      marginTop: 32,
-                    },
-                  ]}
-                >
-                  No saved addresses
-                </Text>
-              }
-            />
+            <>
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={theme.colors.system.body.default} />
+                  <Text
+                    style={[
+                      theme.typography.body.md.regular,
+                      { color: theme.colors.system.body.disabled },
+                    ]}
+                  >
+                    Loading saved addresses...
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={savedAddresses}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderSavedItem}
+                  contentContainerStyle={{ paddingTop: 8 }}
+                  ListEmptyComponent={
+                    <Text
+                      style={[
+                        theme.typography.body.md.regular,
+                        {
+                          color: theme.colors.system.body.disabled,
+                          textAlign: "center",
+                          marginTop: 32,
+                        },
+                      ]}
+                    >
+                      No saved addresses
+                    </Text>
+                  }
+                />
+              )}
+            </>
           )}
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -313,6 +377,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   savedRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 32,
+  },
 });
 
 export default AddressSearch;

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsNotEmpty, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAddressDto {
@@ -7,25 +7,25 @@ export class CreateAddressDto {
   @IsOptional()
   label?: string;
 
-  @ApiProperty({ example: 'Majeedhee Magu, Male' })
+  @ApiProperty({ example: 'Apt 5A, Floor 3', description: 'House/Apt number, floor, etc.' })
   @IsString()
   @IsNotEmpty()
-  streetAddress: string;
+  address: string;
 
-  @ApiProperty({ example: 'Male' })
+  @ApiProperty({ example: 'Majeedhee Magu', description: 'Street/Magu name' })
   @IsString()
   @IsNotEmpty()
-  city: string;
+  street: string;
 
-  @ApiProperty({ example: 'Male', description: 'Island name' })
+  @ApiProperty({ example: 'Near STO', description: 'Landmark/Goalhi' })
   @IsString()
   @IsNotEmpty()
-  island: string;
+  landmark: string;
 
-  @ApiPropertyOptional({ example: '20000' })
-  @IsString()
-  @IsOptional()
-  postalCode?: string;
+  @ApiProperty({ example: 'uuid', description: 'Zone ID' })
+  @IsUUID()
+  @IsNotEmpty()
+  zoneId: string;
 
   @ApiPropertyOptional({ example: 4.1755, description: 'Latitude coordinate' })
   @IsNumber()

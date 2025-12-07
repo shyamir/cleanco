@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    height: 48,
+    minHeight: 48,
   },
   fieldContent: {
     flexDirection: "row",

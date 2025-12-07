@@ -106,8 +106,16 @@ export class UsersService {
           select: {
             id: true,
             label: true,
-            streetAddress: true,
-            city: true,
+            address: true,
+            street: true,
+            landmark: true,
+            zoneId: true,
+            zone: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
             isPrimary: true,
             latitude: true,
             longitude: true,
@@ -143,8 +151,16 @@ export class UsersService {
           select: {
             id: true,
             label: true,
-            streetAddress: true,
-            city: true,
+            address: true,
+            street: true,
+            landmark: true,
+            zoneId: true,
+            zone: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
             isPrimary: true,
             latitude: true,
             longitude: true,

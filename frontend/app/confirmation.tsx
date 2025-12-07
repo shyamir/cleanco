@@ -24,8 +24,20 @@ const {theme} = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
 
-  const { selected } = useAddress();
-  const { service, schedule, frequency, startDate } = useBooking();
+  const { selected, clearSelected } = useAddress();
+  const { service, schedule, frequency, startDate, resetBooking } = useBooking();
+
+  const handleNavigateHome = () => {
+    resetBooking();
+    clearSelected();
+    router.push("/home");
+  };
+
+  const handleViewBooking = () => {
+    resetBooking();
+    clearSelected();
+    router.push("/activity");
+  };
 
   let scheduleDisplay = "-";
 
@@ -157,12 +169,12 @@ const {theme} = useTheme();
           <Button
             label="View Booking"
             variant="outline"
-            onPress={() => router.push("/activity")}
+            onPress={handleViewBooking}
           />
           <Button
             label="Back to Home"
             variant="filled"
-            onPress={() => router.push("/home")}
+            onPress={handleNavigateHome}
           />
         </View>
       </SafeAreaView>

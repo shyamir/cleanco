@@ -102,7 +102,6 @@ export class BookingsService {
     const pricingRule = await this.findMatchingPricingRule({
       serviceType,
       bedrooms,
-      bathrooms,
       officeSize,
       floors,
       rooms,
@@ -228,6 +227,12 @@ export class BookingsService {
       // The booking will remain in CONFIRMED status for manual assignment
     }
 
+    // Update availability cache based on actual assignments
+    const assignedCount = await this.getAssignedCleanersCount(booking.id);
+    if (assignedCount > 0) {
+      await this.updateAvailabilityCache(bookingDate, timeSlotId, assignedCount);
+    }
+
     return booking;
   }
 
@@ -345,6 +350,9 @@ export class BookingsService {
       );
     }
 
+    // Count assigned cleaners BEFORE rescheduling
+    const assignedCount = await this.getAssignedCleanersCount(booking.id);
+
     // Update booking
     const updatedBooking = await this.prisma.booking.update({
       where: { id },
@@ -361,6 +369,14 @@ export class BookingsService {
         timeSlot: true,
       },
     });
+
+    // Update cache for both slots (if cleaners were assigned)
+    if (assignedCount > 0) {
+      // Free up old slot
+      await this.updateAvailabilityCache(booking.date, booking.timeSlotId, -assignedCount);
+      // Book new slot
+      await this.updateAvailabilityCache(newDate, newTimeSlotId, assignedCount);
+    }
 
     // Reassign cleaners for the new date/time
     try {
@@ -407,6 +423,9 @@ export class BookingsService {
       );
     }
 
+    // Count assigned cleaners BEFORE updating status
+    const assignedCount = await this.getAssignedCleanersCount(booking.id);
+
     // Update booking
     const updatedBooking = await this.prisma.booking.update({
       where: { id },
@@ -421,6 +440,11 @@ export class BookingsService {
       },
     });
 
+    // Free up the slot based on actual assignments
+    if (assignedCount > 0) {
+      await this.updateAvailabilityCache(booking.date, booking.timeSlotId, -assignedCount);
+    }
+
     return {
       message: 'Booking canceled successfully',
       booking: updatedBooking,
@@ -433,13 +457,11 @@ export class BookingsService {
   private async findMatchingPricingRule(params: {
     serviceType: ServiceType;
     bedrooms?: number;
-    bathrooms?: number;
     officeSize?: string;
     floors?: number;
     rooms?: number;
   }) {
-    const { serviceType, bedrooms, bathrooms, officeSize, floors, rooms } =
-      params;
+    const { serviceType, bedrooms, officeSize, floors, rooms } = params;
 
     // Try exact match first
     const exactMatch = await this.prisma.pricingRule.findFirst({
@@ -447,7 +469,6 @@ export class BookingsService {
         serviceType,
         frequency: null, // ONE_TIME booking
         bedrooms: serviceType === ServiceType.HOME ? bedrooms : null,
-        bathrooms,
         officeSize: serviceType === ServiceType.OFFICE ? officeSize : null,
         floors: serviceType === ServiceType.OFFICE ? floors : null,
         rooms: serviceType === ServiceType.OFFICE ? rooms : null,
@@ -476,6 +497,72 @@ export class BookingsService {
           frequency: null,
           officeSize,
           isActive: true,
+        },
+      });
+    }
+  }
+
+  /**
+   * Count cleaners assigned to a booking
+   */
+  private async getAssignedCleanersCount(bookingId: string): Promise<number> {
+    return this.prisma.cleanerAssignment.count({
+      where: { bookingId },
+    });
+  }
+
+  /**
+   * Calculate total available cleaners for a given date
+   * Available = cleaners with isAvailable:true - cleaners on vacation
+   */
+  private async getAvailableCleanersCount(date: Date): Promise<number> {
+    return this.prisma.cleanerProfile.count({
+      where: {
+        isAvailable: true,
+        vacations: {
+          none: {
+            startDate: { lte: date },
+            endDate: { gte: date },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Update or create AvailabilityCache entry for a date/slot
+   * @param date - Booking date
+   * @param timeSlotId - Time slot ID
+   * @param cleanerCount - Number of cleaners to add/remove (+N for create, -N for cancel)
+   */
+  private async updateAvailabilityCache(
+    date: Date,
+    timeSlotId: string,
+    cleanerCount: number,
+  ): Promise<void> {
+    const existingCache = await this.prisma.availabilityCache.findUnique({
+      where: {
+        date_timeSlotId: { date, timeSlotId },
+      },
+    });
+
+    if (existingCache) {
+      // Update existing cache
+      await this.prisma.availabilityCache.update({
+        where: { id: existingCache.id },
+        data: {
+          bookedCapacity: Math.max(0, existingCache.bookedCapacity + cleanerCount),
+        },
+      });
+    } else {
+      // Create new cache entry
+      const totalCapacity = await this.getAvailableCleanersCount(date);
+      await this.prisma.availabilityCache.create({
+        data: {
+          date,
+          timeSlotId,
+          totalCapacity,
+          bookedCapacity: Math.max(0, cleanerCount),
         },
       });
     }

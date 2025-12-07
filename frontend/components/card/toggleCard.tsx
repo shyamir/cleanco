@@ -7,6 +7,7 @@ import ToggleGroup from "@/components/toggleButton/toggleGroup";
 
 type ToggleGroupItem = {
   options: string[];
+  disabledOptions?: string[];
   initialValue?: string;
   onChange?: (value: string) => void;
 };
@@ -14,6 +15,7 @@ type ToggleGroupItem = {
 type ToggleCardProps = {
   title: string;
   options?: string[];
+  disabledOptions?: string[];
   initialValue?: string;
   onChange?: (value: string) => void;
   groups?: ToggleGroupItem[];
@@ -23,6 +25,7 @@ type ToggleCardProps = {
 const ToggleCard: React.FC<ToggleCardProps> = ({
   title,
   options,
+  disabledOptions,
   initialValue,
   onChange,
   groups,
@@ -52,6 +55,7 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
                   <React.Fragment key={idx}>
                     <ToggleGroup
                       options={group.options}
+                      disabledOptions={group.disabledOptions}
                       initialValue={group.initialValue}
                       onChange={group.onChange}
                     />
@@ -72,6 +76,7 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
               options && (
                 <ToggleGroup
                   options={options}
+                  disabledOptions={disabledOptions}
                   initialValue={initialValue}
                   onChange={onChange}
                 />

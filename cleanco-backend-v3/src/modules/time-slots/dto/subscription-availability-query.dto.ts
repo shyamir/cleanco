@@ -1,16 +1,26 @@
-import { IsDateString, IsNotEmpty, IsOptional, IsEnum, IsInt, IsString, Min } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsOptional, IsEnum, IsInt, IsString, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ServiceType } from '@prisma/client';
 
-export class AvailableSlotsQueryDto {
+export class SubscriptionAvailabilityQueryDto {
   @ApiProperty({
-    description: 'Date to check available slots (YYYY-MM-DD)',
+    description: 'Start date for the subscription (YYYY-MM-DD)',
     example: '2025-01-15',
   })
   @IsDateString()
   @IsNotEmpty()
-  date: string;
+  startDate: string;
+
+  @ApiProperty({
+    description: 'Day of week to check (0=Sunday, 6=Saturday)',
+    example: 1,
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  dayOfWeek: number;
 
   @ApiPropertyOptional({
     description: 'Service type (HOME or OFFICE)',

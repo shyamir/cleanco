@@ -36,7 +36,7 @@ export class ServicesService {
    * Calculate price quote based on service parameters
    */
   async calculateQuote(quoteDto: CalculateQuoteDto) {
-    const { serviceType, frequency, bedrooms, bathrooms, officeSize, floors, rooms, promoCode } = quoteDto;
+    const { serviceType, frequency, bedrooms, officeSize, floors, rooms, promoCode } = quoteDto;
 
     // Validate service-specific parameters
     if (serviceType === ServiceType.HOME && !bedrooms) {
@@ -52,7 +52,6 @@ export class ServicesService {
       serviceType,
       frequency: frequency || null,
       bedrooms: bedrooms || null,
-      bathrooms: bathrooms || null,
       officeSize: officeSize || null,
       floors: floors || null,
       rooms: rooms || null,
@@ -116,7 +115,6 @@ export class ServicesService {
       frequency: frequency || 'ONE_TIME',
       parameters: {
         bedrooms,
-        bathrooms,
         officeSize,
         floors,
         rooms,
@@ -175,7 +173,6 @@ export class ServicesService {
     serviceType: ServiceType;
     frequency: string | null;
     bedrooms: number | null;
-    bathrooms: number | null;
     officeSize: string | null;
     floors: number | null;
     rooms: number | null;
@@ -196,12 +193,6 @@ export class ServicesService {
     if (params.bedrooms !== null) {
       where.bedrooms = params.bedrooms;
     }
-
-    // Bathrooms are ignored for pricing - always match on null
-    // (Commenting out bathroom matching to ignore this parameter)
-    // if (params.bathrooms !== null) {
-    //   where.bathrooms = params.bathrooms;
-    // }
 
     if (params.officeSize !== null) {
       where.officeSize = params.officeSize;
@@ -237,7 +228,6 @@ export class ServicesService {
       // For HOME service, only bedrooms is required
       if (params.serviceType === ServiceType.HOME && params.bedrooms !== null) {
         minimalWhere.bedrooms = params.bedrooms;
-        minimalWhere.bathrooms = null;
       }
 
       // For OFFICE service, only officeSize is required
@@ -245,7 +235,6 @@ export class ServicesService {
         minimalWhere.officeSize = params.officeSize;
         minimalWhere.floors = null;
         minimalWhere.rooms = null;
-        minimalWhere.bathrooms = null;
       }
 
       pricingRule = await this.prisma.pricingRule.findFirst({

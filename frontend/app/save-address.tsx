@@ -5,8 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  TextInput,
-  Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/constants/icon";
@@ -16,181 +16,325 @@ import Button from "@/components/button";
 import TextField from "@/components/inputs/textfield";
 import BottomSheetDropdown from "@/components/bottomSheet/dropdown";
 import { useAddress } from "@/context/address-context";
+import { useBooking } from "@/context/booking-context";
 import ToggleGroup from "@/components/toggleButton/toggleGroup";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import Geocoder from "react-native-geocoding"; // optional, if you want to get coordinates from address
+import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
+import Geocoder from "react-native-geocoding";
+import axios from "axios";
+import * as Location from "expo-location";
 import lightMapStyle from "@/constants/lightMap.json";
 import darkMapStyle from "@/constants/darkMap.json";
+import { addressApi, CreateAddressRequest, Zone } from "@/services/addressService";
+
+const GOOGLE_MAPS_API_KEY = "AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg";
 
 const SaveAddress = () => {
   const { theme, mode } = useTheme();
   const router = useRouter();
   const { selected, setSelected } = useAddress();
+  const { setAddressId } = useBooking();
 
   // --- State ---
-  const [buildingType, setBuildingType] = useState("House");
-  const [landmark, setLandmark] = useState("");
-  const [buildingName, setBuildingName] = useState("");
-  const [floor, setFloor] = useState("");
-  const [room, setRoom] = useState("");
-  const [label, setLabel] = useState("");
+  const [addressLine, setAddressLine] = useState(""); // House/Apt number, floor, etc.
+  const [street, setStreet] = useState(""); // Street/Magu
+  const [landmark, setLandmark] = useState(""); // Landmark/Goalhi
+  const [selectedZone, setSelectedZone] = useState(""); // Zone from database
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [isLoadingZones, setIsLoadingZones] = useState(true);
+  const [label, setLabel] = useState("Home");
+  const [customLabel, setCustomLabel] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const [coords, setCoords] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
 
+  // Current location info displayed below map (updates when pin moves)
+  const [currentMapLabel, setCurrentMapLabel] = useState(selected?.label || "");
+  const [currentMapAddress, setCurrentMapAddress] = useState(selected?.address || "");
+
+  const mapRef = useRef<MapView>(null);
+
   const { source, returnTo } = useLocalSearchParams<{
     source?: string;
     returnTo?: string;
   }>();
 
-  Geocoder.init("AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg"); // same API key you used for Places
+  Geocoder.init("AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg");
   const isDark = mode === "dark";
 
-  // --- Generate dynamic fields ---
-  const renderFields = () => {
-    switch (buildingType) {
-      case "House":
-        return (
-          <>
-            <TextField
-              label="Landmark*"
-              placeholder="e.g. Across railway station"
-              value={landmark}
-              onChangeText={setLandmark}
-            />
-          </>
-        );
+  // Load zones from backend
+  useEffect(() => {
+    const loadZones = async () => {
+      try {
+        const fetchedZones = await addressApi.getZones();
+        setZones(fetchedZones);
+        if (fetchedZones.length > 0) {
+          setSelectedZone(fetchedZones[0].name);
+        }
+      } catch (error) {
+        console.error("Failed to load zones:", error);
+      } finally {
+        setIsLoadingZones(false);
+      }
+    };
+    loadZones();
+  }, []);
 
-      case "Apartment":
-        return (
-          <>
-            <TextField
-              label="Apt/Flat/Floor*"
-              placeholder="e.g. Flat 5A"
-              value={floor}
-              onChangeText={setFloor}
-            />
-            <TextField
-              label="Building name*"
-              placeholder="e.g. Greenview Apartments"
-              value={buildingName}
-              onChangeText={setBuildingName}
-            />
-            <TextField
-              label="Landmark*"
-              placeholder="e.g. Near post office"
-              value={landmark}
-              onChangeText={setLandmark}
-            />
-          </>
-        );
+  // Check if all required fields are filled
+  const isFormValid = Boolean(
+    addressLine.trim() &&
+    street.trim() &&
+    landmark.trim() &&
+    selectedZone
+  );
 
-      case "Office":
-        return (
-          <>
-            <TextField
-              label="Business/Building name*"
-              placeholder="e.g. Orion Towers"
-              value={buildingName}
-              onChangeText={setBuildingName}
-            />
-            <TextField
-              label="Floor*"
-              placeholder="e.g. 3rd Floor"
-              value={floor}
-              onChangeText={setFloor}
-            />
-            <TextField
-              label="Landmark*"
-              placeholder="e.g. Opposite Central Mall"
-              value={landmark}
-              onChangeText={setLandmark}
-            />
-          </>
-        );
-
-      case "Hotel":
-        return (
-          <>
-            <TextField
-              label="Hotel name*"
-              placeholder="e.g. Cinnamon Grand"
-              value={buildingName}
-              onChangeText={setBuildingName}
-            />
-            <TextField
-              label="Room/Floor*"
-              placeholder="e.g. Room 504"
-              value={room}
-              onChangeText={setRoom}
-            />
-            <TextField
-              label="Landmark*"
-              placeholder="e.g. Near Galle Face"
-              value={landmark}
-              onChangeText={setLandmark}
-            />
-          </>
-        );
-
-      case "Other":
-        return (
-          <>
-            <TextField
-              label="Building name*"
-              placeholder="e.g. Sunshine Plaza"
-              value={buildingName}
-              onChangeText={setBuildingName}
-            />
-            <TextField
-              label="Landmark*"
-              placeholder="e.g. Near City Bus Stop"
-              value={landmark}
-              onChangeText={setLandmark}
-            />
-          </>
-        );
-
-      default:
-        return null;
-    }
+  // Get zone ID from selected zone name
+  const getSelectedZoneId = (): string | null => {
+    const zone = zones.find(z => z.name === selectedZone);
+    return zone?.id || null;
   };
-  const handleSave = () => {
-    // Save the selected address
-    setSelected({
-      label: label || selected.label,
-      address: selected.address,
-    });
 
-    // Navigate based on source
-    if (source === "address-search") {
+  // Navigate back based on source
+  const navigateBack = () => {
+    if (source === "address-search" || source === "set-location") {
       if (returnTo === "home-cleaning") {
         router.replace("/home-cleaning");
       } else if (returnTo === "office-cleaning") {
         router.replace("/office-cleaning");
       } else {
-        router.back(); // fallback
+        router.back();
       }
     } else if (source === "add-home" || source === "add-work") {
       router.replace("/account");
     } else {
-      router.back(); // fallback
+      router.back();
     }
   };
 
-  useEffect(() => {
-    if (selected.address) {
-      Geocoder.from(selected.address)
-        .then((json) => {
-          const location = json.results[0].geometry.location;
-          console.log("Geocoded location:", location); // debug
-          setCoords({ latitude: location.lat, longitude: location.lng });
-        })
-        .catch((error) => console.log("Geocoding error:", error));
+  // Save address to backend and update context
+  const saveAddressToBackend = async (withLabel: boolean) => {
+    const zoneId = getSelectedZoneId();
+    if (!zoneId) {
+      Alert.alert("Error", "Please select a valid zone.");
+      return;
     }
-  }, [selected.address]);
+
+    setIsSaving(true);
+
+    try {
+      const addressLabel = withLabel
+        ? label === "Other"
+          ? customLabel || "Other"
+          : label
+        : undefined;
+
+      const request: CreateAddressRequest = {
+        label: addressLabel,
+        address: addressLine,
+        street: street,
+        landmark: landmark,
+        zoneId: zoneId,
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
+      };
+
+      const savedAddress = await addressApi.createAddress(request);
+
+      // Build display address from separate fields
+      const displayAddress = [savedAddress.address, savedAddress.street, savedAddress.landmark]
+        .filter(Boolean)
+        .join(", ");
+
+      // Update context with the new address
+      setSelected({
+        id: savedAddress.id,
+        label: savedAddress.label || "Address",
+        address: displayAddress,
+        latitude: savedAddress.latitude,
+        longitude: savedAddress.longitude,
+      });
+
+      // Store addressId in booking context
+      setAddressId(savedAddress.id);
+
+      navigateBack();
+    } catch (error: any) {
+      console.error("Failed to save address:", error);
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Failed to save address. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle "Save Address" button
+  const handleSaveAddress = () => {
+    saveAddressToBackend(true);
+  };
+
+  // Reverse geocode coordinates to get address
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const json = await Geocoder.from(latitude, longitude);
+      if (json.results && json.results.length > 0) {
+        const result = json.results[0];
+        const components = result.address_components;
+
+        // Extract main location name (route, point of interest, or locality)
+        const localityComponent = components.find((c: any) =>
+          c.types.includes("locality")
+        );
+        const routeComponent = components.find((c: any) =>
+          c.types.includes("route")
+        );
+        const poiComponent = components.find((c: any) =>
+          c.types.includes("point_of_interest") || c.types.includes("establishment")
+        );
+        const sublocalityComponent = components.find((c: any) =>
+          c.types.includes("sublocality_level_1") || c.types.includes("neighborhood")
+        );
+
+        // Build main label from available components
+        const mainLabel = poiComponent?.long_name ||
+          routeComponent?.long_name ||
+          sublocalityComponent?.long_name ||
+          localityComponent?.long_name ||
+          "Selected Location";
+
+        // Update current map label and address display
+        setCurrentMapLabel(mainLabel);
+        setCurrentMapAddress(result.formatted_address);
+      }
+    } catch (error) {
+      console.error("Reverse geocoding error:", error);
+    }
+  };
+
+  // Get place details from Google Place ID (more reliable than geocoding address string)
+  const getPlaceDetails = async (placeId: string) => {
+    try {
+      const response = await axios.get(
+        `https://maps.googleapis.com/maps/api/place/details/json`,
+        {
+          params: {
+            place_id: placeId,
+            key: GOOGLE_MAPS_API_KEY,
+            fields: "geometry,address_components,formatted_address",
+          },
+        }
+      );
+      return response.data.result;
+    } catch (error) {
+      console.error("Place Details API error:", error);
+      return null;
+    }
+  };
+
+  // Fallback geocoding using address string
+  const fallbackGeocode = async () => {
+    if (!selected.address) {
+      setCoords({ latitude: 4.1755, longitude: 73.5093 });
+      await reverseGeocode(4.1755, 73.5093);
+      return;
+    }
+
+    try {
+      const json = await Geocoder.from(selected.address);
+      if (json.results && json.results.length > 0) {
+        const result = json.results[0];
+        const location = result.geometry.location;
+        setCoords({ latitude: location.lat, longitude: location.lng });
+      } else {
+        // No results found, use default location
+        setCoords({ latitude: 4.1755, longitude: 73.5093 });
+        await reverseGeocode(4.1755, 73.5093);
+      }
+    } catch (error: any) {
+      // Silently handle geocoding failures - just use default location
+      console.log("Using default location (geocoding unavailable)");
+      setCoords({ latitude: 4.1755, longitude: 73.5093 });
+      await reverseGeocode(4.1755, 73.5093);
+    }
+  };
+
+  // Get user's current location
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.log("Location permission denied, using default");
+        return null;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      return {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      };
+    } catch (error) {
+      console.error("Error getting current location:", error);
+      return null;
+    }
+  };
+
+  // Initial location setup - prefer Place Details API if placeId is available
+  useEffect(() => {
+    const initializeLocation = async () => {
+      // If coming from "set location on map", use current location
+      if (source === "set-location") {
+        const currentLocation = await getCurrentLocation();
+        if (currentLocation) {
+          setCoords(currentLocation);
+          // Reverse geocode to get address
+          await reverseGeocode(currentLocation.latitude, currentLocation.longitude);
+        } else {
+          // Fallback to default Male location if permission denied
+          setCoords({ latitude: 4.1755, longitude: 73.5093 });
+          await reverseGeocode(4.1755, 73.5093);
+        }
+        return;
+      }
+
+      if (selected.placeId) {
+        // Use Place Details API for reliable geocoding
+        const details = await getPlaceDetails(selected.placeId);
+        if (details?.geometry?.location) {
+          const { lat, lng } = details.geometry.location;
+          setCoords({ latitude: lat, longitude: lng });
+          // Update current map label and address display
+          if (selected.label) {
+            setCurrentMapLabel(selected.label);
+          }
+          if (details.formatted_address) {
+            setCurrentMapAddress(details.formatted_address);
+          }
+        } else {
+          // Fallback to geocoding if Place Details fails
+          await fallbackGeocode();
+        }
+      } else if (selected.address) {
+        // No placeId available, use geocoding
+        if (selected.label) {
+          setCurrentMapLabel(selected.label);
+        }
+        setCurrentMapAddress(selected.address);
+        await fallbackGeocode();
+      } else {
+        // Default to Male, Maldives if no address provided
+        setCoords({ latitude: 4.1755, longitude: 73.5093 });
+        await reverseGeocode(4.1755, 73.5093);
+      }
+    };
+
+    initializeLocation();
+  }, [source, selected.placeId, selected.address]);
 
   return (
     <SafeAreaProvider>
@@ -211,38 +355,15 @@ const SaveAddress = () => {
               <TouchableOpacity onPress={() => router.back()}>
                 <Icon.back color={theme.colors.system.body.default} />
               </TouchableOpacity>
-
-              <TouchableOpacity
-                // style={[styles.skipButton]}
-                onPress={() => {
-                  // Navigate based on the source / returnTo
-                  if (source === "address-search") {
-                    if (returnTo === "home-cleaning") {
-                      router.replace("/home-cleaning");
-                    } else if (returnTo === "office-cleaning") {
-                      router.replace("/office-cleaning");
-                    } else {
-                      router.back();
-                    }
-                  } else if (source === "add-home" || source === "add-work") {
-                    router.replace("/account");
-                  } else {
-                    router.back();
-                  }
-                }}
+              <Text
+                style={[
+                  theme.typography.body.lg.medium,
+                  { color: theme.colors.system.body.default },
+                ]}
               >
-                <Text
-                  style={[
-                    // styles.skipText,
-                    {
-                      ...theme.typography.body.md.medium,
-                      color: theme.colors.button.label.secondary,
-                    },
-                  ]}
-                >
-                  Skip
-                </Text>
-              </TouchableOpacity>
+                Address Details
+              </Text>
+              <View style={{ width: 24 }} />
             </View>
 
             {/* Body */}
@@ -253,23 +374,35 @@ const SaveAddress = () => {
                 >
                   {coords && (
                     <MapView
+                      ref={mapRef}
                       provider={PROVIDER_GOOGLE}
-                      style={{ flex: 1 }}
+                      style={StyleSheet.absoluteFillObject}
                       initialRegion={{
                         latitude: coords.latitude,
                         longitude: coords.longitude,
                         latitudeDelta: 0.005,
                         longitudeDelta: 0.005,
                       }}
+                      onRegionChangeComplete={(region) => {
+                        setCoords({ latitude: region.latitude, longitude: region.longitude });
+                        reverseGeocode(region.latitude, region.longitude);
+                      }}
                       customMapStyle={isDark ? darkMapStyle : lightMapStyle}
-                    >
-                      <Marker
-                        coordinate={coords}
-                        pinColor={theme.colors.system.body.active}
-                      />
-                    </MapView>
+                    />
                   )}
+                  {/* Fixed center pin */}
+                  <View style={styles.pinFixed} pointerEvents="none">
+                    <Text style={{ fontSize: 32 }}>📍</Text>
+                  </View>
                 </View>
+                <Text
+                  style={[
+                    theme.typography.body.xs.regular,
+                    { color: theme.colors.system.body.disabled, marginTop: 4 },
+                  ]}
+                >
+                  Move the map to adjust location
+                </Text>
 
                 <Text
                   style={[
@@ -277,7 +410,7 @@ const SaveAddress = () => {
                     { color: theme.colors.system.body.default },
                   ]}
                 >
-                  {selected?.label}
+                  {currentMapLabel || "Selected Location"}
                 </Text>
                 <Text
                   style={[
@@ -285,28 +418,40 @@ const SaveAddress = () => {
                     { color: theme.colors.system.body.disabled },
                   ]}
                 >
-                  {selected?.address}
+                  {currentMapAddress || "Move the map to select location"}
                 </Text>
               </View>
 
-              <BottomSheetDropdown
-                label="Building Type"
-                sheetTitle="Choose Builiding Type"
-                options={["House", "Apartment", "Office", "Hotel", "Other"]}
-                optionIcons={{
-                  House: "home",
-                  Apartment: "building",
-                  Office: "briefcase",
-                  Hotel: "hotel",
-                  Other: "pin",
-                }}
-                value={buildingType}
-                onSelect={setBuildingType}
+              <TextField
+                label="Address"
+                placeholder="House/Apt number, floor, etc."
+                value={addressLine}
+                onChangeText={setAddressLine}
               />
 
-              {renderFields()}
+              <TextField
+                label="Street/Magu"
+                placeholder="e.g. Majeedhee Magu"
+                value={street}
+                onChangeText={setStreet}
+              />
 
-              {source === "address-search" && (
+              <TextField
+                label="Landmark/Goalhi"
+                placeholder="e.g. Near ADK Hospital"
+                value={landmark}
+                onChangeText={setLandmark}
+              />
+
+              <BottomSheetDropdown
+                label="Zone"
+                sheetTitle="Select Zone"
+                options={zones.map(z => z.name)}
+                value={selectedZone}
+                onSelect={setSelectedZone}
+              />
+
+              {(source === "address-search" || source === "set-location") && (
                 <View
                   style={[
                     styles.labelGroup,
@@ -338,9 +483,9 @@ const SaveAddress = () => {
                   {label === "Other" && (
                     <TextField
                       label="Address label"
-                      placeholder="e.g. Mom’s Place"
-                      value={buildingName}
-                      onChangeText={setBuildingName}
+                      placeholder="e.g. Mom's Place"
+                      value={customLabel}
+                      onChangeText={setCustomLabel}
                     />
                   )}
                 </View>
@@ -356,11 +501,27 @@ const SaveAddress = () => {
             { backgroundColor: theme.colors.system.background.secondary },
           ]}
         >
-          <Button
-            label={source === "search" ? "Save and Continue" : "Save"}
-            variant="filled"
-            onPress={handleSave}
-          />
+          {isSaving ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={theme.colors.system.body.default} />
+              <Text
+                style={[
+                  theme.typography.body.md.regular,
+                  { color: theme.colors.system.body.disabled },
+                ]}
+              >
+                Saving address...
+              </Text>
+            </View>
+          ) : (
+            <View style={{ opacity: isFormValid ? 1 : 0.5 }}>
+              <Button
+                label="Save Address"
+                variant="filled"
+                onPress={isFormValid ? handleSaveAddress : undefined}
+              />
+            </View>
+          )}
         </View>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -387,7 +548,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 180,
   },
   labelGroup: {
     borderTopWidth: 0.5,
@@ -413,6 +574,20 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+  },
+  pinFixed: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    marginLeft: -16,
+    marginTop: -32,
   },
 });
 

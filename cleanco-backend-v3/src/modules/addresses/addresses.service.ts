@@ -14,8 +14,35 @@ export class AddressesService {
 
   /**
    * Create a new address for the authenticated user
+   * If label is "Home" or "Work" and one already exists, replace it
    */
   async create(userId: string, createDto: CreateAddressDto) {
+    // Check if Home or Work label already exists - replace if so
+    if (createDto.label === 'Home' || createDto.label === 'Work') {
+      const existingWithLabel = await this.prisma.address.findFirst({
+        where: {
+          userId,
+          label: createDto.label,
+        },
+      });
+
+      if (existingWithLabel) {
+        // Update the existing address instead of creating a new one
+        const updatedAddress = await this.prisma.address.update({
+          where: { id: existingWithLabel.id },
+          data: {
+            address: createDto.address,
+            street: createDto.street,
+            landmark: createDto.landmark,
+            zoneId: createDto.zoneId,
+            latitude: createDto.latitude,
+            longitude: createDto.longitude,
+          },
+        });
+        return updatedAddress;
+      }
+    }
+
     // Check if this is the first address for the user
     const existingAddresses = await this.prisma.address.count({
       where: { userId },
