@@ -12,6 +12,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 
 /* --- Services ---*/
 import { servicesApi } from "@/services/services";
+import { bookingApi, UpcomingBooking } from "@/services/bookingService";
 
 /* --- Components ---*/
 import GradientText from "@/components/gradientText";
@@ -23,9 +24,10 @@ import ServiceCard from "../components/card/serviceCard";
 export default function Home() {
   const { theme } = useTheme();
   const { height } = Dimensions.get("window");
-  const [firstName, setFirstName] = useState(""); // default fallback
+  const [firstName, setFirstName] = useState("");
   const [homePrice, setHomePrice] = useState<string>("--");
   const [officePrice, setOfficePrice] = useState<string>("--");
+  const [upcomingBooking, setUpcomingBooking] = useState<UpcomingBooking | null>(null);
 
   // Fetch minimum prices from backend
   useEffect(() => {
@@ -40,7 +42,6 @@ export default function Home() {
         }
       } catch (error) {
         console.error("Failed to fetch prices:", error);
-        // Keep default "--" on error
       }
     };
     fetchPrices();
@@ -48,11 +49,21 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      const loadName = async () => {
+      const loadData = async () => {
+        // Load user name
         const storedName = await AsyncStorage.getItem("firstName");
         if (storedName) setFirstName(storedName);
+
+        // Fetch upcoming booking
+        try {
+          const booking = await bookingApi.getUpcomingBooking();
+          setUpcomingBooking(booking);
+        } catch (error) {
+          console.error("Failed to fetch upcoming booking:", error);
+          setUpcomingBooking(null);
+        }
       };
-      loadName();
+      loadData();
     }, [])
   );
 
@@ -89,12 +100,7 @@ export default function Home() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.topContainer}>
-            <StatusCard
-              hasService={true}
-              hasOngoingJob={false}
-              hasPaymentDue={false}
-              cleaningStatus="in-progress"
-            />
+            <StatusCard upcomingBooking={upcomingBooking} />
 
             <CouponCard
               discountText="Get 30% off!"

@@ -4,16 +4,22 @@ import { useTheme } from "@/theme/ThemeProvider";
 import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
-import GradientText from "../gradientText";
+import dayjs from "dayjs";
 
 type UpcomingServiceCardProps = {
   serviceType: "home" | "office";
+  date: string; // ISO date string
+  time: string; // Display time like "08:00 AM"
+  address: string;
 };
 
 const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
   serviceType,
+  date,
+  time,
+  address,
 }) => {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
 
   const getServiceImage = () => {
     switch (serviceType) {
@@ -24,6 +30,29 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
       default:
         return require("@/assets/images/home-cleaning.png");
     }
+  };
+
+  const getServiceLabel = () => {
+    return serviceType === "home" ? "Home Cleaning" : "Office Cleaning";
+  };
+
+  const getRelativeDateLabel = () => {
+    const bookingDate = dayjs(date);
+    const today = dayjs().startOf("day");
+    const tomorrow = today.add(1, "day");
+
+    if (bookingDate.isSame(today, "day")) {
+      return "Today";
+    } else if (bookingDate.isSame(tomorrow, "day")) {
+      return "Tomorrow";
+    } else {
+      return bookingDate.format("dddd"); // Day name like "Wednesday"
+    }
+  };
+
+  const getFormattedDateTime = () => {
+    const bookingDate = dayjs(date);
+    return `${bookingDate.format("D MMM YYYY")}, ${time}`;
   };
 
   return (
@@ -51,9 +80,8 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
                 } as any,
               ]}
             >
-              Home Cleaning
+              {getServiceLabel()}
             </Text>
-            {/* change to gradient text */}
             <Text
               style={[
                 {
@@ -62,24 +90,24 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
                 } as any,
               ]}
             >
-              Tomorrow
+              {getRelativeDateLabel()}
             </Text>
           </View>
           <Image
             source={getServiceImage()}
             resizeMode="contain"
-            style={{ width: 100, height: 100,}} // optional
+            style={{ width: 100, height: 100 }}
           />
         </View>
         <View style={styles.footer}>
           <InfoRow
             icon={<Icon.calendar color={theme.colors.system.body.disabled} />}
-            label="1 Sep 2025, 08:00"
+            label={getFormattedDateTime()}
             labelColor={theme.colors.card.label.default}
           />
           <InfoRow
             icon={<Icon.location color={theme.colors.system.body.disabled} />}
-            label="Hiyaa Towers H11, Nirolhu Magu, Male, Maldive"
+            label={address}
             labelColor={theme.colors.card.label.default}
           />
         </View>

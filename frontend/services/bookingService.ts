@@ -127,6 +127,14 @@ export interface CreateSubscriptionRequest {
   rooms?: number;
 }
 
+export interface Address {
+  id: string;
+  label?: string;
+  address: string;  // House/Apt number, floor
+  street: string;   // Street/Magu
+  landmark: string; // Landmark/Goalhi
+}
+
 export interface Booking {
   id: string;
   bookingNumber: string;
@@ -136,6 +144,19 @@ export interface Booking {
   date: string;
   totalPrice: number;
   finalPrice: number;
+}
+
+export interface UpcomingBooking {
+  id: string;
+  bookingNumber: string;
+  serviceType: ServiceType;
+  bookingType: BookingType;
+  status: string;
+  date: string;
+  totalPrice: number;
+  finalPrice: number;
+  address: Address;
+  timeSlot: TimeSlot;
 }
 
 export interface Subscription {
@@ -260,6 +281,14 @@ export const bookingApi = {
    */
   getUserSubscriptions: async (): Promise<Subscription[]> => {
     const response = await api.get('/subscriptions');
+    return response.data;
+  },
+
+  /**
+   * Get user's next upcoming booking
+   */
+  getUpcomingBooking: async (): Promise<UpcomingBooking | null> => {
+    const response = await api.get('/bookings/upcoming');
     return response.data;
   },
 };

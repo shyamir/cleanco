@@ -40,6 +40,14 @@ export class BookingsController {
     return this.bookingsService.findAll(user.userId);
   }
 
+  @Get('upcoming')
+  @ApiOperation({ summary: 'Get the next upcoming booking for current user' })
+  @ApiResponse({ status: 200, description: 'Upcoming booking or null if none' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getUpcoming(@CurrentUser() user: CurrentUserPayload) {
+    return this.bookingsService.getUpcoming(user.userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get booking details by ID' })
   @ApiResponse({ status: 200, description: 'Booking details' })

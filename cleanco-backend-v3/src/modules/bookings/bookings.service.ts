@@ -251,6 +251,30 @@ export class BookingsService {
   }
 
   /**
+   * Get user's next upcoming booking
+   */
+  async getUpcoming(userId: string) {
+    const today = startOfDay(new Date());
+
+    const upcomingBooking = await this.prisma.booking.findFirst({
+      where: {
+        userId,
+        date: { gte: today },
+        status: {
+          in: ['PENDING', 'CONFIRMED', 'ASSIGNED', 'IN_PROGRESS'],
+        },
+      },
+      include: {
+        address: true,
+        timeSlot: true,
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    return upcomingBooking;
+  }
+
+  /**
    * Find one booking by ID
    */
   async findOne(userId: string, id: string) {
