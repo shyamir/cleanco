@@ -427,6 +427,7 @@ const SaveAddress = () => {
                 placeholder="House/Apt number, floor, etc."
                 value={addressLine}
                 onChangeText={setAddressLine}
+                required
               />
 
               <TextField
@@ -434,6 +435,7 @@ const SaveAddress = () => {
                 placeholder="e.g. Majeedhee Magu"
                 value={street}
                 onChangeText={setStreet}
+                required
               />
 
               <TextField
@@ -441,6 +443,7 @@ const SaveAddress = () => {
                 placeholder="e.g. Near ADK Hospital"
                 value={landmark}
                 onChangeText={setLandmark}
+                required
               />
 
               <BottomSheetDropdown

@@ -48,7 +48,7 @@ const Tabs = ({ tabs }: TabsProps) => {
         return (
           <Tab
             key={index}
-            onPress={() => router.push(tab.route)}
+            onPress={() => router.replace(tab.route)}
             icon={tab.icon}
             label={tab.label}
             maxWidth={activeWidth}

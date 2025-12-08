@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authService } from "@/services/auth";
@@ -9,7 +9,6 @@ const videoSource = "../assets/videos/splash.mp4";
 
 export default function Splash() {
   const router = useRouter();
-  const [playerReady, setPlayerReady] = useState(false);
 
   const player = useVideoPlayer(require(videoSource), (player) => {
     player.play();
@@ -45,7 +44,6 @@ export default function Splash() {
       const duration = (player as any).duration;
       if (duration) {
         clearInterval(interval);
-        setPlayerReady(true);
 
         // Navigate after actual video duration
         setTimeout(() => {

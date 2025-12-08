@@ -19,6 +19,7 @@ import { AdminSubscriptionsModule } from './modules/admin/subscriptions/admin-su
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminPaymentsModule } from './modules/admin/payments/admin-payments.module';
 import { ZonesModule } from './modules/zones/zones.module';
+import { PromoCodesModule } from './modules/promo-codes/promo-codes.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import configuration from './config/configuration';
@@ -53,6 +54,7 @@ import configuration from './config/configuration';
     PaymentsModule,
     AdminPaymentsModule,
     ZonesModule,
+    PromoCodesModule,
   ],
   controllers: [AppController],
   providers: [

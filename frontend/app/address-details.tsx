@@ -37,10 +37,11 @@ const AddressDetails = () => {
         return (
           <>
             <TextField
-              label="Landmark*"
+              label="Landmark"
               placeholder="e.g. Across railway station"
               value={landmark}
               onChangeText={setLandmark}
+              required
             />
           </>
         );
@@ -49,22 +50,25 @@ const AddressDetails = () => {
         return (
           <>
             <TextField
-              label="Apt/Flat/Floor*"
+              label="Apt/Flat/Floor"
               placeholder="e.g. Flat 5A"
               value={floor}
               onChangeText={setFloor}
+              required
             />
             <TextField
-              label="Building name*"
+              label="Building name"
               placeholder="e.g. Greenview Apartments"
               value={buildingName}
               onChangeText={setBuildingName}
+              required
             />
             <TextField
-              label="Landmark*"
+              label="Landmark"
               placeholder="e.g. Near post office"
               value={landmark}
               onChangeText={setLandmark}
+              required
             />
           </>
         );
@@ -73,22 +77,25 @@ const AddressDetails = () => {
         return (
           <>
             <TextField
-              label="Business/Building name*"
+              label="Business/Building name"
               placeholder="e.g. Orion Towers"
               value={buildingName}
               onChangeText={setBuildingName}
+              required
             />
             <TextField
-              label="Floor*"
+              label="Floor"
               placeholder="e.g. 3rd Floor"
               value={floor}
               onChangeText={setFloor}
+              required
             />
             <TextField
-              label="Landmark*"
+              label="Landmark"
               placeholder="e.g. Opposite Central Mall"
               value={landmark}
               onChangeText={setLandmark}
+              required
             />
           </>
         );
@@ -97,22 +104,25 @@ const AddressDetails = () => {
         return (
           <>
             <TextField
-              label="Hotel name*"
+              label="Hotel name"
               placeholder="e.g. Cinnamon Grand"
               value={buildingName}
               onChangeText={setBuildingName}
+              required
             />
             <TextField
-              label="Room/Floor*"
+              label="Room/Floor"
               placeholder="e.g. Room 504"
               value={room}
               onChangeText={setRoom}
+              required
             />
             <TextField
-              label="Landmark*"
+              label="Landmark"
               placeholder="e.g. Near Galle Face"
               value={landmark}
               onChangeText={setLandmark}
+              required
             />
           </>
         );
@@ -121,16 +131,18 @@ const AddressDetails = () => {
         return (
           <>
             <TextField
-              label="Building name*"
+              label="Building name"
               placeholder="e.g. Sunshine Plaza"
               value={buildingName}
               onChangeText={setBuildingName}
+              required
             />
             <TextField
-              label="Landmark*"
+              label="Landmark"
               placeholder="e.g. Near City Bus Stop"
               value={landmark}
               onChangeText={setLandmark}
+              required
             />
           </>
         );

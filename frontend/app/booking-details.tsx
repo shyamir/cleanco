@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -14,46 +15,228 @@ import { Icon } from "@/constants/icon";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import Button from "@/components/button";
 import StatusPill from "@/components/statusPill";
-import { MOCK_BOOKINGS, Booking } from "@/constants/mockBookings";
 import CustomerSupport from "@/components/bottomSheet/customerSupport";
 import CancelBooking from "@/components/bottomSheet/cancelBooking";
 import RescheduleBooking from "@/components/bottomSheet/rescheduleBooking";
+import { bookingApi, BookingDetails, ServiceType } from "@/services/bookingService";
+import { useActivity } from "@/context/activity-context";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
-export default function BookingDetails() {
-const {theme} = useTheme();
+dayjs.extend(utc);
+
+// Map backend status to frontend status pill
+// Also considers booking date - past bookings that aren't CANCELED show as completed
+const mapStatus = (
+  backendStatus: string,
+  bookingDate: string
+): "upcoming" | "completed" | "cancelled" | "pending" => {
+  // Cancelled bookings always show as cancelled
+  if (backendStatus === "CANCELED") {
+    return "cancelled";
+  }
+
+  // Completed bookings always show as completed
+  if (backendStatus === "COMPLETED") {
+    return "completed";
+  }
+
+  // Check if booking date is in the past
+  const isPastBooking = dayjs.utc(bookingDate).isBefore(dayjs().startOf("day"));
+  if (isPastBooking) {
+    return "completed";
+  }
+
+  // Future bookings show based on status
+  switch (backendStatus) {
+    case "PENDING":
+      return "pending";
+    case "CONFIRMED":
+    case "ASSIGNED":
+    case "IN_PROGRESS":
+      return "upcoming";
+    default:
+      return "upcoming";
+  }
+};
+
+// Check if booking can be modified (reschedule/cancel)
+// Must have modifiable status AND be in the future
+const canModifyBooking = (status: string, bookingDate: string): boolean => {
+  const isModifiableStatus = ["PENDING", "CONFIRMED", "ASSIGNED"].includes(status);
+  const isFutureBooking = dayjs.utc(bookingDate).isAfter(dayjs().startOf("day"));
+  return isModifiableStatus && isFutureBooking;
+};
+
+export default function BookingDetailsScreen() {
+  const { theme } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { refreshBookings } = useActivity();
 
-  const [contactVisible, setContactVisible] = React.useState(false);
-  const [cancelVisible, setCancelVisible] = React.useState(false);
-  const [rescheduleVisible, setRescheduleVisible] = React.useState(false);
+  const [booking, setBooking] = useState<BookingDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get the booking from MOCK_BOOKINGS using the id from params
-  const booking: Booking | undefined = id
-    ? MOCK_BOOKINGS[id as keyof typeof MOCK_BOOKINGS]
-    : undefined;
+  const [contactVisible, setContactVisible] = useState(false);
+  const [cancelVisible, setCancelVisible] = useState(false);
+  const [rescheduleVisible, setRescheduleVisible] = useState(false);
 
-  if (!booking) {
+  useEffect(() => {
+    const fetchBooking = async () => {
+      if (!id) {
+        setError("No booking ID provided");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const data = await bookingApi.getBookingById(id as string);
+        setBooking(data);
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Failed to load booking");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBooking();
+  }, [id]);
+
+  if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Booking not found.</Text>
-      </View>
+      <SafeAreaProvider
+        style={[{ backgroundColor: theme.colors.system.background.default }]}
+      >
+        <SafeAreaView style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={theme.colors.system.body.default}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
-  type BookingStatus = "upcoming" | "completed" | "cancelled";
+  if (error || !booking) {
+    return (
+      <SafeAreaProvider
+        style={[{ backgroundColor: theme.colors.system.background.default }]}
+      >
+        <SafeAreaView style={styles.errorContainer}>
+          <Text
+            style={[
+              theme.typography.body.md.regular,
+              { color: theme.colors.system.body.default },
+            ]}
+          >
+            {error || "Booking not found"}
+          </Text>
+          <Button
+            variant="outline"
+            label="Go Back"
+            onPress={() => router.back()}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
 
-  const statusColorMap: Record<BookingStatus, string> = {
-    upcoming: theme.colors.system.background.default,
-    completed: theme.colors.system.background.default,
-    cancelled: theme.colors.system.background.default,
+  // Build display values
+  const isHomeService = booking.serviceType === ServiceType.HOME;
+  const serviceTitle = isHomeService ? "Home Cleaning" : "Office Cleaning";
+
+  // Build full address: label, address, street, landmark
+  const addressParts = [
+    booking.address.label,
+    booking.address.address,
+    booking.address.street,
+    booking.address.landmark,
+  ].filter(Boolean);
+  const displayAddress = addressParts.join(", ");
+
+  const formattedDate = dayjs.utc(booking.date).format("D MMM YYYY");
+  const formattedTime = booking.timeSlot.displayStartTime;
+  const scheduleDisplay = `${formattedDate}, ${formattedTime}`;
+
+  // Build details string
+  let detailsDisplay = "";
+  if (isHomeService) {
+    const bedroomText = booking.bedrooms
+      ? `${booking.bedrooms} bedroom${booking.bedrooms > 1 ? "s" : ""}`
+      : "";
+    const bathroomText = booking.bathrooms
+      ? `${booking.bathrooms} bathroom${booking.bathrooms > 1 ? "s" : ""}`
+      : "";
+    const petText = booking.hasPets ? "Has pets" : "No pets";
+    detailsDisplay = [bedroomText, bathroomText, petText]
+      .filter(Boolean)
+      .join(", ");
+  } else {
+    const sizeText = booking.officeSize ? `Size: ${booking.officeSize}` : "";
+    const floorText = booking.floors
+      ? `${booking.floors} floor${booking.floors > 1 ? "s" : ""}`
+      : "";
+    const roomText = booking.rooms
+      ? `${booking.rooms} room${booking.rooms > 1 ? "s" : ""}`
+      : "";
+    detailsDisplay = [sizeText, floorText, roomText].filter(Boolean).join(", ");
+  }
+
+  const totalDisplay = `MVR ${booking.finalPrice}`;
+  const status = mapStatus(booking.status, booking.date);
+  const showModifyButtons = canModifyBooking(booking.status, booking.date);
+
+  const handleCancelBooking = async () => {
+    setCancelVisible(false);
+    setIsProcessing(true);
+    try {
+      await bookingApi.cancelBooking(booking.id);
+      refreshBookings();
+      Alert.alert("Booking Cancelled", "Your booking has been cancelled.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (err: any) {
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || "Failed to cancel booking"
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const statusColor = statusColorMap[booking.status as BookingStatus];
+  const handleRescheduleBooking = async (date: string, timeSlotId: string) => {
+    setRescheduleVisible(false);
+    setIsProcessing(true);
+    try {
+      await bookingApi.rescheduleBooking(booking.id, date, timeSlotId);
+      refreshBookings();
+      Alert.alert("Booking Rescheduled", "Your booking has been rescheduled.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (err: any) {
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || "Failed to reschedule booking"
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <SafeAreaProvider
       style={[{ backgroundColor: theme.colors.system.background.default }]}
     >
+      {/* Processing overlay */}
+      {isProcessing && (
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.system.body.default} />
+        </View>
+      )}
+
       <SafeAreaView
         style={[
           styles.container,
@@ -69,7 +252,7 @@ const {theme} = useTheme();
                 { color: theme.colors.system.body.default },
               ]}
             >
-              {booking.title}
+              {serviceTitle}
             </Text>
 
             <TouchableOpacity
@@ -80,53 +263,53 @@ const {theme} = useTheme();
             </TouchableOpacity>
           </View>
 
-          <StatusPill status={booking.status} />
+          <StatusPill status={status} />
         </View>
 
         <ScrollView>
           {/* INFO ROWS */}
           <View style={styles.section}>
             <InfoRow
+              icon={<Icon.list color={theme.colors.system.body.disabled} />}
+              label="Booking ID"
+              value={booking.bookingNumber}
+            />
+
+            <InfoRow
               icon={<Icon.location color={theme.colors.system.body.disabled} />}
               label="Address"
-              value={booking.address}
+              value={displayAddress}
             />
 
             <InfoRow
               icon={<Icon.calendar color={theme.colors.system.body.disabled} />}
               label="Schedule"
-              value={booking.schedule}
+              value={scheduleDisplay}
             />
 
             <InfoRow
               icon={<Icon.notes color={theme.colors.system.body.disabled} />}
               label="Details"
-              value={booking.details}
+              value={detailsDisplay || "-"}
             />
 
             <InfoRow
               icon={<Icon.sparkle color={theme.colors.system.body.disabled} />}
               label="Special Instructions"
-              value={booking.instructions}
-            />
-
-            <InfoRow
-              icon={<Icon.broom color={theme.colors.system.body.disabled} />}
-              label="Cleaner"
-              value={booking.cleaner}
+              value={booking.specialInstructions || "-"}
             />
 
             <InfoRow
               icon={<Icon.bill color={theme.colors.system.body.disabled} />}
               label="Total"
-              value={booking.total}
+              value={totalDisplay}
             />
           </View>
         </ScrollView>
       </SafeAreaView>
 
       {/* BUTTONS */}
-      {booking.status === "upcoming" ? (
+      {showModifyButtons ? (
         <View style={styles.footer}>
           <View style={styles.warningContainer}>
             <Text
@@ -181,6 +364,7 @@ const {theme} = useTheme();
           </View>
         </View>
       )}
+
       <CustomerSupport
         visible={contactVisible}
         onClose={() => setContactVisible(false)}
@@ -196,13 +380,7 @@ const {theme} = useTheme();
       <CancelBooking
         visible={cancelVisible}
         onClose={() => setCancelVisible(false)}
-        onCancelPress={() => {
-          setCancelVisible(false);
-          Alert.alert(
-            "Booking Cancelled",
-            "Your booking has been cancelled successfully."
-          );
-        }}
+        onCancelPress={handleCancelBooking}
         onReschedulePress={() => {
           setCancelVisible(false);
           setRescheduleVisible(true);
@@ -211,16 +389,10 @@ const {theme} = useTheme();
       <RescheduleBooking
         visible={rescheduleVisible}
         onClose={() => setRescheduleVisible(false)}
-        onConfirmPress={() => {
-          setRescheduleVisible(false);
-          Alert.alert(
-            "Booking Rescheduled",
-            "Your booking has been rescheduled successfully."
-          );
-        }}
-        onCancelPress={() => {
-          setRescheduleVisible(false);
-        }}
+        onConfirmPress={handleRescheduleBooking}
+        onCancelPress={() => setRescheduleVisible(false)}
+        serviceName={serviceTitle}
+        bedrooms={booking.bedrooms}
       />
     </SafeAreaProvider>
   );
@@ -233,6 +405,29 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 32,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  processingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+    paddingHorizontal: 24,
+  },
   wrapper: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -240,7 +435,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignContent: "center",
   },
-
   closeBtn: {
     width: 48,
     height: 48,
@@ -251,19 +445,10 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     paddingTop: 16,
   },
-
-  statusPill: {
-    alignSelf: "flex-start",
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-
   section: {
     flexDirection: "column",
     gap: 16,
-    // marginBottom: 24,
   },
-
   warningContainer: {
     flexDirection: "row",
     padding: 16,
@@ -271,21 +456,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginTop: 8,
   },
-  cancelBtn: {
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderRadius: 50,
-    alignItems: "center",
-  },
   footer: {
     flexDirection: "column",
     gap: 8,
-  },
-  rescheduleBtn: {
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderRadius: 50,
-    alignItems: "center",
   },
   btnContainer: {
     shadowColor: "#000",

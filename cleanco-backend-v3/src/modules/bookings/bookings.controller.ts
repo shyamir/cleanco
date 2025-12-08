@@ -48,6 +48,22 @@ export class BookingsController {
     return this.bookingsService.getUpcoming(user.userId);
   }
 
+  @Get('activity')
+  @ApiOperation({ summary: 'Get all upcoming bookings for activity page' })
+  @ApiResponse({ status: 200, description: 'List of upcoming bookings' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getActivityBookings(@CurrentUser() user: CurrentUserPayload) {
+    return this.bookingsService.getActivityBookings(user.userId);
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get past bookings for history page' })
+  @ApiResponse({ status: 200, description: 'List of past bookings' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getHistoryBookings(@CurrentUser() user: CurrentUserPayload) {
+    return this.bookingsService.getHistoryBookings(user.userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get booking details by ID' })
   @ApiResponse({ status: 200, description: 'Booking details' })

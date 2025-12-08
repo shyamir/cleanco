@@ -5,6 +5,9 @@ import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 type UpcomingServiceCardProps = {
   serviceType: "home" | "office";
@@ -37,7 +40,7 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
   };
 
   const getRelativeDateLabel = () => {
-    const bookingDate = dayjs(date);
+    const bookingDate = dayjs.utc(date);
     const today = dayjs().startOf("day");
     const tomorrow = today.add(1, "day");
 
@@ -51,7 +54,7 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
   };
 
   const getFormattedDateTime = () => {
-    const bookingDate = dayjs(date);
+    const bookingDate = dayjs.utc(date);
     return `${bookingDate.format("D MMM YYYY")}, ${time}`;
   };
 

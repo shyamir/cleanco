@@ -1,11 +1,8 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useBooking } from "@/context/booking-context";
 import { CLEANING_PRICING } from "@/constants/pricing";
-import {
-  bookingApi,
-  ServiceType,
-  mapFrequencyToBackend,
-} from "@/services/bookingService";
+import { mapFrequencyToBackend } from "@/services/bookingService";
+import { servicesApi, PricingRule } from "@/services/services";
 
 const useCleaningBooking = () => {
   const {
@@ -20,6 +17,13 @@ const useCleaningBooking = () => {
     setSchedule,
     isLoadingPrice,
     setIsLoadingPrice,
+    // Promo state for preserving discounts
+    promoDiscount,
+    setPromoDiscount,
+    promoDiscountType,
+    promoDiscountValue,
+    originalTotal,
+    setOriginalTotal,
   } = useBooking();
 
   type Slot = { day: string; time: string };
@@ -32,8 +36,9 @@ const useCleaningBooking = () => {
   const [step, setStep] = useState<"selection" | "schedule">("selection");
   const [priceError, setPriceError] = useState<string | null>(null);
 
-  // Ref to track the latest request and cancel stale ones
-  const priceRequestRef = useRef<number>(0);
+  // Store pricing rules fetched from backend
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [rulesLoaded, setRulesLoaded] = useState(false);
 
   const handleNext = () => {
     setStep("schedule");
@@ -61,58 +66,86 @@ const useCleaningBooking = () => {
     return false;
   };
 
-  // Fetch price from backend with debounce
-  const fetchPrice = useCallback(async () => {
-    const requestId = ++priceRequestRef.current;
+  // Helper to apply promo discount to a base price
+  const applyPromoToPrice = useCallback((basePrice: number) => {
+    if (promoDiscountType && promoDiscountValue > 0) {
+      let discount = 0;
+      if (promoDiscountType === 'PERCENTAGE') {
+        discount = (basePrice * promoDiscountValue) / 100;
+      } else {
+        discount = promoDiscountValue;
+      }
+      setPromoDiscount(discount);
+      setOriginalTotal(basePrice);
+      setTotal(Math.max(0, basePrice - discount));
+    } else {
+      setTotal(basePrice);
+    }
+  }, [promoDiscountType, promoDiscountValue, setPromoDiscount, setOriginalTotal, setTotal]);
+
+  // Find price from cached pricing rules
+  const findPriceFromRules = useCallback((bedroomCount: number, freq: string): number | null => {
+    if (pricingRules.length === 0) return null;
 
     // Map frontend frequency to backend format
-    const { isSubscription, subscriptionFrequency } =
-      mapFrequencyToBackend(frequency);
+    const { subscriptionFrequency } = mapFrequencyToBackend(freq);
+    const backendFrequency = subscriptionFrequency || null; // null for one-time
 
-    setIsLoadingPrice(true);
-    setPriceError(null);
+    const rule = pricingRules.find(
+      (r) => r.bedrooms === bedroomCount && r.frequency === backendFrequency
+    );
 
-    try {
-      const response = await bookingApi.calculateQuote({
-        serviceType: ServiceType.HOME,
-        bedrooms,
-        frequency: subscriptionFrequency,
-      });
+    return rule?.price ?? null;
+  }, [pricingRules]);
 
-      // Only update if this is still the latest request
-      if (requestId === priceRequestRef.current) {
-        setTotal(response.pricing.finalPrice);
-      }
-    } catch (error) {
-      console.error("Failed to fetch price:", error);
-      // Only update error if this is still the latest request
-      if (requestId === priceRequestRef.current) {
-        setPriceError("Failed to fetch price");
-        // Fallback to static pricing
-        const fallbackPrice = CLEANING_PRICING[bedrooms]?.[frequency] || 435;
-        setTotal(fallbackPrice);
-      }
-    } finally {
-      if (requestId === priceRequestRef.current) {
+  // Fetch all pricing rules once on mount
+  useEffect(() => {
+    const fetchPricingRules = async () => {
+      setIsLoadingPrice(true);
+      try {
+        const rules = await servicesApi.getPricingRules('HOME');
+        setPricingRules(rules);
+        setRulesLoaded(true);
+      } catch (error) {
+        console.error("Failed to fetch pricing rules:", error);
+        setPriceError("Failed to load pricing");
+        setRulesLoaded(true); // Still mark as loaded so we can use fallback
+      } finally {
         setIsLoadingPrice(false);
       }
-    }
-  }, [bedrooms, frequency, setTotal, setIsLoadingPrice]);
+    };
 
-  // Debounced price fetch when bedrooms or frequency change
+    fetchPricingRules();
+  }, [setIsLoadingPrice]);
+
+  // Calculate price locally when bedrooms or frequency changes
   useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      fetchPrice();
-    }, 300); // 300ms debounce
+    if (!rulesLoaded) return;
 
-    return () => clearTimeout(debounceTimer);
-  }, [fetchPrice]);
+    const price = findPriceFromRules(bedrooms, frequency);
+
+    if (price !== null) {
+      applyPromoToPrice(price);
+      setPriceError(null);
+    } else {
+      // Fallback to static pricing if no rule found
+      const fallbackPrice = CLEANING_PRICING[bedrooms]?.[frequency] || 435;
+      applyPromoToPrice(fallbackPrice);
+      setPriceError(null);
+    }
+  }, [bedrooms, frequency, rulesLoaded, findPriceFromRules, applyPromoToPrice]);
 
   // Reset slots when frequency changes or step changes
   useEffect(() => setSlots(emptySlots), [frequency]);
   useEffect(() => {
     if (step === "selection") setSlots(emptySlots);
   }, [step]);
+
+  // Clear cached pricing rules (call after booking is confirmed)
+  const clearPricingCache = useCallback(() => {
+    setPricingRules([]);
+    setRulesLoaded(false);
+  }, []);
 
   return {
     step,
@@ -130,6 +163,7 @@ const useCleaningBooking = () => {
     isSelectionValid,
     isLoadingPrice,
     priceError,
+    clearPricingCache,
   };
 };
 

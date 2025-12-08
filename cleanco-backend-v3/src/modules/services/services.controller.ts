@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ServicesService } from './services.service';
 import { CalculateQuoteDto } from './dto/calculate-quote.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import { ServiceType } from '@prisma/client';
 
 @ApiTags('Services')
 @Controller('services')
@@ -23,6 +24,19 @@ export class ServicesController {
   @ApiResponse({ status: 200, description: 'Minimum prices for HOME and OFFICE services' })
   getMinimumPrices() {
     return this.servicesService.getMinimumPrices();
+  }
+
+  @Get('pricing/:serviceType')
+  @Public()
+  @ApiOperation({ summary: 'Get all pricing rules for a service type' })
+  @ApiResponse({ status: 200, description: 'All pricing rules for the service type' })
+  @ApiResponse({ status: 400, description: 'Invalid service type' })
+  getPricingRules(@Param('serviceType') serviceType: string) {
+    const upperType = serviceType.toUpperCase();
+    if (upperType !== 'HOME' && upperType !== 'OFFICE') {
+      throw new BadRequestException('Invalid service type. Must be HOME or OFFICE');
+    }
+    return this.servicesService.getPricingRules(upperType as ServiceType);
   }
 
   @Get(':id')

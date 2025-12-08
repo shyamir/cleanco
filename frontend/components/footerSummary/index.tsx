@@ -11,7 +11,11 @@ type FooterSummaryProps = {
   secondaryLabel: string;
   onPrimaryPress: () => void;
   onSecondaryPress: () => void;
-  disabledPrimary?: boolean; // <-- renamed and more specific
+  disabledPrimary?: boolean;
+  // Optional promo discount display
+  originalTotal?: number;
+  promoDiscount?: number;
+  promoCode?: string | null;
 };
 
 const FooterSummary: React.FC<FooterSummaryProps> = ({
@@ -23,9 +27,13 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
   onPrimaryPress,
   onSecondaryPress,
   disabledPrimary = false,
+  originalTotal,
+  promoDiscount,
+  promoCode,
 }) => {
   const {theme} = useTheme();
   const isOnce = frequency === "Once";
+  const hasDiscount = promoCode && promoDiscount && promoDiscount > 0 && originalTotal && originalTotal > 0;
 
   return (
     <View
@@ -34,6 +42,27 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
         { backgroundColor: theme.colors.system.background.secondary },
       ]}
     >
+      {/* Show discount info if promo applied */}
+      {hasDiscount && (
+        <View style={styles.discountInfo}>
+          <Text
+            style={[
+              theme.typography.body.sm.regular as any,
+              { color: theme.colors.system.body.disabled },
+            ]}
+          >
+            Subtotal: {originalTotal} {currency}
+          </Text>
+          <Text
+            style={[
+              theme.typography.body.sm.regular as any,
+              { color: theme.colors.input.label.success },
+            ]}
+          >
+            Discount ({promoCode}): -{promoDiscount} {currency}
+          </Text>
+        </View>
+      )}
       <View style={styles.textWrapper}>
         <Text
           style={[
@@ -117,6 +146,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 24,
     gap: 8,
+  },
+  discountInfo: {
+    marginBottom: 4,
+    gap: 2,
   },
   textWrapper: {
     flexDirection: "row",

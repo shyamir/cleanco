@@ -33,7 +33,7 @@ const Payment = () => {
   const router = useRouter();
   const navigation = useNavigation();
 
-  const { total } = useCleaningBooking();
+  const { total, clearPricingCache } = useCleaningBooking();
   const {
     frequency,
     bedrooms,
@@ -45,6 +45,9 @@ const Payment = () => {
     timeSlotId,
     selectedDays,
     paymentMethod,
+    promoCode,
+    promoDiscount,
+    originalTotal,
     resetBooking,
   } = useBooking();
 
@@ -95,10 +98,14 @@ const Payment = () => {
           hasPets: pet !== "None",
           paymentMethod,
           specialInstructions: instructions || undefined,
+          promoCode: promoCode || undefined,
         };
 
         await bookingApi.createBooking(bookingRequest);
       }
+
+      // Clear cached pricing rules so they're refetched next time
+      clearPricingCache();
 
       // Navigate to confirmation (resetBooking is called when leaving confirmation page)
       router.push("/confirmation");
@@ -176,6 +183,9 @@ const Payment = () => {
           onPrimaryPress={handleConfirm}
           onSecondaryPress={() => navigation.goBack()}
           disabledPrimary={!isPaymentValid || isSubmitting}
+          originalTotal={originalTotal}
+          promoDiscount={promoDiscount}
+          promoCode={promoCode}
         />
       </View>
     </SafeAreaProvider>

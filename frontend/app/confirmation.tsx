@@ -1,15 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Image,
-  ScrollView,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
-import { useNavigation } from "expo-router";
 import GradientText from "@/components/gradientText";
 import LinearGradient from "react-native-linear-gradient";
 import Button from "@/components/button";
@@ -17,15 +14,27 @@ import { useRouter } from "expo-router";
 import { Icon } from "@/constants/icon";
 import { useAddress } from "@/context/address-context";
 import { useBooking } from "@/context/booking-context";
+import { useActivity } from "@/context/activity-context";
+import { useHomeData } from "@/context/home-data-context";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 const Confirmation = ({}) => {
-const {theme} = useTheme();
-  const navigation = useNavigation();
+  const { theme } = useTheme();
   const router = useRouter();
 
   const { selected, clearSelected } = useAddress();
   const { service, schedule, frequency, startDate, resetBooking } = useBooking();
+  const { refreshBookings } = useActivity();
+  const { refreshHomeData } = useHomeData();
+
+  // Refresh activity bookings and home data when confirmation page mounts (booking just created)
+  useEffect(() => {
+    refreshBookings();
+    refreshHomeData();
+  }, []);
 
   const handleNavigateHome = () => {
     resetBooking();
@@ -44,14 +53,14 @@ const {theme} = useTheme();
   if (frequency === "Once") {
     if (schedule) {
       const [datePart, timePart] = schedule.split(",");
-      const formattedDate = dayjs(datePart).format("D MMM YYYY");
+      const formattedDate = dayjs.utc(datePart).format("D MMM YYYY");
       scheduleDisplay = timePart
         ? `${formattedDate},${timePart}`
         : formattedDate;
     }
   } else {
     const start = startDate
-      ? `Starts: ${dayjs(startDate).format("D MMM YYYY")} (${frequency})`
+      ? `Starts: ${dayjs.utc(startDate).format("D MMM YYYY")} (${frequency})`
       : "";
     const repeat = schedule ? `\n${schedule}` : "";
     scheduleDisplay = `${start}${repeat}`.trim() || "-";

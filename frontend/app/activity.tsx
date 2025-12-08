@@ -6,51 +6,96 @@ import {
   TouchableOpacity,
   View,
   Image,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import Tabs from "@/components/tabs";
 import { TABS_DATA } from "@/constants/tabData";
 import ActivityCard from "@/components/statusCard/activityCard";
 import ActivityRow from "@/components/activityRow";
-import { MOCK_BOOKINGS, Booking } from "@/constants/mockBookings";
 import { Icon } from "@/constants/icon";
-import {
-  isUpcomingBooking,
-  parseBookingDate,
-  isTodayOrTomorrow,
-} from "@/utils/date";
+import { useActivity } from "@/context/activity-context";
+import { ActivityBooking } from "@/services/bookingService";
+
+dayjs.extend(utc);
 
 export default function Activity() {
-const {theme} = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
+  const { upcomingBookings, isLoading, isRefreshing, refreshBookings } =
+    useActivity();
 
-  // All upcoming bookings (for grouping)
-  const allUpcomingBookings = Object.values(MOCK_BOOKINGS).filter((b) =>
-    isUpcomingBooking(b.date, b.time)
-  );
+  // Check if booking is today or tomorrow
+  const isTodayOrTomorrow = (dateStr: string): boolean => {
+    const bookingDate = dayjs.utc(dateStr);
+    const today = dayjs().startOf("day");
+    const tomorrow = today.add(1, "day");
+    return bookingDate.isSame(today, "day") || bookingDate.isSame(tomorrow, "day");
+  };
 
-  // Sort them
-  allUpcomingBookings.sort(
-    (a, b) =>
-      parseBookingDate(a.date, a.time).getTime() -
-      parseBookingDate(b.date, b.time).getTime()
-  );
+  // Get first booking that is today or tomorrow for the featured card
+  const nextBooking = upcomingBookings.find((b) => isTodayOrTomorrow(b.date));
 
-  // Next booking (ActivityCard) only if today/tomorrow
-  const nextBooking = allUpcomingBookings.find((b) =>
-    isTodayOrTomorrow(b.date, b.time)
-  );
-
-  // Group all upcoming bookings by date for ActivityRow
-  const bookingsByDate: Record<string, Booking[]> = {};
-  allUpcomingBookings.forEach((b) => {
-    if (!bookingsByDate[b.date]) bookingsByDate[b.date] = [];
-    bookingsByDate[b.date].push(b);
+  // Group all upcoming bookings by date and sort by time within each group
+  const bookingsByDate: Record<string, ActivityBooking[]> = {};
+  upcomingBookings.forEach((b) => {
+    const dateKey = dayjs.utc(b.date).format("D MMM YYYY");
+    if (!bookingsByDate[dateKey]) bookingsByDate[dateKey] = [];
+    bookingsByDate[dateKey].push(b);
   });
 
-  const hasUpcoming = allUpcomingBookings.length > 0;
+  // Sort bookings within each date group by time slot start time (ascending)
+  Object.keys(bookingsByDate).forEach((dateKey) => {
+    bookingsByDate[dateKey].sort((a, b) =>
+      a.timeSlot.startTime.localeCompare(b.timeSlot.startTime)
+    );
+  });
+
+  const hasUpcoming = upcomingBookings.length > 0;
+
+  if (isLoading) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView
+          style={[
+            styles.container,
+            { backgroundColor: theme.colors.system.background.default },
+          ]}
+        >
+          <View style={styles.header}>
+            <Text
+              style={[
+                {
+                  ...theme.typography.heading.xs,
+                  color: theme.colors.system.body.tertiary,
+                },
+              ]}
+            >
+              Activity
+            </Text>
+            <TouchableOpacity
+              style={styles.historyIcon}
+              onPress={() => router.push("/history")}
+            >
+              <Icon.history color={theme.colors.system.body.default} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="large"
+              color={theme.colors.system.body.default}
+            />
+          </View>
+          <Tabs tabs={TABS_DATA} />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <SafeAreaProvider>
@@ -80,7 +125,16 @@ const {theme} = useTheme();
         </View>
 
         {!hasUpcoming ? (
-          <View style={styles.emptyState}>
+          <ScrollView
+            contentContainerStyle={styles.emptyState}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={refreshBookings}
+                tintColor={theme.colors.system.body.default}
+              />
+            }
+          >
             <Image
               source={require("@/assets/images/empty-bookings.png")}
               style={styles.emptyImage}
@@ -94,11 +148,18 @@ const {theme} = useTheme();
             >
               You have no upcoming bookings
             </Text>
-          </View>
+          </ScrollView>
         ) : (
           <ScrollView
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={refreshBookings}
+                tintColor={theme.colors.system.body.default}
+              />
+            }
           >
             <View style={styles.body}>
               {nextBooking && <ActivityCard booking={nextBooking} />}
@@ -155,7 +216,6 @@ const styles = StyleSheet.create({
   header: {
     justifyContent: "space-between",
     flexDirection: "row",
-    // paddingTop: 16,
     gap: 8,
     height: 48,
     alignContent: "center",
@@ -163,6 +223,11 @@ const styles = StyleSheet.create({
   },
   body: { flexDirection: "column", gap: 0 },
   scrollContainer: { flexGrow: 1, paddingBottom: 80, gap: 8 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   emptyState: {
     flex: 1,
     justifyContent: "center",

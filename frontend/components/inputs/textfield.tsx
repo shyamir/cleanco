@@ -108,7 +108,7 @@ const TextField = forwardRef<RNTextInput, TextFieldProps>(
           >
             {label}
             {required && (
-              <Text style={{ color: theme.colors.input.label.default }}>*</Text>
+              <Text style={{ color: theme.colors.input.label.error }}> *</Text>
             )}
           </Text>
         )}

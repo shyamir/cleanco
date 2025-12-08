@@ -3,20 +3,26 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Icon } from "@/constants/icon";
 import { useRouter } from "expo-router";
-import { Booking } from "@/constants/mockBookings";
+import { ActivityBooking, ServiceType } from "@/services/bookingService";
 
 type ActivityRowProps = {
-  booking: Booking;
+  booking: ActivityBooking;
 };
 
 const ActivityRow: React.FC<ActivityRowProps> = ({ booking }) => {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
 
-  const barColor =
-    booking.type === "home cleaning"
-      ? theme.colors.system.border.active
-      : theme.colors.system.border.secondary;
+  const isHomeService = booking.serviceType === ServiceType.HOME;
+  const barColor = isHomeService
+    ? theme.colors.system.border.active
+    : theme.colors.system.border.secondary;
+
+  const title = isHomeService ? "Home Cleaning" : "Office Cleaning";
+
+  // Build address display: "Label - Address" or just "Address"
+  const { label, address } = booking.address;
+  const displayAddress = label ? `${label} - ${address}` : address;
 
   const handlePress = () => {
     router.push(`/booking-details?id=${booking.id}`);
@@ -38,7 +44,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ booking }) => {
               { color: theme.colors.system.body.default },
             ]}
           >
-            {booking.title}
+            {title}
           </Text>
 
           <View style={styles.row}>
@@ -55,7 +61,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ booking }) => {
                 ]}
                 numberOfLines={1}
               >
-                {booking.address}
+                {displayAddress}
               </Text>
             </View>
             <Text
@@ -64,7 +70,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ booking }) => {
                 { color: theme.colors.system.body.disabled },
               ]}
             >
-              {booking.time}
+              {booking.timeSlot.displayStartTime}
             </Text>
           </View>
         </View>

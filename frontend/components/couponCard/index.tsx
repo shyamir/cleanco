@@ -7,7 +7,7 @@ import Button from "../button";
 type CouponCardProps = {
   discountText: string;
   serviceText: string;
-  buttonText: string;
+  buttonText?: string;
   variant?: "orange" | "blue";
   onPress?: () => void;
 };
@@ -61,9 +61,11 @@ const CouponCard: React.FC<CouponCardProps> = ({
             {serviceText}
           </Text>
         </View>
-        <View style={styles.buttonWrapper}>
-          <Button label={buttonText} variant="tonal" onPress={() => {}} />
-        </View>
+        {buttonText && (
+          <View style={styles.buttonWrapper}>
+            <Button label={buttonText} variant="tonal" onPress={onPress} />
+          </View>
+        )}
       </View>
       <Image source={imageSource} style={styles.image} resizeMode="contain" />
     </LinearGradient>

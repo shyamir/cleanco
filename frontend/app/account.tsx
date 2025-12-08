@@ -15,6 +15,7 @@ import CustomerSupport from "@/components/bottomSheet/customerSupport";
 import SignOut from "@/components/bottomSheet/signOut";
 import Appearance from "@/components/bottomSheet/appearance";
 import Notification from "@/components/bottomSheet/notification";
+import { useActivity } from "@/context/activity-context";
 
 export default function Home() {
   const [activeTabIndex, setActiveTabIndex] = useState(0);
@@ -28,6 +29,7 @@ export default function Home() {
   // State to control app theme
   const router = useRouter();
   const { theme, mode, setMode } = useTheme();
+  const { clearBookings } = useActivity();
 
   const handleSupportPress = () => {
     setContactVisible(true); // 👈 open bottom sheet
@@ -161,6 +163,7 @@ export default function Home() {
         onClose={() => setSignOutVisible(false)}
         onSignOutPress={async () => {
           setSignOutVisible(false);
+          clearBookings();
           await authService.logout();
           router.replace("/login");
         }}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -20,13 +20,18 @@ import {
 import Button from "../components/button";
 import { Icon } from "@/constants/icon";
 import InfoRow from "../components/infoRow";
+import PromoCodeInput from "../components/promoCodeInput";
 import { useAddress } from "../context/address-context";
 import { useBooking } from "@/context/booking-context";
 import useCleaningBooking from "./hooks/useCleaningBooking";
+import { promoApi } from "@/services/promoService";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 const Review = () => {
-const {theme} = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
 
   const navigation = useNavigation();
@@ -40,8 +45,84 @@ const {theme} = useTheme();
     instructions,
     startDate,
     service,
+    promoCode,
+    setPromoCode,
+    promoDiscount,
+    setPromoDiscount,
+    promoDiscountType,
+    setPromoDiscountType,
+    promoDiscountValue,
+    setPromoDiscountValue,
+    originalTotal,
+    setOriginalTotal,
+    setTotal,
   } = useBooking();
   const { bedrooms, bathrooms, total, slots } = useCleaningBooking();
+
+  // Local state for promo validation
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [hasAutoValidated, setHasAutoValidated] = useState(false);
+
+  // Auto-validate promo code on mount if one exists
+  useEffect(() => {
+    if (promoCode && !hasAutoValidated && total > 0) {
+      setHasAutoValidated(true);
+      handleApplyPromo(promoCode);
+    }
+  }, [promoCode, total, hasAutoValidated]);
+
+  const handleApplyPromo = async (code: string) => {
+    setIsValidatingPromo(true);
+    setPromoError(null);
+
+    try {
+      const serviceType = service === "Home Cleaning" ? "HOME" : "OFFICE";
+      const basePrice = originalTotal > 0 ? originalTotal : total;
+
+      const result = await promoApi.validatePromo(code, serviceType, basePrice);
+
+      if (result.valid) {
+        setPromoCode(code);
+        setPromoDiscountType(result.discountType as 'PERCENTAGE' | 'FIXED_AMOUNT');
+        setPromoDiscountValue(result.discountValue);
+        setPromoDiscount(result.discount);
+
+        // Store original total if not already stored
+        if (originalTotal === 0) {
+          setOriginalTotal(basePrice);
+        }
+
+        // Update total with discount
+        setTotal(Math.max(0, basePrice - result.discount));
+      } else {
+        setPromoError(result.message || "Invalid promo code");
+        // Clear promo state if validation fails
+        setPromoCode(null);
+        setPromoDiscount(0);
+        setPromoDiscountType(null);
+        setPromoDiscountValue(0);
+      }
+    } catch (error: any) {
+      setPromoError(
+        error.response?.data?.message || "Failed to validate promo code"
+      );
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  const handleClearPromo = () => {
+    setPromoCode(null);
+    setPromoDiscount(0);
+    setPromoDiscountType(null);
+    setPromoDiscountValue(0);
+    setPromoError(null);
+    if (originalTotal > 0) {
+      setTotal(originalTotal);
+      setOriginalTotal(0);
+    }
+  };
 
   const petDisplay =
     pet && pet !== "None" ? (pet === "Other" ? otherPet : pet) : "No Pets";
@@ -55,7 +136,7 @@ const {theme} = useTheme();
     if (schedule) {
       // schedule contains "YYYY-MM-DD, HH:mm" or similar
       const [datePart, timePart] = schedule.split(",");
-      const formattedDate = dayjs(datePart).format("D MMM YYYY");
+      const formattedDate = dayjs.utc(datePart).format("D MMM YYYY");
       scheduleDisplay = timePart
         ? `${formattedDate},${timePart}`
         : formattedDate;
@@ -65,7 +146,7 @@ const {theme} = useTheme();
   } else {
     const start = startDate
       ? `Starts: ${
-          dayjs(startDate).format("D MMM YYYY") + " (" + frequency + ")"
+          dayjs.utc(startDate).format("D MMM YYYY") + " (" + frequency + ")"
         }`
       : "";
     const repeat = schedule ? `\n${schedule}` : "";
@@ -155,8 +236,75 @@ const {theme} = useTheme();
             />
           </ScrollView>
 
+          {/* Promo Code Input */}
+          <PromoCodeInput
+            value={promoCode || ""}
+            onApply={handleApplyPromo}
+            onClear={handleClearPromo}
+            isApplied={!!promoCode && promoDiscount > 0}
+            isLoading={isValidatingPromo}
+            error={promoError}
+            discount={promoDiscount}
+            discountType={promoDiscountType}
+            discountValue={promoDiscountValue}
+          />
+
           {/* Total + Message */}
           <View style={styles.totalContainerWrapper}>
+            {/* Show subtotal if discount applied */}
+            {promoCode && promoDiscount > 0 && originalTotal > 0 && (
+              <View style={styles.discountRow}>
+                <Text
+                  style={
+                    [
+                      theme.typography.body.md.regular,
+                      { color: theme.colors.system.body.disabled },
+                    ] as any
+                  }
+                >
+                  Subtotal
+                </Text>
+                <Text
+                  style={
+                    [
+                      theme.typography.body.md.regular,
+                      { color: theme.colors.system.body.disabled },
+                    ] as any
+                  }
+                >
+                  {originalTotal} MVR
+                </Text>
+              </View>
+            )}
+
+            {/* Show discount if applied */}
+            {promoCode && promoDiscount > 0 && (
+              <View style={styles.discountRow}>
+                <Text
+                  style={
+                    [
+                      theme.typography.body.md.regular,
+                      { color: theme.colors.input.label.success },
+                    ] as any
+                  }
+                >
+                  Discount ({promoCode})
+                </Text>
+                <Text
+                  style={
+                    [
+                      theme.typography.body.md.regular,
+                      { color: theme.colors.input.label.success },
+                    ] as any
+                  }
+                >
+                  -{promoDiscountType === "PERCENTAGE"
+                    ? `${promoDiscountValue}%`
+                    : `${promoDiscount} MVR`}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.totalContainer}>
               <Text
                 style={
@@ -284,6 +432,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  discountRow: {
+    paddingHorizontal: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
   },
   backButton: {
     width: 48,

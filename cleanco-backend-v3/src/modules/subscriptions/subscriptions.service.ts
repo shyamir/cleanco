@@ -493,6 +493,12 @@ export class SubscriptionsService {
       for (const booking of createdBookings) {
         try {
           await this.cleanerAssignmentService.autoAssignCleaners(booking.id);
+
+          // Update availability cache based on assigned cleaners
+          const assignedCount = await this.getAssignedCleanersCount(booking.id);
+          if (assignedCount > 0) {
+            await this.updateAvailabilityCache(booking.date, booking.timeSlotId, assignedCount);
+          }
         } catch (error) {
           this.logger.error(`Auto-assignment failed for subscription booking ${booking.id}: ${error.message}`);
           // Don't fail the subscription creation if auto-assignment fails
@@ -501,6 +507,66 @@ export class SubscriptionsService {
     }
 
     return bookings.length;
+  }
+
+  /**
+   * Get count of cleaners assigned to a booking
+   */
+  private async getAssignedCleanersCount(bookingId: string): Promise<number> {
+    return this.prisma.cleanerAssignment.count({
+      where: { bookingId },
+    });
+  }
+
+  /**
+   * Calculate total available cleaners for a given date
+   */
+  private async getAvailableCleanersCount(date: Date): Promise<number> {
+    return this.prisma.cleanerProfile.count({
+      where: {
+        isAvailable: true,
+        vacations: {
+          none: {
+            startDate: { lte: date },
+            endDate: { gte: date },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Update or create AvailabilityCache entry for a date/slot
+   */
+  private async updateAvailabilityCache(
+    date: Date,
+    timeSlotId: string,
+    cleanerCount: number,
+  ): Promise<void> {
+    const existingCache = await this.prisma.availabilityCache.findUnique({
+      where: {
+        date_timeSlotId: { date, timeSlotId },
+      },
+    });
+
+    if (existingCache) {
+      await this.prisma.availabilityCache.update({
+        where: { id: existingCache.id },
+        data: {
+          bookedCapacity: Math.max(0, existingCache.bookedCapacity + cleanerCount),
+        },
+      });
+    } else {
+      const totalCapacity = await this.getAvailableCleanersCount(date);
+      await this.prisma.availabilityCache.create({
+        data: {
+          date,
+          timeSlotId,
+          totalCapacity,
+          bookedCapacity: Math.max(0, cleanerCount),
+        },
+      });
+    }
   }
 
   /**

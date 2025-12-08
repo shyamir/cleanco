@@ -2,40 +2,47 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import Button from "../button";
+import { ActivityBooking, ServiceType } from "@/services/bookingService";
+
+dayjs.extend(utc);
 
 type HistoryRowProps = {
-  booking: {
-    id: string;
-    title: string;
-    date: string;
-    time: string;
-    total: string;
-    type: string;
-    address: string;
-    image?: any; // image source
-    status: "upcoming" | "completed" | "cancelled" | "pending";
-  };
+  booking: ActivityBooking;
 };
 
 export default function HistoryRow({ booking }: HistoryRowProps) {
   const { theme } = useTheme();
   const router = useRouter();
 
+  const isHomeService = booking.serviceType === ServiceType.HOME;
+
   const handleRebook = () => {
-    // router.push(`/booking-details/${booking.id}`);
+    // TODO: Implement rebook functionality
   };
 
   const handlePress = () => {
     router.push(`/booking-details?id=${booking.id}`);
   };
 
-  const bookingImage =
-    booking.type === "home cleaning"
-      ? require("@/assets/images/home-cleaning.png")
-      : require("@/assets/images/office-cleaning.png");
+  const bookingImage = isHomeService
+    ? require("@/assets/images/home-cleaning.png")
+    : require("@/assets/images/office-cleaning.png");
 
-  const isCancelled = booking.status === "cancelled";
+  const isCancelled = booking.status === "CANCELED";
+
+  // Build address display: prefer label, fallback to address
+  const { label, address } = booking.address;
+  const displayAddress = label || address;
+
+  // Format date and time
+  const formattedDate = dayjs.utc(booking.date).format("D MMM YYYY");
+  const formattedTime = booking.timeSlot.displayStartTime;
+
+  // Format price
+  const formattedTotal = `MVR ${booking.finalPrice}`;
 
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
@@ -71,7 +78,7 @@ export default function HistoryRow({ booking }: HistoryRowProps) {
               ]}
               numberOfLines={1}
             >
-              {booking.address}
+              {displayAddress}
             </Text>
 
             <Text
@@ -80,7 +87,7 @@ export default function HistoryRow({ booking }: HistoryRowProps) {
                 { color: theme.colors.system.body.disabled },
               ]}
             >
-              {booking.date}, {booking.time}
+              {formattedDate}, {formattedTime}
             </Text>
 
             <Text
@@ -93,7 +100,7 @@ export default function HistoryRow({ booking }: HistoryRowProps) {
                 },
               ]}
             >
-              {isCancelled ? "Cancelled" : booking.total}
+              {isCancelled ? "Cancelled" : formattedTotal}
             </Text>
           </View>
         </View>
@@ -150,6 +157,6 @@ const styles = StyleSheet.create({
   },
   image: { width: 50, height: 50 },
   title: {
-    width: "50%",
+    width: "70%",
   },
 });

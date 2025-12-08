@@ -58,23 +58,23 @@ async function seedPricingRules() {
     {
       serviceType: ServiceType.HOME,
       frequency: null,
-      bedrooms: 2,
-      price: 250.0,
-      description: '2BR Home - One Time (alt)',
-    },
-    {
-      serviceType: ServiceType.HOME,
-      frequency: null,
       bedrooms: 3,
-      price: 300.0,
+      price: 280.0,
       description: '3BR Home - One Time',
     },
     {
       serviceType: ServiceType.HOME,
       frequency: null,
       bedrooms: 4,
-      price: 400.0,
+      price: 380.0,
       description: '4BR Home - One Time',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: null,
+      bedrooms: 5,
+      price: 500.0,
+      description: '5BR Home - One Time',
     },
 
     // ========== HOME CLEANING - ONCE A WEEK ==========
@@ -83,37 +83,109 @@ async function seedPricingRules() {
       frequency: SubscriptionFrequency.ONCE_A_WEEK,
       bedrooms: 1,
       price: 120.0,
-      description: '1BR Home - Weekly',
+      description: '1BR Home - 1x/week',
     },
     {
       serviceType: ServiceType.HOME,
       frequency: SubscriptionFrequency.ONCE_A_WEEK,
       bedrooms: 2,
-      price: 200.0,
-      description: '2BR Home - Weekly',
+      price: 160.0,
+      description: '2BR Home - 1x/week',
     },
     {
       serviceType: ServiceType.HOME,
       frequency: SubscriptionFrequency.ONCE_A_WEEK,
       bedrooms: 3,
-      price: 250.0,
-      description: '3BR Home - Weekly',
+      price: 220.0,
+      description: '3BR Home - 1x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.ONCE_A_WEEK,
+      bedrooms: 4,
+      price: 300.0,
+      description: '4BR Home - 1x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.ONCE_A_WEEK,
+      bedrooms: 5,
+      price: 400.0,
+      description: '5BR Home - 1x/week',
     },
 
     // ========== HOME CLEANING - TWICE A WEEK ==========
     {
       serviceType: ServiceType.HOME,
       frequency: SubscriptionFrequency.TWICE_A_WEEK,
+      bedrooms: 1,
+      price: 200.0,
+      description: '1BR Home - 2x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.TWICE_A_WEEK,
       bedrooms: 2,
-      price: 180.0,
-      description: '2BR Home - Twice Weekly',
+      price: 280.0,
+      description: '2BR Home - 2x/week',
     },
     {
       serviceType: ServiceType.HOME,
       frequency: SubscriptionFrequency.TWICE_A_WEEK,
       bedrooms: 3,
-      price: 220.0,
-      description: '3BR Home - Twice Weekly',
+      price: 380.0,
+      description: '3BR Home - 2x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.TWICE_A_WEEK,
+      bedrooms: 4,
+      price: 520.0,
+      description: '4BR Home - 2x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.TWICE_A_WEEK,
+      bedrooms: 5,
+      price: 700.0,
+      description: '5BR Home - 2x/week',
+    },
+
+    // ========== HOME CLEANING - THRICE A WEEK ==========
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.THRICE_A_WEEK,
+      bedrooms: 1,
+      price: 270.0,
+      description: '1BR Home - 3x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.THRICE_A_WEEK,
+      bedrooms: 2,
+      price: 380.0,
+      description: '2BR Home - 3x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.THRICE_A_WEEK,
+      bedrooms: 3,
+      price: 520.0,
+      description: '3BR Home - 3x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.THRICE_A_WEEK,
+      bedrooms: 4,
+      price: 700.0,
+      description: '4BR Home - 3x/week',
+    },
+    {
+      serviceType: ServiceType.HOME,
+      frequency: SubscriptionFrequency.THRICE_A_WEEK,
+      bedrooms: 5,
+      price: 950.0,
+      description: '5BR Home - 3x/week',
     },
 
     // ========== OFFICE CLEANING - ONE TIME ==========
@@ -211,50 +283,118 @@ async function seedPricingRules() {
 async function seedPromoCode() {
   console.log('\n🌱 Seeding promo codes...');
 
-  try {
-    const promoCode = await prisma.promotionalCode.upsert({
-      where: { code: 'WELCOME10' },
-      update: {},
-      create: {
-        code: 'WELCOME10',
-        discountType: 'PERCENTAGE',
-        discountValue: 10,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2025-12-31'),
-        usageLimitPerUser: 1,
-        totalUsageLimit: 100,
-        currentUsage: 0,
-        applicableServices: [ServiceType.HOME, ServiceType.OFFICE],
-        minPurchaseAmount: 100,
-        isActive: true,
-        createdBy: '00000000-0000-0000-0000-000000000000', // System
-      },
-    });
+  const promoCodes = [
+    {
+      code: 'WELCOME10',
+      discountType: 'PERCENTAGE' as const,
+      discountValue: 10,
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2025-12-31'),
+      usageLimitPerUser: 1,
+      totalUsageLimit: 100,
+      currentUsage: 0,
+      applicableServices: [ServiceType.HOME, ServiceType.OFFICE],
+      minPurchaseAmount: 100,
+      isActive: true,
+      isPublic: true,
+      createdBy: '00000000-0000-0000-0000-000000000000',
+      description: '10% off - All Services',
+    },
+    {
+      code: 'SAVE50',
+      discountType: 'FIXED_AMOUNT' as const,
+      discountValue: 50,
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2025-12-31'),
+      usageLimitPerUser: 1,
+      totalUsageLimit: 50,
+      currentUsage: 0,
+      applicableServices: [ServiceType.HOME],
+      minPurchaseAmount: 200,
+      isActive: true,
+      isPublic: true,
+      createdBy: '00000000-0000-0000-0000-000000000000',
+      description: 'MVR 50 off - Home Cleaning',
+    },
+    {
+      code: 'HOLIDAY25',
+      discountType: 'PERCENTAGE' as const,
+      discountValue: 25,
+      startDate: new Date('2024-12-01'),
+      endDate: new Date('2025-12-31'),
+      usageLimitPerUser: 2,
+      totalUsageLimit: 200,
+      currentUsage: 0,
+      applicableServices: [ServiceType.HOME, ServiceType.OFFICE],
+      minPurchaseAmount: 150,
+      isActive: true,
+      isPublic: true,
+      createdBy: '00000000-0000-0000-0000-000000000000',
+      description: '25% off - Holiday Special',
+    },
+    {
+      code: 'OFFICE100',
+      discountType: 'FIXED_AMOUNT' as const,
+      discountValue: 100,
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2025-12-31'),
+      usageLimitPerUser: 1,
+      totalUsageLimit: 30,
+      currentUsage: 0,
+      applicableServices: [ServiceType.OFFICE],
+      minPurchaseAmount: 300,
+      isActive: true,
+      isPublic: true,
+      createdBy: '00000000-0000-0000-0000-000000000000',
+      description: 'MVR 100 off - Office Cleaning',
+    },
+    {
+      code: 'VIP30',
+      discountType: 'PERCENTAGE' as const,
+      discountValue: 30,
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2025-12-31'),
+      usageLimitPerUser: 5,
+      totalUsageLimit: 20,
+      currentUsage: 0,
+      applicableServices: [ServiceType.HOME, ServiceType.OFFICE],
+      minPurchaseAmount: null,
+      isActive: true,
+      isPublic: false, // Private - customer support only
+      createdBy: '00000000-0000-0000-0000-000000000000',
+      description: '30% off - VIP (Private)',
+    },
+  ];
 
-    console.log('✅ Created promo code:', promoCode.code, '- 10% off');
-
-    const promoCode2 = await prisma.promotionalCode.upsert({
-      where: { code: 'SAVE50' },
-      update: {},
-      create: {
-        code: 'SAVE50',
-        discountType: 'FIXED_AMOUNT',
-        discountValue: 50,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2025-12-31'),
-        usageLimitPerUser: 1,
-        totalUsageLimit: 50,
-        currentUsage: 0,
-        applicableServices: [ServiceType.HOME],
-        minPurchaseAmount: 200,
-        isActive: true,
-        createdBy: '00000000-0000-0000-0000-000000000000', // System
-      },
-    });
-
-    console.log('✅ Created promo code:', promoCode2.code, '- MVR 50 off');
-  } catch (error: any) {
-    console.error('❌ Error creating promo codes:', error.message);
+  for (const promo of promoCodes) {
+    try {
+      const created = await prisma.promotionalCode.upsert({
+        where: { code: promo.code },
+        update: {
+          isActive: promo.isActive,
+          isPublic: promo.isPublic,
+          endDate: promo.endDate,
+        },
+        create: {
+          code: promo.code,
+          discountType: promo.discountType,
+          discountValue: promo.discountValue,
+          startDate: promo.startDate,
+          endDate: promo.endDate,
+          usageLimitPerUser: promo.usageLimitPerUser,
+          totalUsageLimit: promo.totalUsageLimit,
+          currentUsage: promo.currentUsage,
+          applicableServices: promo.applicableServices,
+          minPurchaseAmount: promo.minPurchaseAmount,
+          isActive: promo.isActive,
+          isPublic: promo.isPublic,
+          createdBy: promo.createdBy,
+        },
+      });
+      console.log(`✅ Created promo code: ${created.code} - ${promo.description}`);
+    } catch (error: any) {
+      console.error(`❌ Error creating ${promo.code}:`, error.message);
+    }
   }
 }
 

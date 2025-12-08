@@ -1,26 +1,51 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
-import { Booking } from "@/constants/mockBookings";
-import { toTitleCase, isTodayOrTomorrow, parseBookingDate } from "@/utils/date";
+import { ActivityBooking, ServiceType } from "@/services/bookingService";
+
+dayjs.extend(utc);
 
 type ActivityCardProps = {
-  booking: Booking;
+  booking: ActivityBooking;
 };
 
 const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
 
-  const dayLabel = isTodayOrTomorrow(booking.date, booking.time);
-  if (!dayLabel) return null;
+  const isHomeService = booking.serviceType === ServiceType.HOME;
+  const serviceLabel = isHomeService ? "Home Cleaning" : "Office Cleaning";
 
-  const bookingImage =
-    booking.type === "home cleaning"
-      ? require("@/assets/images/home-cleaning.png")
-      : require("@/assets/images/office-cleaning.png");
+  const bookingImage = isHomeService
+    ? require("@/assets/images/home-cleaning.png")
+    : require("@/assets/images/office-cleaning.png");
+
+  // Get relative day label (Today, Tomorrow, or day name)
+  const getRelativeDayLabel = () => {
+    const bookingDate = dayjs.utc(booking.date);
+    const today = dayjs().startOf("day");
+    const tomorrow = today.add(1, "day");
+
+    if (bookingDate.isSame(today, "day")) {
+      return "Today";
+    } else if (bookingDate.isSame(tomorrow, "day")) {
+      return "Tomorrow";
+    } else {
+      return bookingDate.format("dddd");
+    }
+  };
+
+  // Build address display
+  const { label, address } = booking.address;
+  const displayAddress = label ? `${label} - ${address}` : address;
+
+  // Format date and time
+  const formattedDate = dayjs.utc(booking.date).format("D MMM YYYY");
+  const formattedTime = booking.timeSlot.displayStartTime;
 
   return (
     <BaseCard
@@ -38,7 +63,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
                 } as any,
               ]}
             >
-              {toTitleCase(booking.type)}
+              {serviceLabel}
             </Text>
 
             <Text
@@ -50,25 +75,24 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
                 styles.text,
               ]}
             >
-              {dayLabel}
+              {getRelativeDayLabel()}
             </Text>
           </View>
           <Image
             style={styles.image}
             source={bookingImage}
             resizeMode="contain"
-            // style={{ width: 100, height: 100 }} // adjust as needed
           />
         </View>
 
         <InfoRow
           icon={<Icon.calendar color={theme.colors.card.label.secondary} />}
-          label={`${booking.date}, ${booking.time}`}
+          label={`${formattedDate}, ${formattedTime}`}
           labelColor={theme.colors.card.label.secondary}
         />
         <InfoRow
           icon={<Icon.location color={theme.colors.card.label.secondary} />}
-          label={booking.address}
+          label={displayAddress}
           labelColor={theme.colors.card.label.secondary}
         />
 

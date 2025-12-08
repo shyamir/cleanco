@@ -1,23 +1,63 @@
 import React from "react";
-import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
-import { MOCK_BOOKINGS } from "@/constants/mockBookings";
-import { isPastBooking } from "@/utils/date";
-import HistoryRow from "@/components/historyRow"; // 👈 updated import
+import HistoryRow from "@/components/historyRow";
 import { Icon } from "@/constants/icon";
+import { useActivity } from "@/context/activity-context";
 
 export default function History() {
-const {theme} = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
+  const { historyBookings, isLoading, isRefreshing, refreshBookings } =
+    useActivity();
 
-  // Filter past bookings
-  const pastBookings = Object.values(MOCK_BOOKINGS).filter((b) =>
-    isPastBooking(b.date, b.time)
-  );
+  const hasHistory = historyBookings.length > 0;
 
-  const hasHistory = pastBookings.length > 0;
+  if (isLoading) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView
+          style={[
+            styles.container,
+            { backgroundColor: theme.colors.system.background.default },
+          ]}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.push("/activity")}>
+              <Icon.back color={theme.colors.system.body.default} />
+            </TouchableOpacity>
+            <Text
+              style={[
+                {
+                  ...theme.typography.heading.xs,
+                  color: theme.colors.system.body.tertiary,
+                },
+              ]}
+            >
+              History
+            </Text>
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="large"
+              color={theme.colors.system.body.default}
+            />
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <SafeAreaProvider>
@@ -47,7 +87,16 @@ const {theme} = useTheme();
 
         {/* Empty State */}
         {!hasHistory ? (
-          <View style={styles.emptyState}>
+          <ScrollView
+            contentContainerStyle={styles.emptyState}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={refreshBookings}
+                tintColor={theme.colors.system.body.default}
+              />
+            }
+          >
             <Image
               source={require("@/assets/images/empty-bookings.png")}
               style={styles.emptyImage}
@@ -60,13 +109,23 @@ const {theme} = useTheme();
             >
               You have no previous bookings
             </Text>
-          </View>
+          </ScrollView>
         ) : (
-          <View style={styles.list}>
-            {pastBookings.map((booking) => (
+          <ScrollView
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={refreshBookings}
+                tintColor={theme.colors.system.body.default}
+              />
+            }
+          >
+            {historyBookings.map((booking) => (
               <HistoryRow key={booking.id} booking={booking} />
             ))}
-          </View>
+          </ScrollView>
         )}
       </SafeAreaView>
     </SafeAreaProvider>
@@ -74,15 +133,18 @@ const {theme} = useTheme();
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 16, },
+  container: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
   header: {
     flexDirection: "column",
     gap: 12,
     paddingVertical: 16,
-
   },
-  list: { flexDirection: "column", gap: 16 },
-
+  list: { flexDirection: "column", gap: 16, paddingBottom: 20 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   emptyState: {
     flex: 1,
     justifyContent: "center",

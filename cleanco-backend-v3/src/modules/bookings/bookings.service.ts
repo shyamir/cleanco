@@ -120,7 +120,7 @@ export class BookingsService {
     // Apply promo code if provided
     if (promoCode) {
       const promo = await this.prisma.promotionalCode.findUnique({
-        where: { code: promoCode },
+        where: { code: promoCode.toUpperCase() },
       });
 
       if (!promo || !promo.isActive) {
@@ -138,6 +138,22 @@ export class BookingsService {
         throw new BadRequestException(
           'Promo code has reached its usage limit',
         );
+      }
+
+      // Check per-user usage limit
+      if (promo.usageLimitPerUser) {
+        const userUsageCount = await this.prisma.promoCodeUsage.count({
+          where: {
+            promoCodeId: promo.id,
+            userId,
+          },
+        });
+
+        if (userUsageCount >= promo.usageLimitPerUser) {
+          throw new BadRequestException(
+            'You have already used this promo code the maximum number of times',
+          );
+        }
       }
 
       if (
@@ -209,11 +225,21 @@ export class BookingsService {
       },
     });
 
-    // If promo code was used, increment usage count
+    // If promo code was used, increment usage count and create usage record
     if (promoCodeId) {
       await this.prisma.promotionalCode.update({
         where: { id: promoCodeId },
         data: { currentUsage: { increment: 1 } },
+      });
+
+      // Create usage record for per-user tracking
+      await this.prisma.promoCodeUsage.create({
+        data: {
+          promoCodeId,
+          userId,
+          bookingId: booking.id,
+          discountAmount,
+        },
       });
     }
 
@@ -272,6 +298,61 @@ export class BookingsService {
     });
 
     return upcomingBooking;
+  }
+
+  /**
+   * Get all upcoming bookings for activity page
+   * Shows all one-time bookings + subscription bookings only until nextBillingDate
+   */
+  async getActivityBookings(userId: string) {
+    const today = startOfDay(new Date());
+
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        userId,
+        date: { gte: today },
+        status: {
+          in: ['PENDING', 'CONFIRMED', 'ASSIGNED', 'IN_PROGRESS'],
+        },
+      },
+      include: {
+        address: true,
+        timeSlot: true,
+        subscription: {
+          select: { nextBillingDate: true },
+        },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    // Filter: one-time bookings show all, subscription bookings only until nextBillingDate
+    return bookings.filter((booking) => {
+      if (booking.bookingType === 'ONE_TIME') return true;
+      if (!booking.subscription?.nextBillingDate) return true;
+      return booking.date <= booking.subscription.nextBillingDate;
+    });
+  }
+
+  /**
+   * Get past/completed bookings for history page
+   */
+  async getHistoryBookings(userId: string) {
+    const today = startOfDay(new Date());
+
+    return this.prisma.booking.findMany({
+      where: {
+        userId,
+        OR: [
+          { date: { lt: today } },
+          { status: { in: ['COMPLETED', 'CANCELED'] } },
+        ],
+      },
+      include: {
+        address: true,
+        timeSlot: true,
+      },
+      orderBy: { date: 'desc' },
+    });
   }
 
   /**
@@ -361,17 +442,6 @@ export class BookingsService {
 
     if (!timeSlot || !timeSlot.isActive) {
       throw new BadRequestException('Invalid or inactive time slot');
-    }
-
-    // Check if new date is a blackout date
-    const blackoutDate = await this.prisma.blackoutDate.findUnique({
-      where: { date: newDate },
-    });
-
-    if (blackoutDate) {
-      throw new BadRequestException(
-        `Cannot book on this date: ${blackoutDate.reason}`,
-      );
     }
 
     // Count assigned cleaners BEFORE rescheduling
@@ -468,6 +538,11 @@ export class BookingsService {
     if (assignedCount > 0) {
       await this.updateAvailabilityCache(booking.date, booking.timeSlotId, -assignedCount);
     }
+
+    // Remove all cleaner assignments for this booking
+    await this.prisma.cleanerAssignment.deleteMany({
+      where: { bookingId: id },
+    });
 
     return {
       message: 'Booking canceled successfully',

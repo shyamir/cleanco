@@ -17,6 +17,8 @@ import OtpInputs from "@/components/otpInputs";
 import { authService } from "@/services/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Icon } from "@/constants/icon";
+import { useActivity } from "@/context/activity-context";
+import { useHomeData } from "@/context/home-data-context";
 
 export default function Otp() {
   const { theme, mode: themeMode } = useTheme();
@@ -25,6 +27,8 @@ export default function Otp() {
   const [otp, setOtp] = useState("");
   const [phone, setPhone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { refreshBookings } = useActivity();
+  const { refreshHomeData } = useHomeData();
 
   const isPhoneChangeMode = params.mode === "phone-change";
 
@@ -94,6 +98,10 @@ export default function Otp() {
       // Store tokens and user data
       await authService.storeTokens(response.accessToken, response.refreshToken);
       await authService.storeUser(response.user);
+
+      // Refresh bookings and home data after successful login
+      refreshBookings();
+      refreshHomeData();
 
       // Navigate to profile-setup if user is new OR hasn't completed profile
       if (response.isNewUser || !response.user.firstName) {

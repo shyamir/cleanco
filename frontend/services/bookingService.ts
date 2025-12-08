@@ -159,6 +159,22 @@ export interface UpcomingBooking {
   timeSlot: TimeSlot;
 }
 
+// ActivityBooking is the same as UpcomingBooking (used for activity/history pages)
+export type ActivityBooking = UpcomingBooking;
+
+// Detailed booking info returned by getBookingById
+export interface BookingDetails extends UpcomingBooking {
+  bedrooms?: number;
+  bathrooms?: number;
+  hasPets?: boolean;
+  officeSize?: string;
+  floors?: number;
+  rooms?: number;
+  specialInstructions?: string;
+  paymentMethod?: string;
+  discountAmount?: number;
+}
+
 export interface Subscription {
   id: string;
   serviceType: ServiceType;
@@ -290,5 +306,49 @@ export const bookingApi = {
   getUpcomingBooking: async (): Promise<UpcomingBooking | null> => {
     const response = await api.get('/bookings/upcoming');
     return response.data;
+  },
+
+  /**
+   * Get all upcoming bookings for activity page
+   * Shows all one-time bookings + subscription bookings only until next billing date
+   */
+  getActivityBookings: async (): Promise<ActivityBooking[]> => {
+    const response = await api.get('/bookings/activity');
+    return response.data;
+  },
+
+  /**
+   * Get past bookings for history page
+   */
+  getHistoryBookings: async (): Promise<ActivityBooking[]> => {
+    const response = await api.get('/bookings/history');
+    return response.data;
+  },
+
+  /**
+   * Get booking details by ID
+   */
+  getBookingById: async (id: string): Promise<BookingDetails> => {
+    const response = await api.get(`/bookings/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Cancel a booking
+   * @param id - Booking ID
+   * @param cancelReason - Optional reason for cancellation
+   */
+  cancelBooking: async (id: string, cancelReason?: string): Promise<void> => {
+    await api.put(`/bookings/${id}/cancel`, { cancelReason });
+  },
+
+  /**
+   * Reschedule a booking
+   * @param id - Booking ID
+   * @param newDate - New date in YYYY-MM-DD format
+   * @param newTimeSlotId - New time slot ID
+   */
+  rescheduleBooking: async (id: string, newDate: string, newTimeSlotId: string): Promise<void> => {
+    await api.put(`/bookings/${id}/reschedule`, { newDate, newTimeSlotId });
   },
 };

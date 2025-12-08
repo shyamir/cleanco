@@ -25,14 +25,15 @@ const ToggleGroup: React.FC<ToggleGroupProps> = ({
       : -1 // means nothing selected
   );
 
-  // Sync selectedIndex when initialValue changes
+  // Sync selectedIndex when initialValue changes (but not on options changes)
   useEffect(() => {
     if (initialValue && options.includes(initialValue)) {
       setSelectedIndex(options.indexOf(initialValue));
     } else {
       setSelectedIndex(-1);
     }
-  }, [initialValue, options]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValue]);
 
   const handleSelect = (index: number) => {
     setSelectedIndex(index);

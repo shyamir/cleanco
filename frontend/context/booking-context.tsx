@@ -34,6 +34,17 @@ type BookingContextType = {
   setPaymentMethod: (value: PaymentMethod) => void;
   isLoadingPrice: boolean;
   setIsLoadingPrice: (value: boolean) => void;
+  // Promo code fields
+  promoCode: string | null;
+  setPromoCode: (value: string | null) => void;
+  promoDiscount: number;
+  setPromoDiscount: (value: number) => void;
+  promoDiscountType: 'PERCENTAGE' | 'FIXED_AMOUNT' | null;
+  setPromoDiscountType: (value: 'PERCENTAGE' | 'FIXED_AMOUNT' | null) => void;
+  promoDiscountValue: number;
+  setPromoDiscountValue: (value: number) => void;
+  originalTotal: number;
+  setOriginalTotal: (value: number) => void;
   // Reset function to clear booking state
   resetBooking: () => void;
 };
@@ -57,6 +68,12 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.BANK_TRANSFER);
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
+  // Promo code state
+  const [promoCode, setPromoCode] = useState<string | null>(null);
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoDiscountType, setPromoDiscountType] = useState<'PERCENTAGE' | 'FIXED_AMOUNT' | null>(null);
+  const [promoDiscountValue, setPromoDiscountValue] = useState(0);
+  const [originalTotal, setOriginalTotal] = useState(0);
 
   const resetBooking = () => {
     setBedrooms(1);
@@ -74,6 +91,11 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     setSelectedDays([]);
     setPaymentMethod(PaymentMethod.BANK_TRANSFER);
     setIsLoadingPrice(false);
+    setPromoCode(null);
+    setPromoDiscount(0);
+    setPromoDiscountType(null);
+    setPromoDiscountValue(0);
+    setOriginalTotal(0);
   };
 
   return (
@@ -109,6 +131,16 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         setPaymentMethod,
         isLoadingPrice,
         setIsLoadingPrice,
+        promoCode,
+        setPromoCode,
+        promoDiscount,
+        setPromoDiscount,
+        promoDiscountType,
+        setPromoDiscountType,
+        promoDiscountValue,
+        setPromoDiscountValue,
+        originalTotal,
+        setOriginalTotal,
         resetBooking,
       }}
     >

@@ -131,6 +131,39 @@ export class ServicesService {
   }
 
   /**
+   * Get all pricing rules for a specific service type
+   * Used for client-side price calculation
+   */
+  async getPricingRules(serviceType: ServiceType) {
+    const rules = await this.prisma.pricingRule.findMany({
+      where: {
+        serviceType,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        serviceType: true,
+        frequency: true,
+        bedrooms: true,
+        officeSize: true,
+        floors: true,
+        rooms: true,
+        price: true,
+      },
+      orderBy: [
+        { bedrooms: 'asc' },
+        { frequency: 'asc' },
+      ],
+    });
+
+    // Convert Decimal to number for JSON serialization
+    return rules.map(rule => ({
+      ...rule,
+      price: Number(rule.price),
+    }));
+  }
+
+  /**
    * Get minimum prices for each service type
    * Returns the lowest price for HOME and OFFICE services
    */

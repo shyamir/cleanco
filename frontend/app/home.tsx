@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { ScrollView, StyleSheet, Text, View, Dimensions } from "react-native";
+import React, { useState, useCallback } from "react";
+import { ScrollView, StyleSheet, Text, View, RefreshControl } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -10,60 +10,38 @@ import { TABS_DATA } from "@/constants/tabData";
 /* --- Theme ---*/
 import { useTheme } from "@/theme/ThemeProvider";
 
-/* --- Services ---*/
-import { servicesApi } from "@/services/services";
-import { bookingApi, UpcomingBooking } from "@/services/bookingService";
+/* --- Context ---*/
+import { useBooking } from "@/context/booking-context";
+import { useHomeData } from "@/context/home-data-context";
 
 /* --- Components ---*/
 import GradientText from "@/components/gradientText";
 import Tabs from "../components/tabs";
 import { StatusCard } from "@/components/statusCard";
-import CouponCard from "../components/couponCard";
+import PromoCarousel from "../components/promoCarousel";
 import ServiceCard from "../components/card/serviceCard";
 
 export default function Home() {
   const { theme } = useTheme();
-  const { height } = Dimensions.get("window");
+  const { setPromoCode } = useBooking();
+  const {
+    homePrice,
+    officePrice,
+    upcomingBooking,
+    promos,
+    isRefreshing,
+    refreshHomeData,
+  } = useHomeData();
   const [firstName, setFirstName] = useState("");
-  const [homePrice, setHomePrice] = useState<string>("--");
-  const [officePrice, setOfficePrice] = useState<string>("--");
-  const [upcomingBooking, setUpcomingBooking] = useState<UpcomingBooking | null>(null);
 
-  // Fetch minimum prices from backend
-  useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        const prices = await servicesApi.getMinimumPrices();
-        if (prices.home.minPrice !== null) {
-          setHomePrice(prices.home.minPrice.toString());
-        }
-        if (prices.office.minPrice !== null) {
-          setOfficePrice(prices.office.minPrice.toString());
-        }
-      } catch (error) {
-        console.error("Failed to fetch prices:", error);
-      }
-    };
-    fetchPrices();
-  }, []);
-
+  // Load user name on focus
   useFocusEffect(
     useCallback(() => {
-      const loadData = async () => {
-        // Load user name
+      const loadName = async () => {
         const storedName = await AsyncStorage.getItem("firstName");
         if (storedName) setFirstName(storedName);
-
-        // Fetch upcoming booking
-        try {
-          const booking = await bookingApi.getUpcomingBooking();
-          setUpcomingBooking(booking);
-        } catch (error) {
-          console.error("Failed to fetch upcoming booking:", error);
-          setUpcomingBooking(null);
-        }
       };
-      loadData();
+      loadName();
     }, [])
   );
 
@@ -98,16 +76,23 @@ export default function Home() {
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={refreshHomeData}
+              tintColor={theme.colors.system.body.tertiary}
+            />
+          }
         >
           <View style={styles.topContainer}>
             <StatusCard upcomingBooking={upcomingBooking} />
 
-            <CouponCard
-              discountText="Get 30% off!"
-              serviceText="Home Cleaning Service"
-              buttonText="Apply"
-              variant="orange"
-            />
+            {promos.length > 0 && (
+              <PromoCarousel
+                promos={promos}
+                onApply={(promo) => setPromoCode(promo.code)}
+              />
+            )}
           </View>
           <View style={styles.midContainer}>
             <Text
@@ -188,7 +173,6 @@ const styles = StyleSheet.create({
     gap: 8,
     alignSelf: "stretch",
   },
-
   textWrapper: {
     textAlign: "center",
     paddingTop: 16,

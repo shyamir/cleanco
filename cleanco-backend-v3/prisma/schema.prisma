@@ -496,6 +496,7 @@ model PromotionalCode {
   minPurchaseAmount   Decimal?     @db.Decimal(10, 2)
 
   isActive            Boolean      @default(true)
+  isPublic            Boolean      @default(true) // false = private, only via customer support
   createdBy           String       // Admin user ID
 
   createdAt           DateTime     @default(now())
