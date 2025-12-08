@@ -58,17 +58,15 @@ const PromoCodeInput: React.FC<PromoCodeInputProps> = ({
     <View style={styles.container}>
       <Text
         style={[
-          theme.typography.body.md.medium as any,
+          theme.typography.body.sm.medium as any,
           { color: theme.colors.system.body.default },
         ]}
       >
         Promo Code
       </Text>
-
       <View style={styles.inputRow}>
         <TextInput
           style={[
-            theme.typography.body.md.regular as any,
             styles.input,
             {
               backgroundColor: theme.colors.input.background.default,
@@ -93,11 +91,12 @@ const PromoCodeInput: React.FC<PromoCodeInputProps> = ({
               color={theme.colors.system.body.default}
             />
           ) : isApplied ? (
-            <Button label="Remove" variant="outline" onPress={handleClear} />
+            <Button label="Remove" variant="outline" size="small" onPress={handleClear} />
           ) : (
             <Button
               label="Apply"
               variant="filled"
+              size="small"
               onPress={handleApply}
               disabled={!inputValue.trim()}
             />
@@ -108,24 +107,23 @@ const PromoCodeInput: React.FC<PromoCodeInputProps> = ({
       {error && (
         <Text
           style={[
-            theme.typography.body.sm.regular as any,
-            { color: theme.colors.input.label.error, marginTop: 4 },
+            theme.typography.body.xs.regular as any,
+            { color: theme.colors.input.label.error },
           ]}
         >
           {error}
         </Text>
       )}
-
       {isApplied && discountType && (
         <Text
           style={[
-            theme.typography.body.sm.regular as any,
-            { color: theme.colors.input.label.success, marginTop: 4 },
+            theme.typography.body.xs.regular as any,
+            { color: theme.colors.input.label.success },
           ]}
         >
           {discountType === "PERCENTAGE"
-            ? `${discountValue}% discount applied! You save ${discount.toFixed(0)} MVR`
-            : `${discountValue} MVR discount applied!`}
+            ? `${discountValue}% off! You save ${discount.toFixed(0)} MVR`
+            : `${discountValue} MVR off!`}
         </Text>
       )}
     </View>
@@ -134,25 +132,27 @@ const PromoCodeInput: React.FC<PromoCodeInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    gap: 4,
   },
   inputRow: {
     flexDirection: "row",
     gap: 8,
     alignItems: "center",
-    marginTop: 8,
   },
   input: {
     flex: 1,
-    height: 48,
-    paddingHorizontal: 16,
-    borderRadius: 48,
+    height: 32,
+    paddingHorizontal: 12,
+    paddingTop: 0,
+    paddingBottom: 0,
+    borderRadius: 32,
     borderWidth: 1,
+    fontSize: 13,
+    lineHeight: 16,
   },
   buttonWrapper: {
-    minWidth: 80,
-    height: 48,
+    minWidth: 64,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
   },

@@ -12,6 +12,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 
 type ButtonProps = {
   variant: "filled" | "tonal" | "outline" | "text";
+  size?: "default" | "small";
   label?: string;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
@@ -24,6 +25,7 @@ type ButtonProps = {
 
 const Button: React.FC<ButtonProps> = ({
   variant,
+  size = "default",
   label,
   onPress,
   style,
@@ -34,6 +36,7 @@ const Button: React.FC<ButtonProps> = ({
   gradientColors,
 }) => {
   const {theme} = useTheme();
+  const isSmall = size === "small";
 
   const getTextColor = () => {
     if (disabled) return theme.colors.button.label.secondary;
@@ -51,6 +54,7 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const getTextStyle = () => {
+    if (isSmall) return theme.typography.body.sm.medium;
     return variant === "tonal"
       ? theme.typography.body.sm.medium
       : theme.typography.body.md.medium;
@@ -67,6 +71,7 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const getPaddingVertical = () => {
+    if (isSmall) return 6;
     switch (variant) {
       case "tonal":
         return 4;
@@ -78,6 +83,9 @@ const Button: React.FC<ButtonProps> = ({
         return 12;
     }
   };
+
+  const getHeight = () => (isSmall ? 32 : 48);
+  const getPaddingHorizontal = () => (isSmall ? 12 : 20);
 
   const content = (
     <View
@@ -113,8 +121,8 @@ const Button: React.FC<ButtonProps> = ({
           style={[
             {
               borderRadius: 48,
-              height: 48,
-              paddingHorizontal: 20,
+              height: getHeight(),
+              paddingHorizontal: getPaddingHorizontal(),
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: theme.colors.system.border.default,
@@ -141,8 +149,8 @@ const Button: React.FC<ButtonProps> = ({
           onPress={onPress}
           activeOpacity={0.8}
           style={{
-            height: 48,
-            paddingHorizontal: 20,
+            height: getHeight(),
+            paddingHorizontal: getPaddingHorizontal(),
             alignItems: "center",
             justifyContent: "center",
           }}

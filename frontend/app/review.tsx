@@ -237,17 +237,19 @@ const Review = () => {
           </ScrollView>
 
           {/* Promo Code Input */}
-          <PromoCodeInput
-            value={promoCode || ""}
-            onApply={handleApplyPromo}
-            onClear={handleClearPromo}
-            isApplied={!!promoCode && promoDiscount > 0}
-            isLoading={isValidatingPromo}
-            error={promoError}
-            discount={promoDiscount}
-            discountType={promoDiscountType}
-            discountValue={promoDiscountValue}
-          />
+          <View style={styles.promoContainer}>
+            <PromoCodeInput
+              value={promoCode || ""}
+              onApply={handleApplyPromo}
+              onClear={handleClearPromo}
+              isApplied={!!promoCode && promoDiscount > 0}
+              isLoading={isValidatingPromo}
+              error={promoError}
+              discount={promoDiscount}
+              discountType={promoDiscountType}
+              discountValue={promoDiscountValue}
+            />
+          </View>
 
           {/* Total + Message */}
           <View style={styles.totalContainerWrapper}>
@@ -396,7 +398,7 @@ const Review = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  scrollContainer: { padding: 24, flex: 1, flexDirection: "column", gap: 8 },
+  scrollContainer: { padding: 24, flexDirection: "column", gap: 8, paddingBottom: 16 },
   header: {
     flexDirection: "row",
     marginBottom: 16,
@@ -406,6 +408,10 @@ const styles = StyleSheet.create({
     zIndex: -10,
   },
   info: {},
+  promoContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 4,
+  },
   totalContainerWrapper: {
     marginTop: 8,
     marginBottom: 4,
