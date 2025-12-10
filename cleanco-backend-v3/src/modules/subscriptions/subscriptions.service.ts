@@ -135,6 +135,22 @@ export class SubscriptionsService {
             email: true,
           },
         },
+        address: {
+          select: {
+            id: true,
+            label: true,
+            address: true,
+            street: true,
+            landmark: true,
+          },
+        },
+        timeSlot: {
+          select: {
+            id: true,
+            startTime: true,
+            endTime: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -287,7 +303,7 @@ export class SubscriptionsService {
   }
 
   /**
-   * Cancel a subscription
+   * Cancel a subscription and all related future bookings
    */
   async cancel(id: string, userId: string) {
     const subscription = await this.findOne(id, userId);
@@ -296,6 +312,42 @@ export class SubscriptionsService {
       throw new BadRequestException('Subscription is already canceled');
     }
 
+    const today = startOfDay(new Date());
+
+    // Get all future bookings for this subscription that are not already canceled
+    const futureBookings = await this.prisma.booking.findMany({
+      where: {
+        subscriptionId: id,
+        date: { gte: today },
+        status: { not: BookingStatus.CANCELED },
+      },
+      include: {
+        cleanerAssignments: true,
+      },
+    });
+
+    // Update availability cache for each booking being canceled
+    for (const booking of futureBookings) {
+      const assignedCount = booking.cleanerAssignments.length;
+      if (assignedCount > 0) {
+        // Decrease booked capacity (negative count)
+        await this.updateAvailabilityCache(booking.date, booking.timeSlotId, -assignedCount);
+      }
+    }
+
+    // Cancel all future bookings
+    const canceledBookings = await this.prisma.booking.updateMany({
+      where: {
+        subscriptionId: id,
+        date: { gte: today },
+        status: { not: BookingStatus.CANCELED },
+      },
+      data: {
+        status: BookingStatus.CANCELED,
+      },
+    });
+
+    // Update subscription status
     const updated = await this.prisma.subscription.update({
       where: { id },
       data: {
@@ -316,7 +368,7 @@ export class SubscriptionsService {
       },
     });
 
-    this.logger.log(`Canceled subscription ${id}`);
+    this.logger.log(`Canceled subscription ${id}, canceled ${canceledBookings.count} future bookings`);
 
     return updated;
   }
@@ -400,16 +452,8 @@ export class SubscriptionsService {
       throw new NotFoundException('No pricing rule found for the provided parameters');
     }
 
-    // Calculate sessions per month based on frequency
-    const sessionsPerMonth = {
-      [SubscriptionFrequency.ONCE_A_WEEK]: 4,
-      [SubscriptionFrequency.TWICE_A_WEEK]: 8,
-      [SubscriptionFrequency.THRICE_A_WEEK]: 12,
-    };
-
-    const monthlyPrice = Number(pricingRule.price) * sessionsPerMonth[frequency];
-
-    return monthlyPrice;
+    // pricingRule.price is already the monthly price for subscription frequencies
+    return Number(pricingRule.price);
   }
 
   /**

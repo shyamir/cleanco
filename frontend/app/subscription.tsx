@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,22 +7,190 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 import { Icon } from "@/constants/icon";
 import SubscriptionCard from "@/components/card/subscriptionCard";
-import { MOCK_BOOKINGS } from "@/constants/mockBookings";
+import {
+  bookingApi,
+  Subscription,
+  SubscriptionFrequency,
+  ServiceType,
+} from "@/services/bookingService";
 
-export default function Subscription() {
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const formatFrequency = (frequency: SubscriptionFrequency): string => {
+  switch (frequency) {
+    case SubscriptionFrequency.ONCE_A_WEEK:
+      return "1x per week";
+    case SubscriptionFrequency.TWICE_A_WEEK:
+      return "2x per week";
+    case SubscriptionFrequency.THRICE_A_WEEK:
+      return "3x per week";
+    default:
+      return frequency;
+  }
+};
+
+const formatAddress = (address: Subscription["address"] | undefined): string => {
+  if (!address) return "Address not available";
+  const parts = [address.address, address.street, address.landmark].filter(
+    Boolean
+  );
+  return parts.join(", ") || "Address not available";
+};
+
+const formatDays = (selectedDays: number[]): string => {
+  if (!selectedDays || selectedDays.length === 0) return "Not set";
+  return selectedDays
+    .sort((a, b) => a - b)
+    .map((day) => DAY_NAMES[day])
+    .join(", ");
+};
+
+const formatTime = (timeSlot: Subscription["timeSlot"] | undefined): string => {
+  if (!timeSlot) return "Not set";
+  // Convert 24h format to 12h format
+  const [hours, minutes] = timeSlot.startTime.split(":");
+  const h = parseInt(hours, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
+const formatDate = (dateString: string | undefined): string => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const getServiceTitle = (serviceType: ServiceType): string => {
+  return serviceType === ServiceType.HOME ? "Home Cleaning" : "Office Cleaning";
+};
+
+export default function SubscriptionScreen() {
   const { theme } = useTheme();
   const router = useRouter();
 
-  const subscriptions = Object.values(MOCK_BOOKINGS).filter(
-    (booking) => booking.status === "upcoming" || booking.status === "pending"
-  );
-    
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSubscriptions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await bookingApi.getUserSubscriptions();
+      setSubscriptions(data);
+    } catch (err) {
+      setError("Failed to load subscriptions. Please try again.");
+      console.error("Error fetching subscriptions:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, [fetchSubscriptions]);
+
+  const handleCancel = (subscription: Subscription) => {
+    Alert.alert(
+      "Cancel Subscription",
+      `Are you sure you want to cancel your ${getServiceTitle(subscription.serviceType).toLowerCase()} subscription?`,
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes, Cancel",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await bookingApi.cancelSubscription(subscription.id);
+              Alert.alert("Success", "Subscription cancelled successfully.");
+              fetchSubscriptions();
+            } catch (err) {
+              Alert.alert("Error", "Failed to cancel subscription. Please try again.");
+              console.error("Error cancelling subscription:", err);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={theme.colors.system.body.default} />
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.centerContainer}>
+          <Text style={[theme.typography.body.md, { color: theme.colors.system.body.default, textAlign: "center" }]}>
+            {error}
+          </Text>
+          <TouchableOpacity onPress={fetchSubscriptions} style={styles.retryButton}>
+            <Text style={[theme.typography.body.md, { color: theme.colors.button.label.primary }]}>
+              Tap to retry
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (subscriptions.length === 0) {
+      return (
+        <View style={styles.centerContainer}>
+          <Text style={[theme.typography.body.md, { color: theme.colors.system.body.disabled, textAlign: "center" }]}>
+            You don't have any subscriptions yet.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {subscriptions.map((subscription) => {
+          const isCanceled = subscription.status === "CANCELED";
+          return (
+            <SubscriptionCard
+              key={subscription.id}
+              subscriptionId={subscription.id}
+              type={subscription.serviceType === ServiceType.HOME ? "home" : "office"}
+              title={getServiceTitle(subscription.serviceType)}
+              address={formatAddress(subscription.address)}
+              frequency={formatFrequency(subscription.frequency)}
+              days={formatDays(subscription.selectedDays)}
+              time={formatTime(subscription.timeSlot)}
+              startDate={formatDate(subscription.startDate)}
+              renewalOrEndDate={formatDate(isCanceled ? subscription.endDate : subscription.nextBillingDate)}
+              renewalOrEndLabel={isCanceled ? "Ended" : "Next Renewal"}
+              status={subscription.status}
+              onCancel={() => handleCancel(subscription)}
+            />
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
   return (
     <SafeAreaProvider>
       <KeyboardAvoidingView
@@ -50,28 +218,11 @@ export default function Subscription() {
                 { color: theme.colors.system.body.default, marginBottom: 24 },
               ]}
             >
-              Subscription
+              Subscriptions
             </Text>
           </View>
 
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={styles.scrollContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {subscriptions.map((booking) => (
-              <SubscriptionCard
-                key={booking.id}
-                type={booking.type.includes("home") ? "home" : "office"}
-                title={booking.title}
-                address={booking.address}
-                frequency={booking.schedule} // or pass a formatted repeat interval
-                onCancel={() => {
-                  console.log(`Cancel subscription for booking #${booking.id}`);
-                }}
-              />
-            ))}
-          </ScrollView>
+          {renderContent()}
         </SafeAreaView>
       </KeyboardAvoidingView>
     </SafeAreaProvider>
@@ -80,7 +231,9 @@ export default function Subscription() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
-  scrollContainer: { flexGrow: 1, gap: 12 },
+  scrollContainer: { flexGrow: 1, gap: 12, paddingBottom: 24 },
   backBtn: { width: 32, height: 32, justifyContent: "center", marginBottom: 8 },
   header: { flexDirection: "column", gap: 8 },
+  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 32 },
+  retryButton: { marginTop: 16, padding: 12 },
 });

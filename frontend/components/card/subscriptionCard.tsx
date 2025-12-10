@@ -8,18 +8,32 @@ import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
 
 type SubscriptionCardProps = {
+  subscriptionId: string;
   type: "home" | "office";
   title: string;
   address: string;
   frequency: string;
+  days: string;
+  time: string;
+  startDate: string;
+  renewalOrEndDate: string;
+  renewalOrEndLabel: string;
+  status: string;
   onCancel?: () => void;
 };
 
 const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
+  subscriptionId,
   type,
   title,
   address,
   frequency,
+  days,
+  time,
+  startDate,
+  renewalOrEndDate,
+  renewalOrEndLabel,
+  status,
   onCancel,
 }) => {
   const { theme } = useTheme();
@@ -28,6 +42,8 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     type === "home"
       ? theme.colors.card.background.secondary // orange gradient
       : theme.colors.card.background.primary; // blue gradient
+
+  const isCanceled = status === "CANCELED";
 
   return (
     <View style={{ width: "100%" }}>
@@ -42,6 +58,21 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
       {/* Card */}
       <Base style={styles.cardContainer}>
         <View>
+          {/* Subscription ID & Status Badge */}
+          <View style={styles.idRow}>
+            <InfoRow
+              icon={<Icon.id color={theme.colors.system.body.disabled} />}
+              label={subscriptionId.slice(0, 8).toUpperCase()}
+              labelStyle={{ color: theme.colors.system.body.default }}
+              containerStyle={{ marginBottom: 0, flex: 1 }}
+            />
+            {isCanceled && (
+              <View style={[styles.statusBadge, { backgroundColor: theme.colors.button.background.error }]}>
+                <Text style={[theme.typography.body.sm, { color: "#fff" }]}>Canceled</Text>
+              </View>
+            )}
+          </View>
+
           {/* Title */}
           <InfoRow
             icon={<Icon.sparkle color={theme.colors.system.body.disabled} />}
@@ -56,23 +87,52 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
             labelStyle={{ color: theme.colors.system.body.default }}
           />
 
-          {/* Frequency */}
+          {/* Frequency & Days */}
           <InfoRow
             icon={<Icon.calendar color={theme.colors.system.body.disabled} />}
-            label={frequency}
+            label={`${frequency} • ${days}`}
             labelStyle={{ color: theme.colors.system.body.default }}
           />
 
-          {/* Cancel Button */}
-          <View style={{ marginTop: 8, alignItems: "flex-end" }}>
-            <Button
-              variant="text"
-              label="Cancel"
-              onPress={onCancel}
-              icon={<Icon.close color={theme.colors.button.label.error} />}
-              textStyle={{ color: theme.colors.button.label.error }}
-            />
+          {/* Time */}
+          <InfoRow
+            icon={<Icon.clock color={theme.colors.system.body.disabled} />}
+            label={time}
+            labelStyle={{ color: theme.colors.system.body.default }}
+          />
+
+          {/* Dates Row */}
+          <View style={styles.datesRow}>
+            <View style={styles.dateItem}>
+              <Text style={[theme.typography.body.sm, { color: theme.colors.system.body.disabled }]}>
+                Started
+              </Text>
+              <Text style={[theme.typography.body.md, { color: theme.colors.system.body.default }]}>
+                {startDate}
+              </Text>
+            </View>
+            <View style={styles.dateItem}>
+              <Text style={[theme.typography.body.sm, { color: theme.colors.system.body.disabled }]}>
+                {renewalOrEndLabel}
+              </Text>
+              <Text style={[theme.typography.body.md, { color: theme.colors.system.body.default }]}>
+                {renewalOrEndDate}
+              </Text>
+            </View>
           </View>
+
+          {/* Cancel Button - only show if not canceled */}
+          {!isCanceled && (
+            <View style={{ marginTop: 8, alignItems: "flex-end" }}>
+              <Button
+                variant="text"
+                label="Cancel"
+                onPress={onCancel}
+                icon={<Icon.close color={theme.colors.button.label.error} />}
+                textStyle={{ color: theme.colors.button.label.error }}
+              />
+            </View>
+          )}
         </View>
       </Base>
     </View>
@@ -87,10 +147,28 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
   },
   cardContainer: {
-    // borderTopRightRadius: 0,
-    // borderTopLeftRadius: 0,
     paddingBottom: 8,
     marginTop: -18,
+  },
+  idRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  datesRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+    paddingHorizontal: 4,
+  },
+  dateItem: {
+    flex: 1,
   },
 });
 

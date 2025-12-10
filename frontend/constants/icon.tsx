@@ -37,6 +37,8 @@ import ListIcon from "@/app/icons/listIcon";
 import BellIcon from "@/app/icons/bellIcon";
 import SunIcon from "@/app/icons/sunIcon";
 import MoonIcon from "@/app/icons/moonIcon";
+import ClockIcon from "@/app/icons/clockIcon";
+import IdIcon from "@/app/icons/idIcon";
 
 
 export const Icon = {
@@ -89,4 +91,6 @@ export const Icon = {
   bell: (props: { color: string }) => <BellIcon color={props.color} />,
   sun: (props: { color?: string }) => <SunIcon color={props.color} />,
   moon: (props: { color?: string }) => <MoonIcon color={props.color} />,
+  clock: (props: { color?: string }) => <ClockIcon color={props.color} />,
+  id: (props: { color?: string }) => <IdIcon color={props.color} />,
 };

@@ -182,6 +182,11 @@ export interface Subscription {
   status: string;
   monthlyPrice: number;
   selectedDays: number[];
+  address: Address;
+  timeSlot: TimeSlot;
+  startDate: string;
+  nextBillingDate: string;
+  endDate?: string;
 }
 
 // Helper function to map frontend frequency to backend enum
@@ -350,5 +355,13 @@ export const bookingApi = {
    */
   rescheduleBooking: async (id: string, newDate: string, newTimeSlotId: string): Promise<void> => {
     await api.put(`/bookings/${id}/reschedule`, { newDate, newTimeSlotId });
+  },
+
+  /**
+   * Cancel a subscription
+   * @param id - Subscription ID
+   */
+  cancelSubscription: async (id: string): Promise<void> => {
+    await api.patch(`/subscriptions/${id}/cancel`);
   },
 };

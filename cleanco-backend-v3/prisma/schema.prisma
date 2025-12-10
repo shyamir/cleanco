@@ -184,6 +184,7 @@ model Address {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   zone          Zone     @relation(fields: [zoneId], references: [id])
   bookings      Booking[]
+  subscriptions Subscription[]
 
   @@index([userId])
   @@index([zoneId])
@@ -237,6 +238,7 @@ model TimeSlot {
   isActive         Boolean   @default(true)
 
   bookings         Booking[]
+  subscriptions    Subscription[]
   availabilityCaches AvailabilityCache[]
 
   @@unique([startTime])
@@ -355,6 +357,8 @@ model Subscription {
 
   // Relations
   user            User                  @relation(fields: [userId], references: [id])
+  address         Address               @relation(fields: [addressId], references: [id])
+  timeSlot        TimeSlot              @relation(fields: [timeSlotId], references: [id])
   bookings        Booking[]
   payments        Payment[]
 
