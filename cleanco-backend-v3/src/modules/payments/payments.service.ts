@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Inject,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateBankTransferPaymentDto } from './dto/create-bank-transfer-payment.dto';
@@ -14,13 +15,18 @@ import { CreateSubscriptionBankTransferPaymentDto } from './dto/create-subscript
 import { InitiateSubscriptionBmlPaymentDto } from './dto/initiate-subscription-bml-payment.dto';
 import { PaymentMethod, PaymentStatus, BookingStatus } from '@prisma/client';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { BmlService } from '../bml/bml.service';
+import { BmlTransactionState } from '../bml/dto/bml-transaction.dto';
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(forwardRef(() => SubscriptionsService))
     private readonly subscriptionsService: SubscriptionsService,
+    private readonly bmlService: BmlService,
   ) {}
 
   /**
@@ -90,6 +96,11 @@ export class PaymentsService {
    * Initiate BML payment gateway transaction
    */
   async initiateBmlPayment(userId: string, dto: InitiateBmlPaymentDto) {
+    // Check if BML service is configured
+    if (!this.bmlService.isConfigured()) {
+      throw new BadRequestException('BML payment gateway is not configured');
+    }
+
     // Verify booking exists and belongs to user
     const booking = await this.prisma.booking.findUnique({
       where: { id: dto.bookingId },
@@ -116,15 +127,13 @@ export class PaymentsService {
       throw new BadRequestException('Payment already exists for this booking');
     }
 
-    // TODO: Integrate with actual BML payment gateway
-    // For now, create a pending BML payment
+    // Create a pending payment record first
     const payment = await this.prisma.payment.create({
       data: {
         bookingId: dto.bookingId,
         amount: booking.finalPrice,
         method: PaymentMethod.BML_GATEWAY,
         status: PaymentStatus.PENDING,
-        transactionId: `BML-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       },
       include: {
         booking: {
@@ -137,9 +146,43 @@ export class PaymentsService {
       },
     });
 
+    // Create BML transaction
+    const amountInCents = Math.round(Number(booking.finalPrice) * 100);
+    const bmlResult = await this.bmlService.createTransaction({
+      amount: amountInCents,
+      currency: 'MVR',
+      localId: payment.id,
+      customerReference: `Booking #${booking.bookingNumber}`,
+    });
+
+    if (!bmlResult.success || !bmlResult.transactionId || !bmlResult.paymentUrl) {
+      // Delete the pending payment if BML transaction creation failed
+      await this.prisma.payment.delete({ where: { id: payment.id } });
+      throw new BadRequestException(bmlResult.error || 'Failed to create BML transaction');
+    }
+
+    // Update payment with BML transaction ID
+    const updatedPayment = await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        transactionId: bmlResult.transactionId,
+      },
+      include: {
+        booking: {
+          include: {
+            user: true,
+            address: true,
+            timeSlot: true,
+          },
+        },
+      },
+    });
+
+    this.logger.log(`BML payment initiated for booking ${booking.bookingNumber}, transaction: ${bmlResult.transactionId}`);
+
     return {
-      payment,
-      paymentUrl: `https://bml.gateway.example.com/pay/${payment.transactionId}`, // Placeholder URL
+      payment: updatedPayment,
+      paymentUrl: bmlResult.paymentUrl,
       message: 'BML payment initiated. Please complete payment at the provided URL.',
     };
   }
@@ -213,6 +256,11 @@ export class PaymentsService {
     userId: string,
     dto: InitiateSubscriptionBmlPaymentDto,
   ) {
+    // Check if BML service is configured
+    if (!this.bmlService.isConfigured()) {
+      throw new BadRequestException('BML payment gateway is not configured');
+    }
+
     // Verify subscription exists and belongs to user
     const subscription = await this.prisma.subscription.findUnique({
       where: { id: dto.subscriptionId },
@@ -246,15 +294,13 @@ export class PaymentsService {
       throw new BadRequestException('Payment already exists for this subscription billing cycle');
     }
 
-    // TODO: Integrate with actual BML payment gateway
-    // For now, create a pending BML payment for subscription
+    // Create a pending payment record first
     const payment = await this.prisma.payment.create({
       data: {
         subscriptionId: dto.subscriptionId,
         amount: subscription.monthlyPrice,
         method: PaymentMethod.BML_GATEWAY,
         status: PaymentStatus.PENDING,
-        transactionId: `BML-SUB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       },
       include: {
         subscription: {
@@ -265,9 +311,41 @@ export class PaymentsService {
       },
     });
 
+    // Create BML transaction
+    const amountInCents = Math.round(Number(subscription.monthlyPrice) * 100);
+    const bmlResult = await this.bmlService.createTransaction({
+      amount: amountInCents,
+      currency: 'MVR',
+      localId: payment.id,
+      customerReference: `Subscription renewal #${subscription.id.slice(-8)}`,
+    });
+
+    if (!bmlResult.success || !bmlResult.transactionId || !bmlResult.paymentUrl) {
+      // Delete the pending payment if BML transaction creation failed
+      await this.prisma.payment.delete({ where: { id: payment.id } });
+      throw new BadRequestException(bmlResult.error || 'Failed to create BML transaction');
+    }
+
+    // Update payment with BML transaction ID
+    const updatedPayment = await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        transactionId: bmlResult.transactionId,
+      },
+      include: {
+        subscription: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    this.logger.log(`BML payment initiated for subscription ${subscription.id}, transaction: ${bmlResult.transactionId}`);
+
     return {
-      payment,
-      paymentUrl: `https://bml.gateway.example.com/pay/${payment.transactionId}`, // Placeholder URL
+      payment: updatedPayment,
+      paymentUrl: bmlResult.paymentUrl,
       message: 'BML subscription payment initiated. Please complete payment at the provided URL.',
     };
   }
@@ -444,21 +522,109 @@ export class PaymentsService {
   }
 
   /**
-   * Handle BML payment callback (webhook)
-   * This would be called by BML gateway after payment completion
+   * Handle BML payment redirect callback
+   * This is called when BML redirects the user back after payment
    */
-  async handleBmlCallback(transactionId: string, bmlData: any) {
+  async handleBmlRedirectCallback(
+    transactionId: string,
+    state: BmlTransactionState,
+    signature: string,
+  ): Promise<{ payment: any; redirectUrl: string }> {
+    this.logger.log(`Processing BML callback for transaction: ${transactionId}, state: ${state}`);
+
     const payment = await this.prisma.payment.findUnique({
       where: { transactionId },
       include: { booking: true, subscription: true },
     });
 
     if (!payment) {
+      this.logger.error(`Payment not found for transaction: ${transactionId}`);
       throw new NotFoundException('Payment not found');
     }
 
+    // Determine payment status based on BML state
+    const isSuccess = state === BmlTransactionState.CONFIRMED;
+    const isCancelled = state === BmlTransactionState.CANCELLED;
+    const newStatus = isSuccess
+      ? PaymentStatus.VERIFIED
+      : PaymentStatus.FAILED;
+
+    // Update payment status
+    const updatedPayment = await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: newStatus,
+        bmlResponse: { transactionId, state, signature },
+        verifiedAt: isSuccess ? new Date() : null,
+        paidAt: isSuccess ? new Date() : null,
+        failureReason: isSuccess ? null : (isCancelled ? 'Payment cancelled by user' : 'Payment failed'),
+      },
+    });
+
+    // Handle booking payment
+    if (payment.bookingId) {
+      if (isSuccess) {
+        await this.prisma.booking.update({
+          where: { id: payment.bookingId },
+          data: {
+            paymentStatus: PaymentStatus.VERIFIED,
+            status: BookingStatus.CONFIRMED,
+          },
+        });
+        this.logger.log(`Booking ${payment.bookingId} confirmed after BML payment`);
+      } else {
+        await this.prisma.booking.update({
+          where: { id: payment.bookingId },
+          data: {
+            paymentStatus: PaymentStatus.FAILED,
+          },
+        });
+        this.logger.log(`Booking ${payment.bookingId} payment failed`);
+      }
+    }
+
+    // Handle subscription payment and renewal
+    if (payment.subscriptionId && isSuccess) {
+      await this.subscriptionsService.renewSubscription(payment.subscriptionId, payment.id);
+      this.logger.log(`Subscription ${payment.subscriptionId} renewed after BML payment`);
+    }
+
+    // Generate app redirect URL
+    const redirectStatus = isSuccess ? 'success' : (isCancelled ? 'cancelled' : 'failed');
+    const redirectUrl = this.bmlService.getAppRedirectUrl(
+      redirectStatus,
+      payment.id,
+      transactionId,
+    );
+
+    return { payment: updatedPayment, redirectUrl };
+  }
+
+  /**
+   * Handle BML payment webhook (for async notifications)
+   * This is called by BML gateway after payment completion
+   */
+  async handleBmlWebhook(transactionId: string, bmlData: any) {
+    this.logger.log(`Processing BML webhook for transaction: ${transactionId}`);
+
+    const payment = await this.prisma.payment.findUnique({
+      where: { transactionId },
+      include: { booking: true, subscription: true },
+    });
+
+    if (!payment) {
+      this.logger.error(`Payment not found for transaction: ${transactionId}`);
+      throw new NotFoundException('Payment not found');
+    }
+
+    // If payment is already processed, skip
+    if (payment.status === PaymentStatus.VERIFIED || payment.status === PaymentStatus.FAILED) {
+      this.logger.log(`Payment ${payment.id} already processed, skipping webhook`);
+      return payment;
+    }
+
     // Update payment based on BML response
-    const isSuccess = bmlData.status === 'SUCCESS'; // Adjust based on actual BML response
+    const isSuccess = bmlData.state === BmlTransactionState.CONFIRMED;
     const updatedPayment = await this.prisma.payment.update({
       where: { id: payment.id },
       data: {
@@ -496,5 +662,35 @@ export class PaymentsService {
     }
 
     return updatedPayment;
+  }
+
+  /**
+   * Get payment by ID (for checking status after callback)
+   */
+  async getPaymentStatus(paymentId: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        booking: {
+          select: {
+            id: true,
+            bookingNumber: true,
+            status: true,
+          },
+        },
+        subscription: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
+    }
+
+    return payment;
   }
 }

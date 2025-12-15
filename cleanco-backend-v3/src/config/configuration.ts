@@ -27,11 +27,11 @@ export default () => ({
   },
 
   bml: {
-    merchantId: process.env.BML_MERCHANT_ID,
-    secretKey: process.env.BML_SECRET_KEY,
-    baseUrl: process.env.BML_BASE_URL || 'https://api.bankofmaldives.com',
+    clientId: process.env.BML_CLIENT_ID,
+    apiKey: process.env.BML_API_KEY,
+    baseUrl: process.env.BML_BASE_URL || 'https://api.uat.merchants.bankofmaldives.com.mv/public',
     redirectUrl: process.env.BML_REDIRECT_URL,
-    webhookUrl: process.env.BML_WEBHOOK_URL,
+    appDeepLink: process.env.BML_APP_DEEP_LINK || 'cleanco://payment-callback',
   },
 
   gcp: {

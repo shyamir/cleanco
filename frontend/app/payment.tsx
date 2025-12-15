@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -23,6 +24,7 @@ import {
   bookingApi,
   ServiceType,
   BookingType,
+  PaymentMethod,
   mapFrequencyToBackend,
   CreateBookingRequest,
   CreateSubscriptionRequest,
@@ -85,6 +87,12 @@ const Payment = () => {
         };
 
         await bookingApi.createSubscription(subscriptionRequest);
+
+        // Clear cached pricing rules so they're refetched next time
+        clearPricingCache();
+
+        // Navigate to confirmation for subscriptions (payment handled separately)
+        router.push("/confirmation");
       } else {
         // Create a one-time booking
         const bookingRequest: CreateBookingRequest = {
@@ -101,14 +109,33 @@ const Payment = () => {
           promoCode: promoCode || undefined,
         };
 
-        await bookingApi.createBooking(bookingRequest);
+        const booking = await bookingApi.createBooking(bookingRequest);
+
+        // Handle BML payment flow
+        if (paymentMethod === PaymentMethod.BML_GATEWAY) {
+          // Initiate BML payment
+          const bmlResponse = await bookingApi.initiateBmlPayment(booking.id);
+
+          // Clear cached pricing rules
+          clearPricingCache();
+
+          // Open BML payment page in external browser
+          const canOpen = await Linking.canOpenURL(bmlResponse.paymentUrl);
+          if (canOpen) {
+            await Linking.openURL(bmlResponse.paymentUrl);
+            // User will be redirected back to app via deep link after payment
+          } else {
+            Alert.alert(
+              "Error",
+              "Unable to open payment page. Please try again."
+            );
+          }
+        } else {
+          // Bank transfer - go directly to confirmation
+          clearPricingCache();
+          router.push("/confirmation");
+        }
       }
-
-      // Clear cached pricing rules so they're refetched next time
-      clearPricingCache();
-
-      // Navigate to confirmation (resetBooking is called when leaving confirmation page)
-      router.push("/confirmation");
     } catch (error: any) {
       console.error("Failed to create booking:", error);
       const errorMessage =

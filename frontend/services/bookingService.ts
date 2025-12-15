@@ -22,6 +22,50 @@ export enum PaymentMethod {
   BML_GATEWAY = 'BML_GATEWAY',
 }
 
+export enum PaymentStatusEnum {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  VERIFIED = 'VERIFIED',
+  REFUNDED = 'REFUNDED',
+  FAILED = 'FAILED',
+}
+
+export interface BmlPaymentResponse {
+  payment: {
+    id: string;
+    bookingId?: string;
+    subscriptionId?: string;
+    amount: number;
+    method: PaymentMethod;
+    status: PaymentStatusEnum;
+    transactionId?: string;
+  };
+  paymentUrl: string;
+  message: string;
+}
+
+export interface PaymentStatus {
+  id: string;
+  bookingId?: string;
+  subscriptionId?: string;
+  amount: number;
+  method: PaymentMethod;
+  status: PaymentStatusEnum;
+  transactionId?: string;
+  paidAt?: string;
+  verifiedAt?: string;
+  failureReason?: string;
+  booking?: {
+    id: string;
+    bookingNumber: string;
+    status: string;
+  };
+  subscription?: {
+    id: string;
+    status: string;
+  };
+}
+
 // Types
 export interface TimeSlot {
   id: string;
@@ -363,5 +407,39 @@ export const bookingApi = {
    */
   cancelSubscription: async (id: string): Promise<void> => {
     await api.patch(`/subscriptions/${id}/cancel`);
+  },
+
+  // ============================================
+  // BML Payment Methods
+  // ============================================
+
+  /**
+   * Initiate BML payment for a booking
+   * @param bookingId - Booking ID
+   * @returns Payment details with BML payment URL
+   */
+  initiateBmlPayment: async (bookingId: string): Promise<BmlPaymentResponse> => {
+    const response = await api.post('/payments/bml', { bookingId });
+    return response.data;
+  },
+
+  /**
+   * Initiate BML payment for subscription renewal
+   * @param subscriptionId - Subscription ID
+   * @returns Payment details with BML payment URL
+   */
+  initiateBmlSubscriptionPayment: async (subscriptionId: string): Promise<BmlPaymentResponse> => {
+    const response = await api.post('/payments/subscription/bml', { subscriptionId });
+    return response.data;
+  },
+
+  /**
+   * Get payment status by ID
+   * @param paymentId - Payment ID
+   * @returns Payment status details
+   */
+  getPaymentStatus: async (paymentId: string): Promise<PaymentStatus> => {
+    const response = await api.get(`/payments/status/${paymentId}`);
+    return response.data;
   },
 };

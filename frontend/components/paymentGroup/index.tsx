@@ -21,34 +21,35 @@ type PaymentGroupProps = {
   onValidationChange?: (isValid: boolean) => void;
 };
 
+type PaymentOption = "bank" | "bml";
+
 const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
   const { theme } = useTheme();
   const { setPaymentMethod } = useBooking();
 
-  // Only bank transfer is enabled for now
-  const [expandedCard, setExpandedCard] = useState<"bank" | "card">("bank");
+  const [expandedCard, setExpandedCard] = useState<PaymentOption>("bml");
 
-  // Card fields
-  // const [cardNumber, setCardNumber] = useState("");
-  // const [expiry, setExpiry] = useState("");
-  // const [cvc, setCVC] = useState("");
-
-  // Bank upload
+  // Bank upload (for bank transfer)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
 
   const [copied, setCopied] = useState(false);
 
-  const toggleCard = (card: "bank" | "card") => {
-    // Credit card is disabled for now
-    if (card === "card") {
-      return;
-    }
+  const toggleCard = (card: PaymentOption) => {
     if (expandedCard !== card) {
       setExpandedCard(card);
       // Update payment method in booking context
-      setPaymentMethod(PaymentMethod.BANK_TRANSFER);
+      if (card === "bank") {
+        setPaymentMethod(PaymentMethod.BANK_TRANSFER);
+      } else {
+        setPaymentMethod(PaymentMethod.BML_GATEWAY);
+      }
     }
   };
+
+  // Set initial payment method
+  useEffect(() => {
+    setPaymentMethod(PaymentMethod.BML_GATEWAY);
+  }, []);
 
   const bankAccountNumber = "1234 5678 9087"; // Replace with your account number
 
@@ -100,8 +101,8 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
 
     if (expandedCard === "bank") {
       isValid = !!uploadedImage; // must have uploaded slip
-    } else if (expandedCard === "card") {
-      isValid = true; // ✅ always valid when card option is selected
+    } else if (expandedCard === "bml") {
+      isValid = true; // BML payment is always valid (redirect flow)
     }
 
     onValidationChange?.(isValid);
@@ -109,6 +110,36 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
 
   return (
     <View style={styles.container}>
+      {/* BML Connect - Card Payment */}
+      <CollapsibleCard
+        title="Pay with Card"
+        icon={<Icon.card color={theme.colors.system.body.disabled} />}
+        expanded={expandedCard === "bml"}
+        onToggle={() => toggleCard("bml")}
+      >
+        <View style={styles.bmlContainer}>
+          <Text
+            style={[
+              theme.typography.body.md.regular,
+              { color: theme.colors.system.body.tertiary },
+            ]}
+          >
+            Pay securely using your debit or credit card via BML Connect.
+          </Text>
+          <View style={styles.bmlBadges}>
+            <Text
+              style={[
+                theme.typography.body.sm.regular,
+                { color: theme.colors.system.body.disabled },
+              ]}
+            >
+              Visa, Mastercard, and more accepted
+            </Text>
+          </View>
+        </View>
+      </CollapsibleCard>
+
+      {/* Bank Transfer */}
       <CollapsibleCard
         title="Bank Transfer"
         icon={<Icon.bank color={theme.colors.system.body.disabled} />}
@@ -193,26 +224,6 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
           <UploadImage onUploadSuccess={(uri) => setUploadedImage(uri)} />
         </View>
       </CollapsibleCard>
-
-      <CollapsibleCard
-        title="Credit/Debit Card"
-        icon={<Icon.card color={theme.colors.system.body.disabled} />}
-        expanded={false}
-        onToggle={() => toggleCard("card")}
-        disabled
-        badge="Coming soon"
-      >
-        <View style={styles.cardContainer}>
-          <Text
-            style={[
-              theme.typography.body.md.regular,
-              { color: theme.colors.system.body.disabled },
-            ]}
-          >
-            Credit/Debit card payments coming soon
-          </Text>
-        </View>
-      </CollapsibleCard>
     </View>
   );
 };
@@ -233,6 +244,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 48,
+  },
+  bmlContainer: {
+    flexDirection: "column",
+    gap: 8,
+  },
+  bmlBadges: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
   },
 });
 
