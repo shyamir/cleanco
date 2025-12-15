@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsNotEmpty,
   IsUUID,
@@ -13,8 +14,23 @@ import {
   ArrayMinSize,
   ArrayMaxSize,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { ServiceType, SubscriptionFrequency } from '@prisma/client';
+
+// Day slot DTO for subscription day-timeslot pairs
+export class DaySlotDto {
+  @ApiProperty({ description: 'Day of week (0=Sunday, 1=Monday, etc.)', example: 1 })
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  day: number;
+
+  @ApiProperty({ description: 'Time slot ID for this day', example: 'uuid' })
+  @IsUUID()
+  @IsNotEmpty()
+  timeSlotId: string;
+}
 
 export class CreateSubscriptionDto {
   @ApiProperty({ enum: ServiceType, description: 'Type of service (HOME or OFFICE)' })
@@ -32,23 +48,17 @@ export class CreateSubscriptionDto {
   @IsNotEmpty()
   addressId: string;
 
-  @ApiProperty({ description: 'Time slot ID for the subscription', example: 'uuid' })
-  @IsUUID()
-  @IsNotEmpty()
-  timeSlotId: string;
-
   @ApiProperty({
-    description: 'Selected days of the week (0=Sunday, 1=Monday, etc.)',
-    type: [Number],
-    example: [1, 3, 5],
+    description: 'Day slots with day and time slot ID for each day',
+    type: [DaySlotDto],
+    example: [{ day: 1, timeSlotId: 'uuid1' }, { day: 3, timeSlotId: 'uuid2' }],
   })
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(7)
-  @IsInt({ each: true })
-  @Min(0, { each: true })
-  @Max(6, { each: true })
-  selectedDays: number[];
+  @ValidateNested({ each: true })
+  @Type(() => DaySlotDto)
+  daySlots: DaySlotDto[];
 
   // Home cleaning specific fields
   @ApiPropertyOptional({ description: 'Number of bedrooms (for HOME service)', example: 3 })

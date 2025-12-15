@@ -237,9 +237,10 @@ model TimeSlot {
   orderIndex       Int       // For sorting (1, 2, 3...)
   isActive         Boolean   @default(true)
 
-  bookings         Booking[]
-  subscriptions    Subscription[]
-  availabilityCaches AvailabilityCache[]
+  bookings              Booking[]
+  subscriptions         Subscription[]
+  subscriptionDaySlots  SubscriptionDaySlot[]
+  availabilityCaches    AvailabilityCache[]
 
   @@unique([startTime])
   @@index([orderIndex])
@@ -256,6 +257,11 @@ model Booking {
 
   // Address
   addressId         String
+  // Address snapshot (captured at booking time for historical accuracy)
+  addressLabel      String?
+  addressAddress    String?   // House/Apt number, floor
+  addressStreet     String?
+  addressLandmark   String?
 
   // Scheduling
   date              DateTime      @db.Date
@@ -324,10 +330,15 @@ model Subscription {
   id              String                @id @default(uuid())
   userId          String
   frequency       SubscriptionFrequency
-  selectedDays    Int[]                 // Day of week: 0=Sunday, 1=Monday, etc.
+  selectedDays    Int[]                 // Day of week: 0=Sunday, 1=Monday, etc. (deprecated, use daySlots)
 
   // Address and service details (same as booking)
   addressId       String
+  // Address snapshot (captured at subscription time for historical accuracy)
+  addressLabel    String?
+  addressAddress  String?
+  addressStreet   String?
+  addressLandmark String?
   serviceType     ServiceType
   bedrooms        Int?
   bathrooms       Int?
@@ -336,8 +347,8 @@ model Subscription {
   floors          Int?
   rooms           Int?
 
-  // Time slot
-  timeSlotId      String
+  // Time slot (deprecated for multi-day, use daySlots instead)
+  timeSlotId      String?
 
   // Billing
   monthlyPrice    Decimal               @db.Decimal(10, 2)
@@ -358,14 +369,30 @@ model Subscription {
   // Relations
   user            User                  @relation(fields: [userId], references: [id])
   address         Address               @relation(fields: [addressId], references: [id])
-  timeSlot        TimeSlot              @relation(fields: [timeSlotId], references: [id])
+  timeSlot        TimeSlot?             @relation(fields: [timeSlotId], references: [id])
   bookings        Booking[]
   payments        Payment[]
+  daySlots        SubscriptionDaySlot[]
 
   @@index([userId])
   @@index([status])
   @@index([nextBillingDate])
   @@map("subscriptions")
+}
+
+// Stores the day-timeslot pairs for subscriptions with multiple days
+model SubscriptionDaySlot {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  dayOfWeek      Int          // 0=Sunday, 1=Monday, etc.
+  timeSlotId     String
+
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  timeSlot       TimeSlot     @relation(fields: [timeSlotId], references: [id])
+
+  @@unique([subscriptionId, dayOfWeek])
+  @@index([subscriptionId])
+  @@map("subscription_day_slots")
 }
 
 model CleanerProfile {

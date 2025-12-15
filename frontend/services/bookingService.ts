@@ -157,12 +157,17 @@ export interface CreateBookingRequest {
   promoCode?: string;
 }
 
+// Day slot for subscription - maps day of week to time slot
+export interface DaySlot {
+  day: number; // 0-6 (Sunday-Saturday)
+  timeSlotId: string;
+}
+
 export interface CreateSubscriptionRequest {
   serviceType: ServiceType;
   frequency: SubscriptionFrequency;
   addressId: string;
-  timeSlotId: string;
-  selectedDays: number[]; // 0-6 (Sunday-Saturday)
+  daySlots: DaySlot[]; // Array of day-timeslot pairs
   bedrooms?: number;
   bathrooms?: number;
   hasPets?: boolean;
@@ -201,6 +206,11 @@ export interface UpcomingBooking {
   finalPrice: number;
   address: Address;
   timeSlot: TimeSlot;
+  // Address snapshot (captured at booking time for historical accuracy)
+  addressLabel?: string;
+  addressAddress?: string;
+  addressStreet?: string;
+  addressLandmark?: string;
 }
 
 // ActivityBooking is the same as UpcomingBooking (used for activity/history pages)
@@ -219,6 +229,14 @@ export interface BookingDetails extends UpcomingBooking {
   discountAmount?: number;
 }
 
+// Subscription day slot with time slot details
+export interface SubscriptionDaySlot {
+  id: string;
+  dayOfWeek: number;
+  timeSlotId: string;
+  timeSlot: TimeSlot;
+}
+
 export interface Subscription {
   id: string;
   serviceType: ServiceType;
@@ -227,10 +245,17 @@ export interface Subscription {
   monthlyPrice: number;
   selectedDays: number[];
   address: Address;
-  timeSlot: TimeSlot;
+  // Address snapshot (captured at subscription time for historical accuracy)
+  addressLabel?: string;
+  addressAddress?: string;
+  addressStreet?: string;
+  addressLandmark?: string;
+  timeSlot?: TimeSlot; // Deprecated, use daySlots
+  daySlots: SubscriptionDaySlot[]; // Day-specific time slots
   startDate: string;
   nextBillingDate: string;
   endDate?: string;
+  bookings?: { date: string }[]; // First booking (for displaying start date)
 }
 
 // Helper function to map frontend frequency to backend enum

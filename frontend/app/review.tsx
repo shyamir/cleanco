@@ -372,9 +372,9 @@ const Review = () => {
                   ] as any
                 }
               >
-                By proceeding, you authorize Cleanco to charge {total} MVR on
-                the 1st every month. You can cancel your subscription under
-                Manage Subscription in Account.
+                You will be charged every{" "}
+                {frequency === "1x /week" ? "4" : frequency === "2x /week" ? "8" : "12"}{" "}
+                bookings. You can cancel your subscription under Manage Subscription in Account.
               </Text>
             )}
           </View>

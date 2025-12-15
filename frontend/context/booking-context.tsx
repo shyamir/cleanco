@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { CLEANING_PRICING } from "@/constants/pricing";
-import { PaymentMethod } from "@/services/bookingService";
+import { PaymentMethod, DaySlot } from "@/services/bookingService";
 
 type BookingContextType = {
   bedrooms: number;
@@ -30,6 +30,8 @@ type BookingContextType = {
   setTimeSlotId: (value: string | null) => void;
   selectedDays: number[];
   setSelectedDays: (value: number[]) => void;
+  daySlots: DaySlot[];
+  setDaySlots: (value: DaySlot[]) => void;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (value: PaymentMethod) => void;
   isLoadingPrice: boolean;
@@ -66,6 +68,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   const [addressId, setAddressId] = useState<string | null>(null);
   const [timeSlotId, setTimeSlotId] = useState<string | null>(null);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [daySlots, setDaySlots] = useState<DaySlot[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.BANK_TRANSFER);
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   // Promo code state
@@ -89,6 +92,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     setAddressId(null);
     setTimeSlotId(null);
     setSelectedDays([]);
+    setDaySlots([]);
     setPaymentMethod(PaymentMethod.BANK_TRANSFER);
     setIsLoadingPrice(false);
     setPromoCode(null);
@@ -127,6 +131,8 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         setTimeSlotId,
         selectedDays,
         setSelectedDays,
+        daySlots,
+        setDaySlots,
         paymentMethod,
         setPaymentMethod,
         isLoadingPrice,

@@ -20,8 +20,9 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ booking }) => {
 
   const title = isHomeService ? "Home Cleaning" : "Office Cleaning";
 
-  // Build address display: "Label - Address" or just "Address"
-  const { label, address } = booking.address;
+  // Build address display: prefer snapshot data for historical accuracy
+  const label = booking.addressLabel ?? booking.address?.label;
+  const address = booking.addressAddress ?? booking.address?.address;
   const displayAddress = label ? `${label} - ${address}` : address;
 
   const handlePress = () => {

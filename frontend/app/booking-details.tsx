@@ -147,12 +147,12 @@ export default function BookingDetailsScreen() {
   const isHomeService = booking.serviceType === ServiceType.HOME;
   const serviceTitle = isHomeService ? "Home Cleaning" : "Office Cleaning";
 
-  // Build full address: label, address, street, landmark
+  // Build full address: prefer snapshot data for historical accuracy
   const addressParts = [
-    booking.address.label,
-    booking.address.address,
-    booking.address.street,
-    booking.address.landmark,
+    booking.addressLabel ?? booking.address?.label,
+    booking.addressAddress ?? booking.address?.address,
+    booking.addressStreet ?? booking.address?.street,
+    booking.addressLandmark ?? booking.address?.landmark,
   ].filter(Boolean);
   const displayAddress = addressParts.join(", ");
 

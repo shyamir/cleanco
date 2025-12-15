@@ -1,14 +1,42 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Stack, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
+import { Alert } from "react-native";
 import { AddressProvider } from "../context/address-context";
 import { BookingProvider } from "@/context/booking-context";
 import { ActivityProvider } from "@/context/activity-context";
 import { HomeDataProvider } from "@/context/home-data-context";
 import { ThemeProvider } from "@/theme/ThemeProvider";
+import { authEvents } from "@/services/api";
 
 export default function RootLayout() {
   const router = useRouter();
+  const isAuthAlertShowing = useRef(false);
+
+  // Handle auth failure - redirect to login when session expires
+  useEffect(() => {
+    const unsubscribe = authEvents.onAuthFailure(() => {
+      // Prevent multiple alerts from stacking
+      if (isAuthAlertShowing.current) return;
+      isAuthAlertShowing.current = true;
+
+      Alert.alert(
+        "Session Expired",
+        "Your session has expired. Please log in again.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              isAuthAlertShowing.current = false;
+              router.replace("/login");
+            },
+          },
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [router]);
 
   useEffect(() => {
     // Handle deep links when app is already open

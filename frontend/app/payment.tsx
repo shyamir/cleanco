@@ -46,6 +46,7 @@ const Payment = () => {
     addressId,
     timeSlotId,
     selectedDays,
+    daySlots,
     paymentMethod,
     promoCode,
     promoDiscount,
@@ -63,7 +64,13 @@ const Payment = () => {
       return;
     }
 
-    if (!timeSlotId) {
+    // For subscriptions, check daySlots; for one-time bookings, check timeSlotId
+    const { isSubscription: isSubCheck } = mapFrequencyToBackend(frequency);
+    if (isSubCheck && daySlots.length === 0) {
+      Alert.alert("Error", "Please select days and time slots before confirming.");
+      return;
+    }
+    if (!isSubCheck && !timeSlotId) {
       Alert.alert("Error", "Please select a time slot before confirming.");
       return;
     }
@@ -74,13 +81,12 @@ const Payment = () => {
       const { isSubscription, subscriptionFrequency } = mapFrequencyToBackend(frequency);
 
       if (isSubscription && subscriptionFrequency) {
-        // Create a subscription
+        // Create a subscription with day-specific time slots
         const subscriptionRequest: CreateSubscriptionRequest = {
           serviceType: ServiceType.HOME,
           frequency: subscriptionFrequency,
           addressId,
-          timeSlotId,
-          selectedDays: selectedDays.length > 0 ? selectedDays : [1], // Default to Monday if no days selected
+          daySlots: daySlots.length > 0 ? daySlots : [{ day: 1, timeSlotId: timeSlotId! }], // Fallback for backward compatibility
           bedrooms,
           bathrooms,
           hasPets: pet !== "None",
@@ -100,7 +106,7 @@ const Payment = () => {
           bookingType: BookingType.ONE_TIME,
           addressId,
           date: startDate || new Date().toISOString().split("T")[0],
-          timeSlotId,
+          timeSlotId: timeSlotId!,
           bedrooms,
           bathrooms,
           hasPets: pet !== "None",

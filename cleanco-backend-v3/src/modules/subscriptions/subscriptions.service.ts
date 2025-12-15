@@ -29,8 +29,7 @@ export class SubscriptionsService {
       serviceType,
       frequency,
       addressId,
-      timeSlotId,
-      selectedDays,
+      daySlots,
       bedrooms,
       bathrooms,
       hasPets,
@@ -51,14 +50,23 @@ export class SubscriptionsService {
       throw new NotFoundException('Address not found or does not belong to user');
     }
 
-    // Verify time slot exists
-    const timeSlot = await this.prisma.timeSlot.findUnique({
-      where: { id: timeSlotId },
+    // Verify all time slots exist and are active
+    const timeSlotIds = daySlots.map((ds) => ds.timeSlotId);
+    const timeSlots = await this.prisma.timeSlot.findMany({
+      where: { id: { in: timeSlotIds } },
     });
 
-    if (!timeSlot || !timeSlot.isActive) {
-      throw new NotFoundException('Time slot not found or inactive');
+    if (timeSlots.length !== timeSlotIds.length) {
+      throw new NotFoundException('One or more time slots not found');
     }
+
+    const inactiveSlot = timeSlots.find((ts) => !ts.isActive);
+    if (inactiveSlot) {
+      throw new BadRequestException('One or more time slots are inactive');
+    }
+
+    // Extract selected days from daySlots
+    const selectedDays = daySlots.map((ds) => ds.day);
 
     // Validate selected days match frequency
     this.validateSelectedDays(frequency, selectedDays);
@@ -73,17 +81,21 @@ export class SubscriptionsService {
       rooms,
     );
 
-    // Set start date to tomorrow and calculate first billing date
+    // Set start date to tomorrow
     const startDate = startOfDay(addDays(new Date(), 1));
-    const nextBillingDate = startOfDay(addMonths(startDate, 1));
 
-    // Create subscription
+    // Create subscription with daySlots relation
     const subscription = await this.prisma.subscription.create({
       data: {
         userId,
         frequency,
         selectedDays,
         addressId,
+        // Address snapshot (captured at subscription time for historical accuracy)
+        addressLabel: address.label,
+        addressAddress: address.address,
+        addressStreet: address.street,
+        addressLandmark: address.landmark,
         serviceType,
         bedrooms,
         bathrooms,
@@ -91,12 +103,17 @@ export class SubscriptionsService {
         officeSize,
         floors,
         rooms,
-        timeSlotId,
         monthlyPrice,
-        nextBillingDate,
+        nextBillingDate: startDate, // Temporary, will be updated
         startDate,
         status: SubscriptionStatus.ACTIVE,
         autoRenew: true,
+        daySlots: {
+          create: daySlots.map((ds) => ({
+            dayOfWeek: ds.day,
+            timeSlotId: ds.timeSlotId,
+          })),
+        },
       },
       include: {
         user: {
@@ -108,6 +125,11 @@ export class SubscriptionsService {
             email: true,
           },
         },
+        daySlots: {
+          include: {
+            timeSlot: true,
+          },
+        },
       },
     });
 
@@ -115,6 +137,22 @@ export class SubscriptionsService {
 
     // Generate 12 weeks of bookings
     await this.generateBookingsForSubscription(subscription, 12);
+
+    // Set nextBillingDate to the date of the last paid booking
+    const lastPaidBooking = await this.prisma.booking.findFirst({
+      where: {
+        subscriptionId: subscription.id,
+        paymentStatus: 'PAID',
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    if (lastPaidBooking) {
+      await this.prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { nextBillingDate: lastPaidBooking.date },
+      });
+    }
 
     return subscription;
   }
@@ -150,6 +188,24 @@ export class SubscriptionsService {
             startTime: true,
             endTime: true,
           },
+        },
+        daySlots: {
+          include: {
+            timeSlot: {
+              select: {
+                id: true,
+                startTime: true,
+                endTime: true,
+                displayStartTime: true,
+              },
+            },
+          },
+          orderBy: { dayOfWeek: 'asc' },
+        },
+        bookings: {
+          select: { date: true },
+          orderBy: { date: 'asc' },
+          take: 1,
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -335,11 +391,22 @@ export class SubscriptionsService {
       }
     }
 
-    // Cancel all future bookings
+    // Delete unpaid future bookings (placeholders that shouldn't show in history)
+    const deletedBookings = await this.prisma.booking.deleteMany({
+      where: {
+        subscriptionId: id,
+        date: { gte: today },
+        paymentStatus: PaymentStatus.PENDING,
+        status: { not: BookingStatus.CANCELED },
+      },
+    });
+
+    // Cancel paid future bookings (keep in history)
     const canceledBookings = await this.prisma.booking.updateMany({
       where: {
         subscriptionId: id,
         date: { gte: today },
+        paymentStatus: { in: [PaymentStatus.PAID, PaymentStatus.VERIFIED] },
         status: { not: BookingStatus.CANCELED },
       },
       data: {
@@ -368,7 +435,7 @@ export class SubscriptionsService {
       },
     });
 
-    this.logger.log(`Canceled subscription ${id}, canceled ${canceledBookings.count} future bookings`);
+    this.logger.log(`Canceled subscription ${id}, deleted ${deletedBookings.count} unpaid bookings, canceled ${canceledBookings.count} paid bookings`);
 
     return updated;
   }
@@ -458,7 +525,7 @@ export class SubscriptionsService {
 
   /**
    * Generate bookings for a subscription
-   * Creates bookings for the specified number of weeks based on selectedDays
+   * Creates bookings for the specified number of weeks based on daySlots
    */
   private async generateBookingsForSubscription(
     subscription: any,
@@ -467,16 +534,41 @@ export class SubscriptionsService {
     const bookings = [];
     const today = new Date();
 
-    // Get pricing per session
+    // Fetch address for snapshot
+    const address = await this.prisma.address.findUnique({
+      where: { id: subscription.addressId },
+    });
+
+    // Fetch daySlots if not included in subscription object
+    let daySlots = subscription.daySlots;
+    if (!daySlots || daySlots.length === 0) {
+      daySlots = await this.prisma.subscriptionDaySlot.findMany({
+        where: { subscriptionId: subscription.id },
+      });
+    }
+
+    // Build a map of day -> timeSlotId for quick lookup
+    const dayToTimeSlot: Record<number, string> = {};
+    for (const slot of daySlots) {
+      dayToTimeSlot[slot.dayOfWeek] = slot.timeSlotId;
+    }
+
+    // Fallback to old single timeSlotId for backward compatibility
+    const fallbackTimeSlotId = subscription.timeSlotId;
+
+    // Get sessions count for determining which bookings are paid
     const sessionsPerMonth: Record<SubscriptionFrequency, number> = {
       [SubscriptionFrequency.ONCE_A_WEEK]: 4,
       [SubscriptionFrequency.TWICE_A_WEEK]: 8,
       [SubscriptionFrequency.THRICE_A_WEEK]: 12,
     };
-    const pricePerSession = Number(subscription.monthlyPrice) / sessionsPerMonth[subscription.frequency as SubscriptionFrequency];
+    const paidSessionsCount = sessionsPerMonth[subscription.frequency as SubscriptionFrequency];
+    // Use full subscription monthly price for all bookings
+    const subscriptionPrice = Number(subscription.monthlyPrice);
 
-    // Get next booking number
+    // Get next booking number and track paid sessions
     let bookingCounter = 0;
+    let paidBookingsCreated = 0;
 
     // Generate bookings for each week
     for (let week = 0; week < weeksToGenerate; week++) {
@@ -487,20 +579,34 @@ export class SubscriptionsService {
         // Calculate the actual date for this day in this week
         const bookingDate = setDay(weekStart, dayOfWeek, { weekStartsOn: 0 }); // 0 = Sunday
 
+        // Get the time slot for this day (from daySlots or fallback)
+        const timeSlotId = dayToTimeSlot[dayOfWeek] || fallbackTimeSlotId;
+
         // Only create bookings for future dates
-        if (bookingDate > today) {
+        if (bookingDate > today && timeSlotId) {
           const bookingNumber = `BK${Date.now()}${bookingCounter++}`;
+
+          // First month's worth of bookings are PAID, rest are PENDING (placeholders)
+          const isPaidBooking = paidBookingsCreated < paidSessionsCount;
+          if (isPaidBooking) {
+            paidBookingsCreated++;
+          }
 
           bookings.push({
             bookingNumber,
             userId: subscription.userId,
             addressId: subscription.addressId,
+            // Address snapshot (captured at booking time for historical accuracy)
+            addressLabel: address?.label,
+            addressAddress: address?.address,
+            addressStreet: address?.street,
+            addressLandmark: address?.landmark,
             serviceType: subscription.serviceType,
             bookingType: BookingType.SUBSCRIPTION,
-            timeSlotId: subscription.timeSlotId,
+            timeSlotId,
             date: startOfDay(bookingDate),
-            totalPrice: pricePerSession,
-            finalPrice: pricePerSession,
+            totalPrice: subscriptionPrice,
+            finalPrice: subscriptionPrice,
             bedrooms: subscription.bedrooms,
             bathrooms: subscription.bathrooms,
             hasPets: subscription.hasPets,
@@ -509,7 +615,7 @@ export class SubscriptionsService {
             rooms: subscription.rooms,
             subscriptionId: subscription.id,
             status: BookingStatus.PENDING,
-            paymentStatus: PaymentStatus.PENDING,
+            paymentStatus: isPaidBooking ? PaymentStatus.PAID : PaymentStatus.PENDING,
             adminApproved: false,
           });
         }
@@ -670,12 +776,21 @@ export class SubscriptionsService {
       await this.generateBookingsForSubscription(subscription, weeksToGenerate);
     }
 
+    // Get the last paid booking date for nextBillingDate
+    const lastPaidBooking = await this.prisma.booking.findFirst({
+      where: {
+        subscriptionId,
+        paymentStatus: 'PAID',
+      },
+      orderBy: { date: 'desc' },
+    });
+
     // Update subscription
     const updated = await this.prisma.subscription.update({
       where: { id: subscriptionId },
       data: {
         status: SubscriptionStatus.ACTIVE,
-        nextBillingDate: addMonths(subscription.nextBillingDate, 1),
+        nextBillingDate: lastPaidBooking?.date || addMonths(subscription.nextBillingDate, 1),
         lastPaymentId: paymentId,
         lastPaymentDate: new Date(),
       },
@@ -709,20 +824,28 @@ export class SubscriptionsService {
       throw new BadRequestException('Subscription is already expired');
     }
 
-    // Cancel all future bookings
     const today = startOfDay(new Date());
+
+    // Delete unpaid future bookings (placeholders that shouldn't show in history)
+    const deletedBookings = await this.prisma.booking.deleteMany({
+      where: {
+        subscriptionId,
+        date: { gte: today },
+        paymentStatus: PaymentStatus.PENDING,
+        status: { not: BookingStatus.CANCELED },
+      },
+    });
+
+    // Cancel paid future bookings (keep in history)
     const canceledBookings = await this.prisma.booking.updateMany({
       where: {
         subscriptionId,
-        date: {
-          gte: today,
-        },
-        status: {
-          not: 'CANCELED',
-        },
+        date: { gte: today },
+        paymentStatus: { in: [PaymentStatus.PAID, PaymentStatus.VERIFIED] },
+        status: { not: BookingStatus.CANCELED },
       },
       data: {
-        status: 'CANCELED',
+        status: BookingStatus.CANCELED,
       },
     });
 
@@ -748,7 +871,7 @@ export class SubscriptionsService {
     });
 
     this.logger.log(
-      `Expired subscription ${subscriptionId}, canceled ${canceledBookings.count} future bookings`,
+      `Expired subscription ${subscriptionId}, deleted ${deletedBookings.count} unpaid bookings, canceled ${canceledBookings.count} paid bookings`,
     );
 
     return updated;

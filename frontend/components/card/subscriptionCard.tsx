@@ -15,6 +15,7 @@ type SubscriptionCardProps = {
   frequency: string;
   days: string;
   time: string;
+  price: string;
   startDate: string;
   renewalOrEndDate: string;
   renewalOrEndLabel: string;
@@ -30,6 +31,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   frequency,
   days,
   time,
+  price,
   startDate,
   renewalOrEndDate,
   renewalOrEndLabel,
@@ -87,17 +89,24 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
             labelStyle={{ color: theme.colors.system.body.default }}
           />
 
-          {/* Frequency & Days */}
+          {/* Frequency */}
           <InfoRow
             icon={<Icon.calendar color={theme.colors.system.body.disabled} />}
-            label={`${frequency} • ${days}`}
+            label={frequency}
             labelStyle={{ color: theme.colors.system.body.default }}
           />
 
-          {/* Time */}
+          {/* Schedule (day-time pairs) */}
           <InfoRow
             icon={<Icon.clock color={theme.colors.system.body.disabled} />}
             label={time}
+            labelStyle={{ color: theme.colors.system.body.default }}
+          />
+
+          {/* Price */}
+          <InfoRow
+            icon={<Icon.bill color={theme.colors.system.body.disabled} />}
+            label={price}
             labelStyle={{ color: theme.colors.system.body.default }}
           />
 

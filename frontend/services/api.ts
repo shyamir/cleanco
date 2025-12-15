@@ -3,6 +3,22 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:3000/api/v1'; // Update this to your backend URL
 
+// Simple auth event listener for session expiry
+type AuthFailureListener = () => void;
+const authFailureListeners: Set<AuthFailureListener> = new Set();
+
+export const authEvents = {
+  onAuthFailure: (listener: AuthFailureListener) => {
+    authFailureListeners.add(listener);
+    return () => {
+      authFailureListeners.delete(listener);
+    };
+  },
+  emitAuthFailure: () => {
+    authFailureListeners.forEach((listener) => listener());
+  },
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -49,9 +65,17 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed, clear tokens
-        await AsyncStorage.removeItem('accessToken');
-        await AsyncStorage.removeItem('refreshToken');
+        // Refresh failed, clear all auth data (same as logout) and emit auth failure event
+        await AsyncStorage.multiRemove([
+          'accessToken',
+          'refreshToken',
+          'user',
+          'firstName',
+          'fullName',
+          'email',
+          'phone',
+        ]);
+        authEvents.emitAuthFailure();
       }
     }
 

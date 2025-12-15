@@ -10,7 +10,7 @@ import { CleanerAssignmentService } from '../cleaner-assignment/cleaner-assignme
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { CancelBookingDto } from './dto/cancel-booking.dto';
-import { ServiceType, BookingType, BookingStatus } from '@prisma/client';
+import { ServiceType, BookingType, BookingStatus, PaymentStatus } from '@prisma/client';
 import { nanoid } from 'nanoid';
 import { parse, isBefore, startOfDay, differenceInHours } from 'date-fns';
 
@@ -195,6 +195,11 @@ export class BookingsService {
         bookingType,
         status: BookingStatus.PENDING,
         addressId,
+        // Address snapshot (captured at booking time for historical accuracy)
+        addressLabel: address.label,
+        addressAddress: address.address,
+        addressStreet: address.street,
+        addressLandmark: address.landmark,
         date: bookingDate,
         timeSlotId,
         bedrooms,
@@ -208,6 +213,7 @@ export class BookingsService {
         discountAmount,
         promoCodeId,
         paymentMethod,
+        paymentStatus: PaymentStatus.PAID,
         specialInstructions,
       },
       include: {
@@ -289,6 +295,10 @@ export class BookingsService {
         status: {
           in: ['PENDING', 'CONFIRMED', 'ASSIGNED', 'IN_PROGRESS'],
         },
+        // Only show paid bookings
+        paymentStatus: {
+          in: ['PAID', 'VERIFIED'],
+        },
       },
       include: {
         address: true,
@@ -302,34 +312,28 @@ export class BookingsService {
 
   /**
    * Get all upcoming bookings for activity page
-   * Shows all one-time bookings + subscription bookings only until nextBillingDate
+   * Shows only paid bookings (excludes unpaid placeholder bookings)
    */
   async getActivityBookings(userId: string) {
     const today = startOfDay(new Date());
 
-    const bookings = await this.prisma.booking.findMany({
+    return this.prisma.booking.findMany({
       where: {
         userId,
         date: { gte: today },
         status: {
           in: ['PENDING', 'CONFIRMED', 'ASSIGNED', 'IN_PROGRESS'],
         },
+        // Only show paid bookings (excludes unpaid subscription placeholders)
+        paymentStatus: {
+          in: ['PAID', 'VERIFIED'],
+        },
       },
       include: {
         address: true,
         timeSlot: true,
-        subscription: {
-          select: { nextBillingDate: true },
-        },
       },
       orderBy: { date: 'asc' },
-    });
-
-    // Filter: one-time bookings show all, subscription bookings only until nextBillingDate
-    return bookings.filter((booking) => {
-      if (booking.bookingType === 'ONE_TIME') return true;
-      if (!booking.subscription?.nextBillingDate) return true;
-      return booking.date <= booking.subscription.nextBillingDate;
     });
   }
 
@@ -491,9 +495,10 @@ export class BookingsService {
   async cancel(userId: string, id: string, cancelDto: CancelBookingDto) {
     const { cancelReason } = cancelDto;
 
-    // Find booking
+    // Find booking with timeSlot for accurate time comparison
     const booking = await this.prisma.booking.findFirst({
       where: { id, userId },
+      include: { timeSlot: true },
     });
 
     if (!booking) {
@@ -510,7 +515,21 @@ export class BookingsService {
     }
 
     // Check minimum notice (24 hours)
-    const hoursDiff = differenceInHours(booking.date, new Date());
+    // Combine booking date with time slot start time for accurate comparison
+    // Use UTC methods to avoid timezone issues - times are in Maldives (UTC+5)
+    const [hours, minutes] = booking.timeSlot.startTime.split(':').map(Number);
+    const bookingDate = new Date(booking.date);
+    const bookingDateTime = new Date(
+      bookingDate.getUTCFullYear(),
+      bookingDate.getUTCMonth(),
+      bookingDate.getUTCDate(),
+      hours,
+      minutes,
+      0,
+      0
+    );
+
+    const hoursDiff = differenceInHours(bookingDateTime, new Date());
     if (hoursDiff < 24) {
       throw new BadRequestException(
         'Bookings must be canceled at least 24 hours in advance',

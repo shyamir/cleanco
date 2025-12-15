@@ -46,7 +46,7 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
     Map<number, boolean>
   >(new Map());
 
-  const { setSchedule, setTimeSlotId, setSelectedDays, bedrooms, service } =
+  const { setSchedule, setTimeSlotId, setSelectedDays, setDaySlots, bedrooms, service } =
     useBooking();
   const { startDate, setStartDate } = useBooking();
 
@@ -319,15 +319,24 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
         .join(" | ");
       setSchedule(scheduleStr);
 
-      // Store the first timeSlotId for the subscription
+      // Store the first timeSlotId for backward compatibility
       const firstSlotWithTime = updated.find((s) => s.timeSlotId);
       if (firstSlotWithTime?.timeSlotId) {
         setTimeSlotId(firstSlotWithTime.timeSlotId);
       }
 
-      // Store selected days as numbers for backend
+      // Store selected days as numbers for backward compatibility
       const days = updated.filter((s) => s.day).map((s) => mapDayToNumber(s.day));
       setSelectedDays(days);
+
+      // Store daySlots for backend (day-timeSlotId pairs)
+      const daySlotsPairs = updated
+        .filter((s) => s.day && s.timeSlotId)
+        .map((s) => ({
+          day: mapDayToNumber(s.day),
+          timeSlotId: s.timeSlotId!,
+        }));
+      setDaySlots(daySlotsPairs);
     }
   };
 

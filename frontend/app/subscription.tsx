@@ -37,11 +37,13 @@ const formatFrequency = (frequency: SubscriptionFrequency): string => {
   }
 };
 
-const formatAddress = (address: Subscription["address"] | undefined): string => {
-  if (!address) return "Address not available";
-  const parts = [address.address, address.street, address.landmark].filter(
-    Boolean
-  );
+const formatAddress = (subscription: Subscription): string => {
+  // Prefer snapshot data for historical accuracy
+  const address = subscription.addressAddress ?? subscription.address?.address;
+  const street = subscription.addressStreet ?? subscription.address?.street;
+  const landmark = subscription.addressLandmark ?? subscription.address?.landmark;
+
+  const parts = [address, street, landmark].filter(Boolean);
   return parts.join(", ") || "Address not available";
 };
 
@@ -53,14 +55,44 @@ const formatDays = (selectedDays: number[]): string => {
     .join(", ");
 };
 
-const formatTime = (timeSlot: Subscription["timeSlot"] | undefined): string => {
-  if (!timeSlot) return "Not set";
+const formatTimeFromString = (startTime: string): string => {
   // Convert 24h format to 12h format
-  const [hours, minutes] = timeSlot.startTime.split(":");
+  const [hours, minutes] = startTime.split(":");
   const h = parseInt(hours, 10);
   const ampm = h >= 12 ? "PM" : "AM";
   const hour12 = h % 12 || 12;
   return `${hour12}:${minutes} ${ampm}`;
+};
+
+const formatTime = (timeSlot: Subscription["timeSlot"] | undefined): string => {
+  if (!timeSlot) return "Not set";
+  return formatTimeFromString(timeSlot.startTime);
+};
+
+// Format day slots with their times (e.g., "Mon 9:00 AM, Wed 2:00 PM")
+const formatDaySlots = (subscription: Subscription): string => {
+  // Use daySlots if available
+  if (subscription.daySlots && subscription.daySlots.length > 0) {
+    return subscription.daySlots
+      .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+      .map((slot) => {
+        const dayName = DAY_NAMES[slot.dayOfWeek];
+        const time = formatTimeFromString(slot.timeSlot.startTime);
+        return `${dayName} ${time}`;
+      })
+      .join("\n");
+  }
+
+  // Fallback to old format (selectedDays + single timeSlot)
+  if (subscription.selectedDays && subscription.timeSlot) {
+    const time = formatTime(subscription.timeSlot);
+    return subscription.selectedDays
+      .sort((a, b) => a - b)
+      .map((day) => `${DAY_NAMES[day]} ${time}`)
+      .join("\n");
+  }
+
+  return "Not set";
 };
 
 const formatDate = (dateString: string | undefined): string => {
@@ -70,6 +102,7 @@ const formatDate = (dateString: string | undefined): string => {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 };
 
@@ -175,11 +208,12 @@ export default function SubscriptionScreen() {
               subscriptionId={subscription.id}
               type={subscription.serviceType === ServiceType.HOME ? "home" : "office"}
               title={getServiceTitle(subscription.serviceType)}
-              address={formatAddress(subscription.address)}
+              address={formatAddress(subscription)}
               frequency={formatFrequency(subscription.frequency)}
               days={formatDays(subscription.selectedDays)}
-              time={formatTime(subscription.timeSlot)}
-              startDate={formatDate(subscription.startDate)}
+              time={formatDaySlots(subscription)}
+              price={`MVR ${subscription.monthlyPrice}/month`}
+              startDate={formatDate(subscription.bookings?.[0]?.date || subscription.startDate)}
               renewalOrEndDate={formatDate(isCanceled ? subscription.endDate : subscription.nextBillingDate)}
               renewalOrEndLabel={isCanceled ? "Ended" : "Next Renewal"}
               status={subscription.status}
