@@ -1,7 +1,7 @@
 import { TABS_DATA } from "@/constants/tabData";
 import { useTheme } from "@/theme/ThemeProvider";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { authService } from "@/services/auth";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +16,7 @@ import SignOut from "@/components/bottomSheet/signOut";
 import Appearance from "@/components/bottomSheet/appearance";
 import Notification from "@/components/bottomSheet/notification";
 import { useActivity } from "@/context/activity-context";
+import { useAddress } from "@/context/address-context";
 
 export default function Home() {
   const [activeTabIndex, setActiveTabIndex] = useState(0);
@@ -30,6 +31,22 @@ export default function Home() {
   const router = useRouter();
   const { theme, mode, setMode } = useTheme();
   const { clearBookings } = useActivity();
+  const { savedAddresses, loadAddresses } = useAddress();
+
+  // Load saved addresses on mount
+  useEffect(() => {
+    loadAddresses();
+  }, []);
+
+  // Find Home and Work addresses
+  const homeAddress = savedAddresses.find((addr) => addr.label === "Home");
+  const workAddress = savedAddresses.find((addr) => addr.label === "Work");
+
+  // Format address for display
+  const formatAddressSubtitle = (addr: typeof homeAddress) => {
+    if (!addr) return "Not set";
+    return [addr.address, addr.street].filter(Boolean).join(", ");
+  };
 
   const handleSupportPress = () => {
     setContactVisible(true); // 👈 open bottom sheet
@@ -67,24 +84,36 @@ export default function Home() {
               <AccountRow
                 icon={<Icon.home color={theme.colors.system.body.default} />}
                 title="Home"
-                subtitle="Hiyaa Tower H12"
-                onPress={() => router.push("/add-home")}
+                subtitle={formatAddressSubtitle(homeAddress)}
+                onPress={() =>
+                  router.push(
+                    homeAddress
+                      ? `/save-address?editId=${homeAddress.id}&label=Home&source=account`
+                      : "/address-search?label=Home&returnTo=account"
+                  )
+                }
               />
               <AccountRow
                 icon={
                   <Icon.briefcase color={theme.colors.system.body.default} />
                 }
                 title="Work"
-                subtitle="Hiyaa Tower H12"
-                onPress={() => router.push("/add-work")}
+                subtitle={formatAddressSubtitle(workAddress)}
+                onPress={() =>
+                  router.push(
+                    workAddress
+                      ? `/save-address?editId=${workAddress.id}&label=Work&source=account`
+                      : "/address-search?label=Work&returnTo=account"
+                  )
+                }
               />
               <AccountRow
                 icon={
                   <Icon.location color={theme.colors.system.body.default} />
                 }
-                title="Shortcuts"
+                title="Saved Addresses"
                 subtitle="Manage saved locations"
-                onPress={() => router.push("/home")}
+                onPress={() => router.push("/saved-addresses")}
               />
               <AccountRow
                 icon={<Icon.list color={theme.colors.system.body.default} />}

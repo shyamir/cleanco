@@ -56,10 +56,14 @@ const SaveAddress = () => {
 
   const mapRef = useRef<MapView>(null);
 
-  const { source, returnTo } = useLocalSearchParams<{
+  const { source, returnTo, editId, label: labelParam } = useLocalSearchParams<{
     source?: string;
     returnTo?: string;
+    editId?: string;
+    label?: string;
   }>();
+
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
 
   Geocoder.init("AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg");
   const isDark = mode === "dark";
@@ -70,7 +74,7 @@ const SaveAddress = () => {
       try {
         const fetchedZones = await addressApi.getZones();
         setZones(fetchedZones);
-        if (fetchedZones.length > 0) {
+        if (fetchedZones.length > 0 && !editId) {
           setSelectedZone(fetchedZones[0].name);
         }
       } catch (error) {
@@ -80,7 +84,67 @@ const SaveAddress = () => {
       }
     };
     loadZones();
-  }, []);
+  }, [editId]);
+
+  // Load existing address for editing (wait for zones to be loaded first)
+  useEffect(() => {
+    const loadExistingAddress = async () => {
+      if (!editId) {
+        // Set label from param if creating new address
+        if (labelParam) {
+          setLabel(labelParam);
+        }
+        return;
+      }
+
+      // Wait for zones to be loaded before loading address
+      if (zones.length === 0) {
+        return;
+      }
+
+      setIsLoadingAddress(true);
+      try {
+        const address = await addressApi.getAddress(editId);
+        // Pre-populate form fields
+        setAddressLine(address.address || "");
+        setStreet(address.street || "");
+        setLandmark(address.landmark || "");
+        if (address.zone?.name) {
+          setSelectedZone(address.zone.name);
+        } else if (address.zoneId) {
+          // Fallback: find zone by ID if name not included
+          const zone = zones.find(z => z.id === address.zoneId);
+          if (zone) {
+            setSelectedZone(zone.name);
+          }
+        }
+        if (address.label) {
+          if (["Home", "Work"].includes(address.label)) {
+            setLabel(address.label);
+          } else {
+            setLabel("Other");
+            setCustomLabel(address.label);
+          }
+        }
+        // Set coordinates if available
+        if (address.latitude && address.longitude) {
+          setCoords({ latitude: address.latitude, longitude: address.longitude });
+          setCurrentMapLabel(address.label || "Address");
+          const displayAddress = [address.address, address.street, address.landmark]
+            .filter(Boolean)
+            .join(", ");
+          setCurrentMapAddress(displayAddress);
+        }
+      } catch (error) {
+        console.error("Failed to load address:", error);
+        Alert.alert("Error", "Failed to load address details");
+      } finally {
+        setIsLoadingAddress(false);
+      }
+    };
+
+    loadExistingAddress();
+  }, [editId, labelParam, zones]);
 
   // Check if all required fields are filled
   const isFormValid = Boolean(
@@ -98,11 +162,19 @@ const SaveAddress = () => {
 
   // Navigate back based on source
   const navigateBack = () => {
-    if (source === "address-search" || source === "set-location") {
+    if (source === "account") {
+      router.replace("/account");
+    } else if (source === "saved-addresses") {
+      router.replace("/saved-addresses");
+    } else if (source === "address-search" || source === "set-location") {
       if (returnTo === "home-cleaning") {
         router.replace("/home-cleaning");
       } else if (returnTo === "office-cleaning") {
         router.replace("/office-cleaning");
+      } else if (returnTo === "saved-addresses") {
+        router.replace("/saved-addresses");
+      } else if (returnTo === "account") {
+        router.replace("/account");
       } else {
         router.back();
       }
@@ -140,24 +212,29 @@ const SaveAddress = () => {
         longitude: coords?.longitude,
       };
 
-      const savedAddress = await addressApi.createAddress(request);
+      // Update existing address or create new one
+      const savedAddress = editId
+        ? await addressApi.updateAddress(editId, request)
+        : await addressApi.createAddress(request);
 
       // Build display address from separate fields
       const displayAddress = [savedAddress.address, savedAddress.street, savedAddress.landmark]
         .filter(Boolean)
         .join(", ");
 
-      // Update context with the new address
-      setSelected({
-        id: savedAddress.id,
-        label: savedAddress.label || "Address",
-        address: displayAddress,
-        latitude: savedAddress.latitude,
-        longitude: savedAddress.longitude,
-      });
-
-      // Store addressId in booking context
-      setAddressId(savedAddress.id);
+      // Only update selected address in booking context when coming from booking flow
+      // Don't update when managing addresses from account page
+      const isFromBookingFlow = returnTo === "home-cleaning" || returnTo === "office-cleaning";
+      if (isFromBookingFlow) {
+        setSelected({
+          id: savedAddress.id,
+          label: savedAddress.label || "Address",
+          address: displayAddress,
+          latitude: savedAddress.latitude,
+          longitude: savedAddress.longitude,
+        });
+        setAddressId(savedAddress.id);
+      }
 
       navigateBack();
     } catch (error: any) {
@@ -287,6 +364,11 @@ const SaveAddress = () => {
   // Initial location setup - prefer Place Details API if placeId is available
   useEffect(() => {
     const initializeLocation = async () => {
+      // Skip if editing - coordinates come from loadExistingAddress useEffect
+      if (editId) {
+        return;
+      }
+
       // If coming from "set location on map", use current location
       if (source === "set-location") {
         const currentLocation = await getCurrentLocation();
@@ -334,7 +416,7 @@ const SaveAddress = () => {
     };
 
     initializeLocation();
-  }, [source, selected.placeId, selected.address]);
+  }, [source, selected.placeId, selected.address, editId]);
 
   return (
     <SafeAreaProvider>
@@ -361,7 +443,7 @@ const SaveAddress = () => {
                   { color: theme.colors.system.body.default },
                 ]}
               >
-                Address Details
+                {editId ? "Edit Address" : "Address Details"}
               </Text>
               <View style={{ width: 24 }} />
             </View>
@@ -454,45 +536,43 @@ const SaveAddress = () => {
                 onSelect={setSelectedZone}
               />
 
-              {(source === "address-search" || source === "set-location") && (
-                <View
-                  style={[
-                    styles.labelGroup,
-                    {
-                      borderColor: theme.colors.system.border.default,
-                      backgroundColor: theme.colors.system.background.default,
-                    },
-                  ]}
-                >
-                  <ToggleGroup
-                    options={["Home", "Work", "Other"]}
-                    initialValue="Home"
-                    onChange={(value) => setLabel(value)}
-                    optionIcons={{
-                      Home: (
-                        <Icon.home color={theme.colors.system.body.default} />
-                      ),
-                      Work: (
-                        <Icon.briefcase
-                          color={theme.colors.system.body.default}
-                        />
-                      ),
-                      Other: (
-                        <Icon.pin color={theme.colors.system.body.default} />
-                      ),
-                    }}
-                  />
+              <View
+                style={[
+                  styles.labelGroup,
+                  {
+                    borderColor: theme.colors.system.border.default,
+                    backgroundColor: theme.colors.system.background.default,
+                  },
+                ]}
+              >
+                <ToggleGroup
+                  options={["Home", "Work", "Other"]}
+                  initialValue={label}
+                  onChange={(value) => setLabel(value)}
+                  optionIcons={{
+                    Home: (
+                      <Icon.home color={theme.colors.system.body.default} />
+                    ),
+                    Work: (
+                      <Icon.briefcase
+                        color={theme.colors.system.body.default}
+                      />
+                    ),
+                    Other: (
+                      <Icon.pin color={theme.colors.system.body.default} />
+                    ),
+                  }}
+                />
 
-                  {label === "Other" && (
-                    <TextField
-                      label="Address label"
-                      placeholder="e.g. Mom's Place"
-                      value={customLabel}
-                      onChangeText={setCustomLabel}
-                    />
-                  )}
-                </View>
-              )}
+                {label === "Other" && (
+                  <TextField
+                    label="Address label"
+                    placeholder="e.g. Mom's Place"
+                    value={customLabel}
+                    onChangeText={setCustomLabel}
+                  />
+                )}
+              </View>
             </View>
           </View>
         </ScrollView>

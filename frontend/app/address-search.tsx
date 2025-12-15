@@ -15,7 +15,7 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/constants/icon";
 import { useTheme } from "@/theme/ThemeProvider";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import SegmentedButton from "@/components/segmentedButton";
 import SearchBar from "@/components/searchBar";
 import axios from "axios";
@@ -30,6 +30,14 @@ const AddressSearch = () => {
   const router = useRouter();
   const { selected, setSelected, savedAddresses, loadAddresses, isLoading } = useAddress();
   const { setAddressId } = useBooking();
+
+  const { label: labelParam, returnTo } = useLocalSearchParams<{
+    label?: string;
+    returnTo?: string;
+  }>();
+
+  // Hide "Saved" tab when adding Home/Work address or from saved addresses page
+  const hideSavedTab = labelParam === "Home" || labelParam === "Work" || returnTo === "saved-addresses";
 
   const [activeTab, setActiveTab] = useState("New");
   const [query, setQuery] = useState("");
@@ -141,7 +149,8 @@ const AddressSearch = () => {
           pathname: "/save-address",
           params: {
             source: "address-search",
-            returnTo: "home-cleaning", // or whatever logic you need
+            returnTo: returnTo || "home-cleaning",
+            ...(labelParam && { label: labelParam }),
           },
         });
       }}
@@ -252,12 +261,14 @@ const AddressSearch = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Tabs */}
-          <SegmentedButton
-            tabs={["New", "Saved"]}
-            activeTab={activeTab}
-            onTabPress={(tab) => setActiveTab(tab)}
-          />
+          {/* Tabs - hide when adding Home/Work address or from saved addresses */}
+          {!hideSavedTab && (
+            <SegmentedButton
+              tabs={["New", "Saved"]}
+              activeTab={activeTab}
+              onTabPress={(tab) => setActiveTab(tab)}
+            />
+          )}
 
           {/* New Tab */}
           {activeTab === "New" && (
@@ -290,7 +301,8 @@ const AddressSearch = () => {
                         pathname: "/save-address",
                         params: {
                           source: "set-location",
-                          returnTo: "home-cleaning",
+                          returnTo: returnTo || "home-cleaning",
+                          ...(labelParam && { label: labelParam }),
                         },
                       });
                     }}

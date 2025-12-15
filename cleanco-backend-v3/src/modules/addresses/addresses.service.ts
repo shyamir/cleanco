@@ -144,6 +144,28 @@ export class AddressesService {
     // Verify the address exists and belongs to the user
     const address = await this.findOne(addressId, userId);
 
+    // Check if address is used by any bookings
+    const bookingsCount = await this.prisma.booking.count({
+      where: { addressId },
+    });
+
+    if (bookingsCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete this address because it is associated with existing bookings',
+      );
+    }
+
+    // Check if address is used by any subscriptions
+    const subscriptionsCount = await this.prisma.subscription.count({
+      where: { addressId },
+    });
+
+    if (subscriptionsCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete this address because it is associated with active subscriptions',
+      );
+    }
+
     // If this is the primary address, check if there are other addresses
     if (address.isPrimary) {
       const otherAddresses = await this.prisma.address.findMany({
