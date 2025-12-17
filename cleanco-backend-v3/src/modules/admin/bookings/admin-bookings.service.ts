@@ -6,7 +6,9 @@ import {
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AdminBookingsQueryDto } from './dto/admin-bookings-query.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { ConfirmInspectionDto } from './dto/confirm-inspection.dto';
 import { parse } from 'date-fns';
+import { BookingStatus } from '@prisma/client';
 
 @Injectable()
 export class AdminBookingsService {
@@ -208,12 +210,14 @@ export class AdminBookingsService {
     const [
       totalBookings,
       pendingBookings,
+      pendingInspectionBookings,
       confirmedBookings,
       completedBookings,
       canceledBookings,
     ] = await Promise.all([
       this.prisma.booking.count(),
       this.prisma.booking.count({ where: { status: 'PENDING' } }),
+      this.prisma.booking.count({ where: { status: 'PENDING_INSPECTION' } }),
       this.prisma.booking.count({ where: { status: 'CONFIRMED' } }),
       this.prisma.booking.count({ where: { status: 'COMPLETED' } }),
       this.prisma.booking.count({ where: { status: 'CANCELED' } }),
@@ -222,9 +226,105 @@ export class AdminBookingsService {
     return {
       total: totalBookings,
       pending: pendingBookings,
+      pendingInspection: pendingInspectionBookings,
       confirmed: confirmedBookings,
       completed: completedBookings,
       canceled: canceledBookings,
+    };
+  }
+
+  /**
+   * Get all bookings pending inspection (office bookings)
+   */
+  async findPendingInspection() {
+    return this.prisma.booking.findMany({
+      where: {
+        status: BookingStatus.PENDING_INSPECTION,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+            email: true,
+          },
+        },
+        address: true,
+        timeSlot: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /**
+   * Confirm price after inspection
+   * Admin can increase, decrease, or confirm the estimated price
+   */
+  async confirmInspection(
+    bookingId: string,
+    adminId: string,
+    confirmDto: ConfirmInspectionDto,
+  ) {
+    const { confirmedPrice, priceAdjustmentReason } = confirmDto;
+
+    // Find the booking
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    // Validate booking is pending inspection
+    if (booking.status !== 'PENDING_INSPECTION') {
+      throw new BadRequestException(
+        'Booking is not pending inspection. Current status: ' + booking.status,
+      );
+    }
+
+    // Calculate final price after discount
+    const discountAmount = Number(booking.discountAmount) || 0;
+    const finalPrice = confirmedPrice - discountAmount;
+
+    // Update booking with confirmed price
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: BookingStatus.CONFIRMED,
+        confirmedPrice,
+        totalPrice: confirmedPrice,
+        finalPrice: Math.max(0, finalPrice),
+        priceAdjustmentReason,
+        inspectedAt: new Date(),
+        inspectedBy: adminId,
+        adminApproved: true,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+            email: true,
+          },
+        },
+        address: true,
+        timeSlot: true,
+      },
+    });
+
+    return {
+      message: 'Inspection confirmed and price updated',
+      booking: updatedBooking,
+      priceChange: {
+        estimatedPrice: Number(booking.estimatedPrice),
+        confirmedPrice,
+        difference: confirmedPrice - Number(booking.estimatedPrice || 0),
+      },
     };
   }
 }

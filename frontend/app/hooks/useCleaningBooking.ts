@@ -2,7 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useBooking } from "@/context/booking-context";
 import { CLEANING_PRICING } from "@/constants/pricing";
 import { mapFrequencyToBackend } from "@/services/bookingService";
-import { servicesApi, PricingRule } from "@/services/services";
+import { servicesApi } from "@/services/services";
+
+// Module-level flag to prevent race conditions across multiple hook instances
+let isFetchingHomePricing = false;
 
 const useCleaningBooking = () => {
   const {
@@ -24,7 +27,17 @@ const useCleaningBooking = () => {
     promoDiscountValue,
     originalTotal,
     setOriginalTotal,
+    // Service type to determine if we should fetch pricing
+    service,
+    // Home pricing cache from context (persists across navigations)
+    homePricingRules,
+    setHomePricingRules,
+    homePricingLoaded,
+    setHomePricingLoaded,
   } = useBooking();
+
+  // Only fetch pricing for home bookings (office uses API quote on review page)
+  const isHomeCleaning = service === "Home Cleaning";
 
   type Slot = { day: string; time: string };
   const emptySlots: Slot[] = [
@@ -35,10 +48,6 @@ const useCleaningBooking = () => {
   const [slots, setSlots] = useState<Slot[]>(emptySlots);
   const [step, setStep] = useState<"selection" | "schedule">("selection");
   const [priceError, setPriceError] = useState<string | null>(null);
-
-  // Store pricing rules fetched from backend
-  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
-  const [rulesLoaded, setRulesLoaded] = useState(false);
 
   const handleNext = () => {
     setStep("schedule");
@@ -85,42 +94,57 @@ const useCleaningBooking = () => {
 
   // Find price from cached pricing rules
   const findPriceFromRules = useCallback((bedroomCount: number, freq: string): number | null => {
-    if (pricingRules.length === 0) return null;
+    if (homePricingRules.length === 0) return null;
 
     // Map frontend frequency to backend format
     const { subscriptionFrequency } = mapFrequencyToBackend(freq);
     const backendFrequency = subscriptionFrequency || null; // null for one-time
 
-    const rule = pricingRules.find(
+    const rule = homePricingRules.find(
       (r) => r.bedrooms === bedroomCount && r.frequency === backendFrequency
     );
 
     return rule?.price ?? null;
-  }, [pricingRules]);
+  }, [homePricingRules]);
 
-  // Fetch all pricing rules once on mount
+  // Fetch all pricing rules only for home cleaning (uses module-level flag to prevent race conditions)
   useEffect(() => {
+    // Only fetch for home cleaning
+    if (!isHomeCleaning) {
+      return;
+    }
+
+    // Skip if already loaded or currently fetching (synchronous check prevents race conditions)
+    if (homePricingLoaded || isFetchingHomePricing) {
+      return;
+    }
+
+    // Set flag synchronously BEFORE async operation
+    isFetchingHomePricing = true;
+
     const fetchPricingRules = async () => {
       setIsLoadingPrice(true);
       try {
         const rules = await servicesApi.getPricingRules('HOME');
-        setPricingRules(rules);
-        setRulesLoaded(true);
+        setHomePricingRules(rules);
+        setHomePricingLoaded(true);
       } catch (error) {
         console.error("Failed to fetch pricing rules:", error);
         setPriceError("Failed to load pricing");
-        setRulesLoaded(true); // Still mark as loaded so we can use fallback
+        setHomePricingLoaded(true); // Still mark as loaded so we can use fallback
       } finally {
         setIsLoadingPrice(false);
+        isFetchingHomePricing = false;
       }
     };
 
     fetchPricingRules();
-  }, [setIsLoadingPrice]);
+  }, [isHomeCleaning, homePricingLoaded, setIsLoadingPrice, setHomePricingRules, setHomePricingLoaded]);
 
-  // Calculate price locally when bedrooms or frequency changes
+  // Calculate price locally when bedrooms or frequency changes (only for home cleaning)
   useEffect(() => {
-    if (!rulesLoaded) return;
+    // Only calculate price for home cleaning
+    if (!isHomeCleaning || !homePricingLoaded) return;
 
     const price = findPriceFromRules(bedrooms, frequency);
 
@@ -133,7 +157,7 @@ const useCleaningBooking = () => {
       applyPromoToPrice(fallbackPrice);
       setPriceError(null);
     }
-  }, [bedrooms, frequency, rulesLoaded, findPriceFromRules, applyPromoToPrice]);
+  }, [bedrooms, frequency, homePricingLoaded, findPriceFromRules, applyPromoToPrice, isHomeCleaning]);
 
   // Reset slots when frequency changes or step changes
   useEffect(() => setSlots(emptySlots), [frequency]);
@@ -143,9 +167,9 @@ const useCleaningBooking = () => {
 
   // Clear cached pricing rules (call after booking is confirmed)
   const clearPricingCache = useCallback(() => {
-    setPricingRules([]);
-    setRulesLoaded(false);
-  }, []);
+    setHomePricingRules([]);
+    setHomePricingLoaded(false);
+  }, [setHomePricingRules, setHomePricingLoaded]);
 
   return {
     step,

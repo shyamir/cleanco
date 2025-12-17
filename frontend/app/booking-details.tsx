@@ -50,6 +50,7 @@ const mapStatus = (
   // Future bookings show based on status
   switch (backendStatus) {
     case "PENDING":
+    case "PENDING_INSPECTION":
       return "pending";
     case "CONFIRMED":
     case "ASSIGNED":
@@ -63,7 +64,7 @@ const mapStatus = (
 // Check if booking can be modified (reschedule/cancel)
 // Must have modifiable status AND be in the future
 const canModifyBooking = (status: string, bookingDate: string): boolean => {
-  const isModifiableStatus = ["PENDING", "CONFIRMED", "ASSIGNED"].includes(status);
+  const isModifiableStatus = ["PENDING", "PENDING_INSPECTION", "CONFIRMED", "ASSIGNED"].includes(status);
   const isFutureBooking = dayjs.utc(bookingDate).isAfter(dayjs().startOf("day"));
   return isModifiableStatus && isFutureBooking;
 };
@@ -174,17 +175,28 @@ export default function BookingDetailsScreen() {
       .filter(Boolean)
       .join(", ");
   } else {
-    const sizeText = booking.officeSize ? `Size: ${booking.officeSize}` : "";
-    const floorText = booking.floors
-      ? `${booking.floors} floor${booking.floors > 1 ? "s" : ""}`
-      : "";
+    const sqftText = booking.squareFeet ? `${booking.squareFeet} sqft` : "";
     const roomText = booking.rooms
       ? `${booking.rooms} room${booking.rooms > 1 ? "s" : ""}`
       : "";
-    detailsDisplay = [sizeText, floorText, roomText].filter(Boolean).join(", ");
+    const toiletText = booking.toilets
+      ? `${booking.toilets} toilet${booking.toilets > 1 ? "s" : ""}`
+      : "";
+    detailsDisplay = [sqftText, roomText, toiletText].filter(Boolean).join(", ");
   }
 
-  const totalDisplay = `MVR ${booking.finalPrice}`;
+  // Handle price display for office bookings (estimated vs confirmed)
+  let priceDisplay = `MVR ${booking.finalPrice}`;
+  let priceLabel = "Total";
+  if (!isHomeService) {
+    if (booking.confirmedPrice !== null && booking.confirmedPrice !== undefined) {
+      priceDisplay = `MVR ${booking.confirmedPrice}`;
+      priceLabel = "Confirmed Price";
+    } else if (booking.estimatedPrice !== null && booking.estimatedPrice !== undefined) {
+      priceDisplay = `MVR ${booking.estimatedPrice} (Est.)`;
+      priceLabel = "Estimated Price";
+    }
+  }
   const status = mapStatus(booking.status, booking.date);
   const showModifyButtons = canModifyBooking(booking.status, booking.date);
 
@@ -301,8 +313,8 @@ export default function BookingDetailsScreen() {
 
             <InfoRow
               icon={<Icon.bill color={theme.colors.system.body.disabled} />}
-              label="Total"
-              value={totalDisplay}
+              label={priceLabel}
+              value={priceDisplay}
             />
           </View>
         </ScrollView>

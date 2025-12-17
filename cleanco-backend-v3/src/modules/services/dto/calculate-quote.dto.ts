@@ -40,16 +40,18 @@ export class CalculateQuoteDto {
 
   // Office cleaning parameters
   @ApiPropertyOptional({
-    example: 'Medium',
-    description: 'Office size: Small, Medium, Large (required for OFFICE service)',
+    example: 250,
+    description: 'Square feet of office (required for OFFICE service)',
   })
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
   @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
-  officeSize?: string;
+  squareFeet?: number;
 
   @ApiPropertyOptional({
     example: 2,
-    description: 'Number of floors (for OFFICE service)',
+    description: 'Number of floors (optional for OFFICE service)',
   })
   @Type(() => Number)
   @IsInt()
@@ -58,14 +60,24 @@ export class CalculateQuoteDto {
   floors?: number;
 
   @ApiPropertyOptional({
-    example: 10,
-    description: 'Number of rooms (for OFFICE service)',
+    example: 3,
+    description: 'Number of rooms (required for OFFICE service)',
   })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @IsOptional()
+  @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
   rooms?: number;
+
+  @ApiPropertyOptional({
+    example: 2,
+    description: 'Number of toilets (required for OFFICE service)',
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
+  toilets?: number;
 
   @ApiPropertyOptional({
     example: 'PROMO10',

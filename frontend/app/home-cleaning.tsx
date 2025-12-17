@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { View, StyleSheet, Animated, Text } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -50,6 +50,11 @@ const {theme} = useTheme();
   /* --- Cleaning Booking Hook --- */
   const { step, setStep, slots, setSlots, handleNext, isSelectionValid } =
     useCleaningBooking();
+
+  // Set service type on mount
+  useEffect(() => {
+    setService("Home Cleaning");
+  }, [setService]);
 
   return (
     <SafeAreaProvider>
@@ -159,13 +164,8 @@ const {theme} = useTheme();
             primaryLabel={step === "selection" ? "Next" : "Review"}
             onPrimaryPress={
               step === "selection"
-                ? () => {
-                    setService("Home Cleaning"); // Set service when entering schedule step
-                    handleNext();
-                  }
-                : () => {
-                    router.push("/review");
-                  }
+                ? handleNext
+                : () => router.push("/review")
             }
             secondaryLabel="Back"
             onSecondaryPress={

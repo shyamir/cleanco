@@ -59,17 +59,17 @@ export class CreateBookingDto {
   hasPets?: boolean;
 
   // OFFICE service parameters
-  @ApiPropertyOptional({ description: 'Office size (required for OFFICE service)', example: 'Medium' })
-  @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
-  @IsString()
-  @IsNotEmpty()
-  officeSize?: string;
-
-  @ApiPropertyOptional({ description: 'Number of floors (required for OFFICE service)' })
+  @ApiPropertyOptional({ description: 'Square feet of office (required for OFFICE service)', example: 250 })
   @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
   @IsInt()
-  @Min(1)
+  @Min(100)
   @IsNotEmpty()
+  squareFeet?: number;
+
+  @ApiPropertyOptional({ description: 'Number of floors (optional for OFFICE service)' })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
   floors?: number;
 
   @ApiPropertyOptional({ description: 'Number of rooms (required for OFFICE service)' })
@@ -78,6 +78,13 @@ export class CreateBookingDto {
   @Min(1)
   @IsNotEmpty()
   rooms?: number;
+
+  @ApiPropertyOptional({ description: 'Number of toilets (required for OFFICE service)' })
+  @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
+  @IsInt()
+  @Min(1)
+  @IsNotEmpty()
+  toilets?: number;
 
   @ApiPropertyOptional({ description: 'Promotional code to apply' })
   @IsString()

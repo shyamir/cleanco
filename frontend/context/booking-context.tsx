@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { CLEANING_PRICING } from "@/constants/pricing";
 import { PaymentMethod, DaySlot } from "@/services/bookingService";
+import { PricingRule } from "@/services/services";
 
 type BookingContextType = {
   bedrooms: number;
@@ -47,8 +48,22 @@ type BookingContextType = {
   setPromoDiscountValue: (value: number) => void;
   originalTotal: number;
   setOriginalTotal: (value: number) => void;
+  // Office cleaning specific fields
+  squareFeet: number;
+  setSquareFeet: (value: number) => void;
+  rooms: number;
+  setRooms: (value: number) => void;
+  toilets: number;
+  setToilets: (value: number) => void;
+  isEstimate: boolean;
+  setIsEstimate: (value: boolean) => void;
   // Reset function to clear booking state
   resetBooking: () => void;
+  // Home pricing cache (persists across navigations)
+  homePricingRules: PricingRule[];
+  setHomePricingRules: (rules: PricingRule[]) => void;
+  homePricingLoaded: boolean;
+  setHomePricingLoaded: (loaded: boolean) => void;
 };
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -77,6 +92,14 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   const [promoDiscountType, setPromoDiscountType] = useState<'PERCENTAGE' | 'FIXED_AMOUNT' | null>(null);
   const [promoDiscountValue, setPromoDiscountValue] = useState(0);
   const [originalTotal, setOriginalTotal] = useState(0);
+  // Office cleaning specific state
+  const [squareFeet, setSquareFeet] = useState(200);
+  const [rooms, setRooms] = useState(1);
+  const [toilets, setToilets] = useState(1);
+  const [isEstimate, setIsEstimate] = useState(false);
+  // Home pricing cache (persists across navigations)
+  const [homePricingRules, setHomePricingRules] = useState<PricingRule[]>([]);
+  const [homePricingLoaded, setHomePricingLoaded] = useState(false);
 
   const resetBooking = () => {
     setBedrooms(1);
@@ -100,6 +123,13 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     setPromoDiscountType(null);
     setPromoDiscountValue(0);
     setOriginalTotal(0);
+    // Reset office-specific fields
+    setSquareFeet(200);
+    setRooms(1);
+    setToilets(1);
+    setIsEstimate(false);
+    // Reset pricing cache to fetch fresh prices
+    setHomePricingLoaded(false);
   };
 
   return (
@@ -147,7 +177,19 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         setPromoDiscountValue,
         originalTotal,
         setOriginalTotal,
+        squareFeet,
+        setSquareFeet,
+        rooms,
+        setRooms,
+        toilets,
+        setToilets,
+        isEstimate,
+        setIsEstimate,
         resetBooking,
+        homePricingRules,
+        setHomePricingRules,
+        homePricingLoaded,
+        setHomePricingLoaded,
       }}
     >
       {children}

@@ -6,6 +6,10 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 import { CreatePricingRuleDto } from './dto/create-pricing-rule.dto';
 import { UpdatePricingRuleDto } from './dto/update-pricing-rule.dto';
 import { QueryPricingRulesDto } from './dto/query-pricing-rules.dto';
+import { CreateOfficePricingTierDto } from './dto/create-office-pricing-tier.dto';
+import { UpdateOfficePricingTierDto } from './dto/update-office-pricing-tier.dto';
+import { CreateOfficeAddOnPricingDto } from './dto/create-office-addon-pricing.dto';
+import { UpdateOfficeAddOnPricingDto } from './dto/update-office-addon-pricing.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
@@ -97,5 +101,93 @@ export class AdminServicesController {
   @ApiResponse({ status: 404, description: 'Pricing rule not found' })
   removePricingRule(@Param('id') id: string) {
     return this.adminServicesService.removePricingRule(id);
+  }
+
+  // ===== OFFICE PRICING TIERS MANAGEMENT =====
+
+  @Post('office-pricing')
+  @ApiOperation({ summary: 'Create a new office pricing tier (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Office pricing tier created successfully' })
+  @ApiResponse({ status: 409, description: 'Overlapping tier exists or invalid range' })
+  createOfficePricingTier(@Body() createDto: CreateOfficePricingTierDto) {
+    return this.adminServicesService.createOfficePricingTier(createDto);
+  }
+
+  @Get('office-pricing/list')
+  @ApiOperation({ summary: 'Get all office pricing tiers (Admin only)' })
+  @ApiResponse({ status: 200, description: 'List of office pricing tiers' })
+  findAllOfficePricingTiers() {
+    return this.adminServicesService.findAllOfficePricingTiers();
+  }
+
+  @Get('office-pricing/:id')
+  @ApiOperation({ summary: 'Get office pricing tier by ID (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Office pricing tier details' })
+  @ApiResponse({ status: 404, description: 'Office pricing tier not found' })
+  findOneOfficePricingTier(@Param('id') id: string) {
+    return this.adminServicesService.findOneOfficePricingTier(id);
+  }
+
+  @Put('office-pricing/:id')
+  @ApiOperation({ summary: 'Update an office pricing tier (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Office pricing tier updated successfully' })
+  @ApiResponse({ status: 404, description: 'Office pricing tier not found' })
+  updateOfficePricingTier(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateOfficePricingTierDto,
+  ) {
+    return this.adminServicesService.updateOfficePricingTier(id, updateDto);
+  }
+
+  @Delete('office-pricing/:id')
+  @ApiOperation({ summary: 'Delete an office pricing tier (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Office pricing tier deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Office pricing tier not found' })
+  removeOfficePricingTier(@Param('id') id: string) {
+    return this.adminServicesService.removeOfficePricingTier(id);
+  }
+
+  // ===== OFFICE ADD-ON PRICING MANAGEMENT =====
+
+  @Post('office-addons')
+  @ApiOperation({ summary: 'Create a new office add-on pricing (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Office add-on pricing created successfully' })
+  @ApiResponse({ status: 409, description: 'Add-on pricing already exists' })
+  createOfficeAddOnPricing(@Body() createDto: CreateOfficeAddOnPricingDto) {
+    return this.adminServicesService.createOfficeAddOnPricing(createDto);
+  }
+
+  @Get('office-addons/list')
+  @ApiOperation({ summary: 'Get all office add-on pricing (Admin only)' })
+  @ApiResponse({ status: 200, description: 'List of office add-on pricing' })
+  findAllOfficeAddOnPricing() {
+    return this.adminServicesService.findAllOfficeAddOnPricing();
+  }
+
+  @Get('office-addons/:id')
+  @ApiOperation({ summary: 'Get office add-on pricing by ID (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Office add-on pricing details' })
+  @ApiResponse({ status: 404, description: 'Office add-on pricing not found' })
+  findOneOfficeAddOnPricing(@Param('id') id: string) {
+    return this.adminServicesService.findOneOfficeAddOnPricing(id);
+  }
+
+  @Put('office-addons/:id')
+  @ApiOperation({ summary: 'Update an office add-on pricing (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Office add-on pricing updated successfully' })
+  @ApiResponse({ status: 404, description: 'Office add-on pricing not found' })
+  updateOfficeAddOnPricing(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateOfficeAddOnPricingDto,
+  ) {
+    return this.adminServicesService.updateOfficeAddOnPricing(id, updateDto);
+  }
+
+  @Delete('office-addons/:id')
+  @ApiOperation({ summary: 'Delete an office add-on pricing (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Office add-on pricing deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Office add-on pricing not found' })
+  removeOfficeAddOnPricing(@Param('id') id: string) {
+    return this.adminServicesService.removeOfficeAddOnPricing(id);
   }
 }

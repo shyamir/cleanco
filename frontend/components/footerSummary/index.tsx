@@ -16,6 +16,8 @@ type FooterSummaryProps = {
   originalTotal?: number;
   promoDiscount?: number;
   promoCode?: string | null;
+  // Hide price section (for office bookings where quote is shown on review page)
+  hidePrice?: boolean;
 };
 
 const FooterSummary: React.FC<FooterSummaryProps> = ({
@@ -30,6 +32,7 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
   originalTotal,
   promoDiscount,
   promoCode,
+  hidePrice = false,
 }) => {
   const {theme} = useTheme();
   const isOnce = frequency === "Once";
@@ -42,75 +45,80 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
         { backgroundColor: theme.colors.system.background.secondary },
       ]}
     >
-      {/* Show discount info if promo applied */}
-      {hasDiscount && (
-        <View style={styles.discountInfo}>
-          <Text
-            style={[
-              theme.typography.body.sm.regular as any,
-              { color: theme.colors.system.body.disabled },
-            ]}
-          >
-            Subtotal: {originalTotal} {currency}
-          </Text>
-          <Text
-            style={[
-              theme.typography.body.sm.regular as any,
-              { color: theme.colors.input.label.success },
-            ]}
-          >
-            Discount ({promoCode}): -{promoDiscount} {currency}
-          </Text>
-        </View>
-      )}
-      <View style={styles.textWrapper}>
-        <Text
-          style={[
-            {
-              ...theme.typography.heading.xs3.book,
-              color: theme.colors.system.heading.tertiary,
-            } as any,
-          ]}
-        >
-          Total
-        </Text>
-        <View style={styles.priceWrapper}>
-          <Text
-            style={
-              [
-                theme.typography.heading.xs,
-                { color: theme.colors.card.label.active },
-              ] as any
-            }
-          >
-            {total}
-          </Text>
-          <Text
-            style={
-              [
-                theme.typography.heading.xs4.medium,
-                { color: theme.colors.card.label.active },
-              ] as any
-            }
-          >
-            {currency}
-          </Text>
-
-          {/* Conditionally show /month */}
-          {!isOnce && (
-            <Text
-              style={
-                [
-                  theme.typography.body.sm.regular,
-                  { color: theme.colors.card.label.active },
-                ] as any
-              }
-            >
-              / month
-            </Text>
+      {/* Price section - hidden for office bookings where quote is shown on review */}
+      {!hidePrice && (
+        <>
+          {/* Show discount info if promo applied */}
+          {hasDiscount && (
+            <View style={styles.discountInfo}>
+              <Text
+                style={[
+                  theme.typography.body.sm.regular as any,
+                  { color: theme.colors.system.body.disabled },
+                ]}
+              >
+                Subtotal: {originalTotal} {currency}
+              </Text>
+              <Text
+                style={[
+                  theme.typography.body.sm.regular as any,
+                  { color: theme.colors.input.label.success },
+                ]}
+              >
+                Discount ({promoCode}): -{promoDiscount} {currency}
+              </Text>
+            </View>
           )}
-        </View>
-      </View>
+          <View style={styles.textWrapper}>
+            <Text
+              style={[
+                {
+                  ...theme.typography.heading.xs3.book,
+                  color: theme.colors.system.heading.tertiary,
+                } as any,
+              ]}
+            >
+              Total
+            </Text>
+            <View style={styles.priceWrapper}>
+              <Text
+                style={
+                  [
+                    theme.typography.heading.xs,
+                    { color: theme.colors.card.label.active },
+                  ] as any
+                }
+              >
+                {total}
+              </Text>
+              <Text
+                style={
+                  [
+                    theme.typography.heading.xs4.medium,
+                    { color: theme.colors.card.label.active },
+                  ] as any
+                }
+              >
+                {currency}
+              </Text>
+
+              {/* Conditionally show /month */}
+              {!isOnce && (
+                <Text
+                  style={
+                    [
+                      theme.typography.body.sm.regular,
+                      { color: theme.colors.card.label.active },
+                    ] as any
+                  }
+                >
+                  / month
+                </Text>
+              )}
+            </View>
+          </View>
+        </>
+      )}
 
       {/* Buttons */}
       <View style={styles.buttonRow}>

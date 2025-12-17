@@ -30,6 +30,7 @@ enum BookingType {
 
 enum BookingStatus {
   PENDING           // Awaiting payment confirmation
+  PENDING_INSPECTION // Office booking awaiting inspection before price confirmation
   CONFIRMED         // Payment confirmed, awaiting cleaner assignment
   ASSIGNED          // Cleaners assigned
   IN_PROGRESS       // Cleaning in progress
@@ -213,7 +214,7 @@ model PricingRule {
   // Home cleaning parameters
   bedrooms        Int?
 
-  // Office cleaning parameters
+  // Office cleaning parameters (DEPRECATED - use OfficePricingTier)
   officeSize      String?  // Small, Medium, Large
   floors          Int?
   rooms           Int?
@@ -227,6 +228,55 @@ model PricingRule {
   @@unique([serviceType, frequency, bedrooms, officeSize, floors, rooms])
   @@index([serviceType])
   @@map("pricing_rules")
+}
+
+// Separate pricing table for home cleaning
+model HomePricingRule {
+  id        String                 @id @default(uuid())
+  frequency SubscriptionFrequency?
+  bedrooms  Int
+  price     Decimal                @db.Decimal(10, 2)
+  isActive  Boolean                @default(true)
+
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  @@unique([frequency, bedrooms])
+  @@index([bedrooms])
+  @@map("home_pricing_rules")
+}
+
+// Sqft-based pricing tiers for office cleaning
+model OfficePricingTier {
+  id        String                 @id @default(uuid())
+  frequency SubscriptionFrequency?
+  sqftMin   Int                    // Lower bound (inclusive)
+  sqftMax   Int                    // Upper bound (inclusive)
+  basePrice Decimal                @db.Decimal(10, 2)
+  isActive  Boolean                @default(true)
+
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  @@unique([frequency, sqftMin, sqftMax])
+  @@index([sqftMin, sqftMax])
+  @@map("office_pricing_tiers")
+}
+
+// Configurable add-on pricing for office cleaning (rooms, toilets)
+model OfficeAddOnPricing {
+  id           String  @id @default(uuid())
+  addOnType    String  // 'ROOM' or 'TOILET'
+  minQuantity  Int     // Quantity threshold (e.g., 2 means "2 or more")
+  pricePerUnit Decimal @db.Decimal(10, 2) // Per additional unit
+  isActive     Boolean @default(true)
+  description  String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([addOnType, minQuantity])
+  @@map("office_addon_pricing")
 }
 
 model TimeSlot {
@@ -273,9 +323,11 @@ model Booking {
   hasPets           Boolean       @default(false)
 
   // Office cleaning specific
-  officeSize        String?
+  officeSize        String?       // DEPRECATED - use squareFeet
+  squareFeet        Int?          // Square feet of office
   floors            Int?
   rooms             Int?
+  toilets           Int?          // Number of toilets
 
   // Pricing
   frequency         SubscriptionFrequency?
@@ -283,6 +335,13 @@ model Booking {
   finalPrice        Decimal       @db.Decimal(10, 2)  // After discount
   promoCodeId       String?
   discountAmount    Decimal       @default(0) @db.Decimal(10, 2)
+
+  // Inspection pricing (for office bookings)
+  estimatedPrice    Decimal?      @db.Decimal(10, 2)  // Initial customer estimate
+  confirmedPrice    Decimal?      @db.Decimal(10, 2)  // Admin-confirmed price after inspection
+  priceAdjustmentReason String?   // Admin notes for price changes
+  inspectedAt       DateTime?     // When inspection was completed
+  inspectedBy       String?       // Admin ID who performed inspection
 
   // Payment
   paymentStatus     PaymentStatus @default(PENDING)
@@ -343,9 +402,11 @@ model Subscription {
   bedrooms        Int?
   bathrooms       Int?
   hasPets         Boolean               @default(false)
-  officeSize      String?
+  officeSize      String?               // DEPRECATED - use squareFeet
+  squareFeet      Int?                  // Square feet of office
   floors          Int?
   rooms           Int?
+  toilets         Int?                  // Number of toilets
 
   // Time slot (deprecated for multi-day, use daySlots instead)
   timeSlotId      String?

@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { View, StyleSheet, Animated, Text } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -28,10 +28,12 @@ const OfficeCleaningScreen = () => {
 
   /* --- Booking Context --- */
   const {
-    bedrooms,
-    setBedrooms,
-    bathrooms,
-    setBathrooms,
+    squareFeet,
+    setSquareFeet,
+    rooms,
+    setRooms,
+    toilets,
+    setToilets,
     pet,
     setPet,
     otherPet,
@@ -43,6 +45,8 @@ const OfficeCleaningScreen = () => {
     total,
     setTotal,
     setService,
+    isEstimate,
+    setIsEstimate,
   } = useBooking();
 
   /* --- Address Context --- */
@@ -51,6 +55,12 @@ const OfficeCleaningScreen = () => {
   /* --- Cleaning Booking Hook --- */
   const { step, setStep, slots, setSlots, handleNext, isSelectionValid } =
     useCleaningBooking();
+
+  // Set service type on mount so useCleaningBooking skips HOME pricing
+  useEffect(() => {
+    setService("Office Cleaning");
+    setIsEstimate(true);
+  }, [setService, setIsEstimate]);
 
   return (
     <SafeAreaProvider>
@@ -103,23 +113,24 @@ const OfficeCleaningScreen = () => {
                     }
                   />
 
-                  {/* Bedrooms/Bathrooms */}
+                  {/* Square Feet */}
+                  <SquareFeetCard
+                    initialValue={squareFeet}
+                    onChange={(val) => {
+                      setSquareFeet(val);
+                      setIsEstimate(true); // Office bookings are estimates
+                    }}
+                  />
+
+                  {/* Rooms/Toilets */}
                   <PropertyDetailsCard
                     title="Office Details"
                     primaryLabel="Rooms"
-                    secondaryLabel="Washrooms"
-                    primaryValue={bedrooms}
-                    secondaryValue={bathrooms}
-                    onPrimaryChange={setBedrooms}
-                    onSecondaryChange={setBathrooms}
-                  />
-
-                  <SquareFeetCard
-                    initialValue={150}
-                    onChange={(val) => {
-                      console.log("Square feet selected:", val);
-                      // Add pricing logic for square feet here if needed
-                    }}
+                    secondaryLabel="Toilets"
+                    primaryValue={rooms}
+                    secondaryValue={toilets}
+                    onPrimaryChange={setRooms}
+                    onSecondaryChange={setToilets}
                   />
 
                   {/* Frequency */}
@@ -161,20 +172,15 @@ const OfficeCleaningScreen = () => {
             </View>
           </Animated.ScrollView>
 
-          {/* Footer */}
+          {/* Footer - hidePrice since office quote is shown on review page */}
           <FooterSummary
-            total={total}
+            hidePrice={true}
             frequency={frequency}
             primaryLabel={step === "selection" ? "Next" : "Review"}
             onPrimaryPress={
               step === "selection"
-                ? () => {
-                    setService("Office Cleaning"); // Set service when entering schedule step
-                    handleNext();
-                  }
-                : () => {
-                    router.push("/review");
-                  }
+                ? handleNext
+                : () => router.push("/review")
             }
             secondaryLabel="Back"
             onSecondaryPress={
@@ -182,7 +188,11 @@ const OfficeCleaningScreen = () => {
                 ? () => router.push("/home")
                 : () => setStep("selection")
             }
-            disabledPrimary={step === "schedule" && !isSelectionValid()}
+            disabledPrimary={
+              step === "selection"
+                ? !selected?.id  // Disable Next if no address selected
+                : !isSelectionValid()  // Disable Review if schedule not valid
+            }
           />
         </SafeAreaView>
       </LinearGradient>

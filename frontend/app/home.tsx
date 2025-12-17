@@ -13,6 +13,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 /* --- Context ---*/
 import { useBooking } from "@/context/booking-context";
 import { useHomeData } from "@/context/home-data-context";
+import { useAddress } from "@/context/address-context";
 
 /* --- Components ---*/
 import GradientText from "@/components/gradientText";
@@ -23,7 +24,8 @@ import ServiceCard from "../components/card/serviceCard";
 
 export default function Home() {
   const { theme } = useTheme();
-  const { setPromoCode } = useBooking();
+  const { setPromoCode, resetBooking } = useBooking();
+  const { clearSelected } = useAddress();
   const {
     homePrice,
     officePrice,
@@ -33,6 +35,12 @@ export default function Home() {
     refreshHomeData,
   } = useHomeData();
   const [firstName, setFirstName] = useState("");
+
+  // Reset booking state when starting a new booking flow
+  const handleStartBooking = useCallback(() => {
+    resetBooking();
+    clearSelected();
+  }, [resetBooking, clearSelected]);
 
   // Load user name on focus
   useFocusEffect(
@@ -112,12 +120,14 @@ export default function Home() {
                 duration="1–4h"
                 price={homePrice}
                 route="/home-cleaning"
+                onPress={handleStartBooking}
               />
               <ServiceCard
                 title="Office Cleaning"
                 duration="1–4h"
                 price={officePrice}
                 route="/office-cleaning"
+                onPress={handleStartBooking}
               />
             </View>
 

@@ -17,9 +17,11 @@ import {
 import { AdminBookingsService } from './admin-bookings.service';
 import { AdminBookingsQueryDto } from './dto/admin-bookings-query.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { ConfirmInspectionDto } from './dto/confirm-inspection.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 
 @ApiTags('Admin - Bookings')
 @Controller('admin/bookings')
@@ -79,5 +81,31 @@ export class AdminBookingsController {
   @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   remove(@Param('id') id: string) {
     return this.adminBookingsService.remove(id);
+  }
+
+  // ===== INSPECTION ENDPOINTS =====
+
+  @Get('pending-inspection/list')
+  @ApiOperation({ summary: 'Get all bookings pending inspection (office bookings)' })
+  @ApiResponse({ status: 200, description: 'List of bookings pending inspection' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  findPendingInspection() {
+    return this.adminBookingsService.findPendingInspection();
+  }
+
+  @Put(':id/confirm-inspection')
+  @ApiOperation({ summary: 'Confirm price after inspection' })
+  @ApiResponse({ status: 200, description: 'Inspection confirmed and price updated' })
+  @ApiResponse({ status: 400, description: 'Booking is not pending inspection' })
+  @ApiResponse({ status: 404, description: 'Booking not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  confirmInspection(
+    @Param('id') id: string,
+    @Body() confirmDto: ConfirmInspectionDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.adminBookingsService.confirmInspection(id, user.id, confirmDto);
   }
 }

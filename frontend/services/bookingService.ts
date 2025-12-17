@@ -129,15 +129,21 @@ export interface QuoteRequest {
   serviceType: ServiceType;
   bedrooms?: number;
   frequency?: SubscriptionFrequency;
-  officeSize?: string;
+  // Office-specific fields
+  squareFeet?: number;
   floors?: number;
   rooms?: number;
+  toilets?: number;
   promoCode?: string;
 }
 
 export interface QuoteResponse {
+  isEstimate?: boolean; // True for office bookings (pending inspection)
   pricing: {
     basePrice: number;
+    sqftTierPrice?: number;
+    roomAddOn?: number;
+    toiletAddOn?: number;
     discount: number;
     finalPrice: number;
   };
@@ -149,9 +155,16 @@ export interface CreateBookingRequest {
   addressId: string;
   date: string; // YYYY-MM-DD
   timeSlotId: string;
+  // Home-specific fields
   bedrooms?: number;
   bathrooms?: number;
   hasPets?: boolean;
+  // Office-specific fields
+  squareFeet?: number;
+  floors?: number;
+  rooms?: number;
+  toilets?: number;
+  // Common fields
   paymentMethod: PaymentMethod;
   specialInstructions?: string;
   promoCode?: string;
@@ -168,12 +181,15 @@ export interface CreateSubscriptionRequest {
   frequency: SubscriptionFrequency;
   addressId: string;
   daySlots: DaySlot[]; // Array of day-timeslot pairs
+  // Home-specific fields
   bedrooms?: number;
   bathrooms?: number;
   hasPets?: boolean;
-  officeSize?: string;
+  // Office-specific fields
+  squareFeet?: number;
   floors?: number;
   rooms?: number;
+  toilets?: number;
 }
 
 export interface Address {
@@ -221,9 +237,14 @@ export interface BookingDetails extends UpcomingBooking {
   bedrooms?: number;
   bathrooms?: number;
   hasPets?: boolean;
-  officeSize?: string;
+  // Office-specific fields
+  squareFeet?: number;
   floors?: number;
   rooms?: number;
+  toilets?: number;
+  estimatedPrice?: number;
+  confirmedPrice?: number;
+  priceAdjustmentReason?: string;
   specialInstructions?: string;
   paymentMethod?: string;
   discountAmount?: number;

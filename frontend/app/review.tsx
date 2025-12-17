@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,6 +26,7 @@ import { useAddress } from "../context/address-context";
 import { useBooking } from "@/context/booking-context";
 import useCleaningBooking from "./hooks/useCleaningBooking";
 import { promoApi } from "@/services/promoService";
+import { bookingApi, ServiceType, mapFrequencyToBackend } from "@/services/bookingService";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 
@@ -56,8 +58,68 @@ const Review = () => {
     originalTotal,
     setOriginalTotal,
     setTotal,
+    // Office-specific fields
+    squareFeet,
+    rooms,
+    toilets,
+    isEstimate,
+    setIsEstimate,
   } = useBooking();
-  const { bedrooms, bathrooms, total, slots } = useCleaningBooking();
+  const { bedrooms, bathrooms, total: homeCleaningTotal, slots } = useCleaningBooking();
+
+  // Determine if this is an office booking
+  const isOfficeBooking = service === "Office Cleaning";
+
+  // State for loading office quote - use LOCAL state to avoid useCleaningBooking overwriting
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [officeTotal, setOfficeTotal] = useState<number | null>(null);
+
+  // Use correct total based on service type
+  // For office: use local officeTotal state (not affected by useCleaningBooking)
+  // For home: use homeCleaningTotal from useCleaningBooking hook
+  const total = isOfficeBooking ? (officeTotal ?? 0) : homeCleaningTotal;
+
+  // Fetch office quote on mount
+  useEffect(() => {
+    const fetchOfficeQuote = async () => {
+      if (!isOfficeBooking) return;
+
+      setIsLoadingQuote(true);
+      setQuoteError(null);
+
+      try {
+        const { subscriptionFrequency } = mapFrequencyToBackend(frequency);
+        const response = await bookingApi.calculateQuote({
+          serviceType: ServiceType.OFFICE,
+          squareFeet,
+          rooms,
+          toilets,
+          frequency: subscriptionFrequency,
+          promoCode: promoCode || undefined,
+        });
+
+        // Use local state for office total to avoid useCleaningBooking overwriting it
+        setOfficeTotal(response.pricing.finalPrice);
+        // Also update booking context for payment flow
+        setTotal(response.pricing.finalPrice);
+        setIsEstimate(response.isEstimate ?? true);
+
+        // Store original total for promo calculations
+        if (response.pricing.discount > 0) {
+          setOriginalTotal(response.pricing.basePrice);
+          setPromoDiscount(response.pricing.discount);
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch office quote:", error);
+        setQuoteError("Failed to calculate quote. Please try again.");
+      } finally {
+        setIsLoadingQuote(false);
+      }
+    };
+
+    fetchOfficeQuote();
+  }, [isOfficeBooking, squareFeet, rooms, toilets, frequency]);
 
   // Local state for promo validation
   const [promoError, setPromoError] = useState<string | null>(null);
@@ -223,11 +285,11 @@ const Review = () => {
             <InfoRow
               icon={<Icon.notes color={theme.colors.system.body.disabled} />}
               label="Details"
-              value={`${bedroomCount} bedroom${
-                bedroomCount > 1 ? "s" : ""
-              }, ${bathroomCount} bathroom${
-                bathroomCount > 1 ? "s" : ""
-              }, ${petDisplay}`}
+              value={
+                isOfficeBooking
+                  ? `${squareFeet} sqft, ${rooms} room${rooms > 1 ? "s" : ""}, ${toilets} toilet${toilets > 1 ? "s" : ""}, ${petDisplay}`
+                  : `${bedroomCount} bedroom${bedroomCount > 1 ? "s" : ""}, ${bathroomCount} bathroom${bathroomCount > 1 ? "s" : ""}, ${petDisplay}`
+              }
             />
             <InfoRow
               icon={<Icon.notes color={theme.colors.system.body.disabled} />}
@@ -308,54 +370,83 @@ const Review = () => {
             )}
 
             <View style={styles.totalContainer}>
-              <Text
-                style={
-                  [
-                    theme.typography.heading.xs2,
-                    { color: theme.colors.system.body.default },
-                  ] as any
-                }
-              >
-                Total
-              </Text>
-              <View style={styles.priceWrapper}>
+              <View>
                 <Text
                   style={
                     [
-                      theme.typography.heading.xs,
-                      { color: theme.colors.card.label.active },
+                      theme.typography.heading.xs2,
+                      { color: theme.colors.system.body.default },
                     ] as any
                   }
                 >
-                  {total}
+                  {isOfficeBooking && isEstimate ? "Estimated Quote" : "Total"}
                 </Text>
-                <Text
-                  style={
-                    [
-                      theme.typography.body.md.medium,
-                      { color: theme.colors.card.label.active },
-                    ] as any
-                  }
-                >
-                  MVR
-                </Text>
-
-                {frequency !== "Once" && (
+                {isOfficeBooking && isEstimate && (
                   <Text
                     style={
                       [
-                        theme.typography.body.md.regular,
-                        {
-                          color: theme.colors.card.label.active,
-                          fontSize: 14,
-                        },
+                        theme.typography.body.xs.regular,
+                        { color: theme.colors.system.body.disabled },
                       ] as any
                     }
                   >
-                    /month
+                    Final price confirmed after inspection
                   </Text>
                 )}
               </View>
+              {isLoadingQuote ? (
+                <ActivityIndicator size="small" color={theme.colors.card.label.active} />
+              ) : quoteError ? (
+                <Text
+                  style={
+                    [
+                      theme.typography.body.sm.regular,
+                      { color: theme.colors.input.label.error },
+                    ] as any
+                  }
+                >
+                  {quoteError}
+                </Text>
+              ) : (
+                <View style={styles.priceWrapper}>
+                  <Text
+                    style={
+                      [
+                        theme.typography.heading.xs,
+                        { color: theme.colors.card.label.active },
+                      ] as any
+                    }
+                  >
+                    {total}
+                  </Text>
+                  <Text
+                    style={
+                      [
+                        theme.typography.body.md.medium,
+                        { color: theme.colors.card.label.active },
+                      ] as any
+                    }
+                  >
+                    MVR
+                  </Text>
+
+                  {frequency !== "Once" && (
+                    <Text
+                      style={
+                        [
+                          theme.typography.body.md.regular,
+                          {
+                            color: theme.colors.card.label.active,
+                            fontSize: 14,
+                          },
+                        ] as any
+                      }
+                    >
+                      /month
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Show recurring charge message when not Once */}
@@ -384,6 +475,7 @@ const Review = () => {
             <Button
               label="Confirm & Pay"
               variant="filled"
+              disabled={isLoadingQuote || !!quoteError}
               onPress={() => {
                 router.push("/payment");
               }}

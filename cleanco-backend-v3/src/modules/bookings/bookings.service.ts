@@ -36,9 +36,10 @@ export class BookingsService {
       bedrooms,
       bathrooms,
       hasPets,
-      officeSize,
+      squareFeet,
       floors,
       rooms,
+      toilets,
       promoCode,
       paymentMethod,
       specialInstructions,
@@ -98,24 +99,38 @@ export class BookingsService {
       throw new BadRequestException('This time slot is fully booked');
     }
 
-    // Find matching pricing rule
-    const pricingRule = await this.findMatchingPricingRule({
-      serviceType,
-      bedrooms,
-      officeSize,
-      floors,
-      rooms,
-    });
-
-    if (!pricingRule) {
-      throw new BadRequestException(
-        'No pricing rule found for the provided parameters',
-      );
-    }
-
-    let basePrice = Number(pricingRule.price);
+    // Calculate pricing based on service type
+    let basePrice: number;
     let discountAmount = 0;
     let promoCodeId = null;
+    let estimatedPrice: number | null = null;
+    let isOfficeBooking = serviceType === ServiceType.OFFICE;
+
+    if (isOfficeBooking) {
+      // Use sqft-based pricing for office bookings
+      const officeQuote = await this.calculateOfficePrice({
+        squareFeet: squareFeet!,
+        rooms: rooms!,
+        toilets: toilets!,
+      });
+      basePrice = officeQuote.totalPrice;
+      estimatedPrice = basePrice; // Store as estimate (pending inspection)
+    } else {
+      // Use standard pricing rule for HOME bookings
+      const pricingRule = await this.findMatchingPricingRule({
+        serviceType,
+        bedrooms,
+        floors,
+        rooms,
+      });
+
+      if (!pricingRule) {
+        throw new BadRequestException(
+          'No pricing rule found for the provided parameters',
+        );
+      }
+      basePrice = Number(pricingRule.price);
+    }
 
     // Apply promo code if provided
     if (promoCode) {
@@ -187,13 +202,18 @@ export class BookingsService {
     const bookingNumber = `BK-${nanoid(10).toUpperCase()}`;
 
     // Create booking
+    // Office bookings go to PENDING_INSPECTION, home bookings go to PENDING
+    const bookingStatus = isOfficeBooking
+      ? BookingStatus.PENDING_INSPECTION
+      : BookingStatus.PENDING;
+
     const booking = await this.prisma.booking.create({
       data: {
         bookingNumber,
         userId,
         serviceType,
         bookingType,
-        status: BookingStatus.PENDING,
+        status: bookingStatus,
         addressId,
         // Address snapshot (captured at booking time for historical accuracy)
         addressLabel: address.label,
@@ -205,13 +225,17 @@ export class BookingsService {
         bedrooms,
         bathrooms,
         hasPets: hasPets || false,
-        officeSize,
+        // Office-specific fields
+        squareFeet,
         floors,
         rooms,
+        toilets,
+        // Pricing
         totalPrice: basePrice,
         finalPrice,
         discountAmount,
         promoCodeId,
+        estimatedPrice, // For office bookings, stores the initial estimate
         paymentMethod,
         paymentStatus: PaymentStatus.PAID,
         specialInstructions,
@@ -570,54 +594,95 @@ export class BookingsService {
   }
 
   /**
-   * Helper: Find matching pricing rule
+   * Helper: Find matching pricing rule (for HOME service)
    */
   private async findMatchingPricingRule(params: {
     serviceType: ServiceType;
     bedrooms?: number;
-    officeSize?: string;
     floors?: number;
     rooms?: number;
   }) {
-    const { serviceType, bedrooms, officeSize, floors, rooms } = params;
+    const { serviceType, bedrooms } = params;
 
-    // Try exact match first
-    const exactMatch = await this.prisma.pricingRule.findFirst({
+    // For HOME service, find by bedrooms
+    return this.prisma.pricingRule.findFirst({
       where: {
         serviceType,
         frequency: null, // ONE_TIME booking
-        bedrooms: serviceType === ServiceType.HOME ? bedrooms : null,
-        officeSize: serviceType === ServiceType.OFFICE ? officeSize : null,
-        floors: serviceType === ServiceType.OFFICE ? floors : null,
-        rooms: serviceType === ServiceType.OFFICE ? rooms : null,
+        bedrooms,
+        isActive: true,
+      },
+    });
+  }
+
+  /**
+   * Calculate office price based on sqft tiers and add-ons
+   */
+  private async calculateOfficePrice(params: {
+    squareFeet: number;
+    rooms: number;
+    toilets: number;
+  }) {
+    const { squareFeet, rooms, toilets } = params;
+
+    // 1. Find matching sqft tier
+    const tier = await this.prisma.officePricingTier.findFirst({
+      where: {
+        sqftMin: { lte: squareFeet },
+        sqftMax: { gte: squareFeet },
+        frequency: null, // ONE_TIME booking
         isActive: true,
       },
     });
 
-    if (exactMatch) {
-      return exactMatch;
+    if (!tier) {
+      throw new BadRequestException(
+        `No pricing tier found for ${squareFeet} sqft. Please contact support.`,
+      );
     }
 
-    // Fallback: Try minimal match
-    if (serviceType === ServiceType.HOME) {
-      return this.prisma.pricingRule.findFirst({
+    let sqftBasePrice = Number(tier.basePrice);
+    let roomAddOnTotal = 0;
+    let toiletAddOnTotal = 0;
+
+    // 2. Calculate room add-on (if rooms > 1)
+    if (rooms > 1) {
+      const roomAddOn = await this.prisma.officeAddOnPricing.findFirst({
         where: {
-          serviceType,
-          frequency: null,
-          bedrooms,
+          addOnType: 'ROOM',
           isActive: true,
         },
+        orderBy: { minQuantity: 'asc' },
       });
-    } else {
-      return this.prisma.pricingRule.findFirst({
-        where: {
-          serviceType,
-          frequency: null,
-          officeSize,
-          isActive: true,
-        },
-      });
+
+      if (roomAddOn) {
+        roomAddOnTotal = Number(roomAddOn.pricePerUnit) * (rooms - 1);
+      }
     }
+
+    // 3. Calculate toilet add-on (if toilets > 1)
+    if (toilets > 1) {
+      const toiletAddOn = await this.prisma.officeAddOnPricing.findFirst({
+        where: {
+          addOnType: 'TOILET',
+          isActive: true,
+        },
+        orderBy: { minQuantity: 'asc' },
+      });
+
+      if (toiletAddOn) {
+        toiletAddOnTotal = Number(toiletAddOn.pricePerUnit) * (toilets - 1);
+      }
+    }
+
+    const totalPrice = sqftBasePrice + roomAddOnTotal + toiletAddOnTotal;
+
+    return {
+      sqftTierPrice: sqftBasePrice,
+      roomAddOn: roomAddOnTotal,
+      toiletAddOn: toiletAddOnTotal,
+      totalPrice,
+    };
   }
 
   /**

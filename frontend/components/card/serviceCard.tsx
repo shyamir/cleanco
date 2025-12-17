@@ -11,6 +11,7 @@ type ServiceCardProps = {
   price: string;
   currency?: string;
   route: Href;
+  onPress?: () => void;
 };
 
 const ServiceCard: React.FC<ServiceCardProps> = ({
@@ -19,11 +20,13 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   price,
   currency = "MVR",
   route,
+  onPress,
 }) => {
   const {theme} = useTheme();
   const router = useRouter();
 
   const handlePress = () => {
+    onPress?.();
     if (route) router.push(route);
   };
 
