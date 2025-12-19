@@ -10,7 +10,8 @@ import { CleanerAssignmentService } from '../cleaner-assignment/cleaner-assignme
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { ServiceType, SubscriptionFrequency, SubscriptionStatus, BookingType, BookingStatus, PaymentStatus } from '@prisma/client';
-import { addMonths, startOfDay, addDays, addWeeks, getDay, setDay, differenceInWeeks } from 'date-fns';
+import { addMonths, addDays, addWeeks, getDay, setDay, differenceInWeeks } from 'date-fns';
+import { DateUtils } from '../../common/utils/date.utils';
 
 @Injectable()
 export class SubscriptionsService {
@@ -83,8 +84,8 @@ export class SubscriptionsService {
       rooms,
     );
 
-    // Set start date to tomorrow
-    const startDate = startOfDay(addDays(new Date(), 1));
+    // Set start date to tomorrow (in Maldives time)
+    const startDate = addDays(DateUtils.todayInMaldives(), 1);
 
     // Create subscription with daySlots relation
     // Subscription is ACTIVE for all types, but office bookings will be PENDING_INSPECTION
@@ -373,7 +374,7 @@ export class SubscriptionsService {
       throw new BadRequestException('Subscription is already canceled');
     }
 
-    const today = startOfDay(new Date());
+    const today = DateUtils.todayInMaldives();
 
     // Get all future bookings for this subscription that are not already canceled
     const futureBookings = await this.prisma.booking.findMany({
@@ -424,7 +425,7 @@ export class SubscriptionsService {
       where: { id },
       data: {
         status: SubscriptionStatus.CANCELED,
-        endDate: new Date(),
+        endDate: DateUtils.nowInMaldives(),
         autoRenew: false,
       },
       include: {
@@ -537,7 +538,7 @@ export class SubscriptionsService {
     weeksToGenerate: number,
   ) {
     const bookings = [];
-    const today = new Date();
+    const today = DateUtils.nowInMaldives();
 
     // Fetch address for snapshot
     const address = await this.prisma.address.findUnique({
@@ -615,7 +616,7 @@ export class SubscriptionsService {
             serviceType: subscription.serviceType,
             bookingType: BookingType.SUBSCRIPTION,
             timeSlotId,
-            date: startOfDay(bookingDate),
+            date: DateUtils.startOfDayInMaldives(bookingDate),
             totalPrice: subscriptionPrice,
             finalPrice: subscriptionPrice,
             bedrooms: subscription.bedrooms,
@@ -649,7 +650,7 @@ export class SubscriptionsService {
       const createdBookings = await this.prisma.booking.findMany({
         where: {
           subscriptionId: subscription.id,
-          date: { gte: startOfDay(new Date()) },
+          date: { gte: DateUtils.todayInMaldives() },
           status: BookingStatus.PENDING,
         },
         orderBy: { date: 'asc' },
@@ -738,7 +739,7 @@ export class SubscriptionsService {
    * Count how many weeks of future bookings exist for a subscription
    */
   private async countFutureBookingWeeks(subscriptionId: string): Promise<number> {
-    const today = startOfDay(new Date());
+    const today = DateUtils.todayInMaldives();
 
     // Get all future bookings for this subscription
     const futureBookings = await this.prisma.booking.findMany({
@@ -807,7 +808,7 @@ export class SubscriptionsService {
         status: SubscriptionStatus.ACTIVE,
         nextBillingDate: lastPaidBooking?.date || addMonths(subscription.nextBillingDate, 1),
         lastPaymentId: paymentId,
-        lastPaymentDate: new Date(),
+        lastPaymentDate: DateUtils.nowInMaldives(),
       },
       include: {
         user: {
@@ -839,7 +840,7 @@ export class SubscriptionsService {
       throw new BadRequestException('Subscription is already expired');
     }
 
-    const today = startOfDay(new Date());
+    const today = DateUtils.todayInMaldives();
 
     // Delete unpaid future bookings (placeholders that shouldn't show in history)
     const deletedBookings = await this.prisma.booking.deleteMany({
@@ -869,7 +870,7 @@ export class SubscriptionsService {
       where: { id: subscriptionId },
       data: {
         status: SubscriptionStatus.EXPIRED,
-        endDate: new Date(),
+        endDate: DateUtils.nowInMaldives(),
         autoRenew: false,
       },
       include: {

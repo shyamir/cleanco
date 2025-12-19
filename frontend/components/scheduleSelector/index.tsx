@@ -186,21 +186,29 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
 
   // Compute disabled days for each slot
   const getDisabledDaysForSlot = (slotIndex: number): string[] => {
-    if (frequency === "Once") return [];
+    // Friday is always disabled (no bookings on Fridays)
+    const alwaysDisabled = ["Friday"];
+
+    if (frequency === "Once") return alwaysDisabled;
 
     // Slot 0: Only the start date's day is allowed (disable all others)
     if (slotIndex === 0) {
       const startDayIndex = getStartDateDayOfWeek();
       if (startDayIndex >= 0) {
-        return dayOptions.filter((_, idx) => idx !== startDayIndex);
+        const disabled = dayOptions.filter((_, idx) => idx !== startDayIndex);
+        // Ensure Friday is always disabled
+        if (!disabled.includes("Friday")) {
+          disabled.push("Friday");
+        }
+        return disabled;
       }
-      return [];
+      return alwaysDisabled;
     }
 
-    // Subsequent slots: disable previously selected days
-    const disabled: string[] = [];
+    // Subsequent slots: disable previously selected days + Friday
+    const disabled: string[] = [...alwaysDisabled];
     for (let i = 0; i < slotIndex; i++) {
-      if (slots[i].day) {
+      if (slots[i].day && !disabled.includes(slots[i].day)) {
         disabled.push(slots[i].day);
       }
     }
@@ -352,37 +360,41 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
       <View key={index}>
         <ToggleCard
           title={`Slot ${index + 1}`}
-          groups={[
-            {
-              options: dayOptions,
-              disabledOptions: disabledDays,
-              initialValue: slots[index].day,
-              onChange: (value) => updateSlot(index, "day", value),
-            },
-            {
-              options: isLoading
-                ? ["Checking availability..."]
-                : noSlotsAvailable && hasDay
+          options={dayOptions}
+          disabledOptions={disabledDays}
+          initialValue={slots[index].day}
+          onChange={(value) => updateSlot(index, "day", value)}
+        />
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.system.body.default}
+            />
+          </View>
+        ) : (
+          <ToggleCard
+            title="Time"
+            options={
+              noSlotsAvailable && hasDay
                 ? ["No slots available"]
                 : timeOpts.length > 0
                 ? timeOpts
-                : ["Select a day first"],
-              disabledOptions: isLoading || noSlotsAvailable ? [] : disabledTimeOpts,
-              initialValue: slots[index].time,
-              onChange: (value) => {
-                if (
-                  !isLoading &&
-                  !noSlotsAvailable &&
-                  value !== "Checking availability..." &&
-                  value !== "No slots available" &&
-                  value !== "Select a day first"
-                ) {
-                  updateSlot(index, "time", value);
-                }
-              },
-            },
-          ]}
-        />
+                : ["Select a day first"]
+            }
+            disabledOptions={noSlotsAvailable ? [] : disabledTimeOpts}
+            initialValue={slots[index].time}
+            onChange={(value) => {
+              if (
+                !noSlotsAvailable &&
+                value !== "No slots available" &&
+                value !== "Select a day first"
+              ) {
+                updateSlot(index, "time", value);
+              }
+            }}
+          />
+        )}
       </View>
     );
   };
@@ -416,14 +428,6 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
             size="small"
             color={theme.colors.system.body.default}
           />
-          <Text
-            style={[
-              theme.typography.body.sm.regular,
-              { color: theme.colors.system.body.disabled },
-            ]}
-          >
-            Checking 12-week availability...
-          </Text>
         </View>
       );
     }
@@ -480,14 +484,6 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
             size="small"
             color={theme.colors.system.body.default}
           />
-          <Text
-            style={[
-              theme.typography.body.sm.regular,
-              { color: theme.colors.system.body.disabled },
-            ]}
-          >
-            Loading time slots...
-          </Text>
         </View>
       );
     }
@@ -551,7 +547,7 @@ const styles = StyleSheet.create({
   loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
     padding: 16,
   },
   unavailableContainer: {

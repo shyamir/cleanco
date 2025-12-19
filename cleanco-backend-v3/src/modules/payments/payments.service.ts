@@ -17,6 +17,7 @@ import { PaymentMethod, PaymentStatus, BookingStatus } from '@prisma/client';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { BmlService } from '../bml/bml.service';
 import { BmlTransactionState } from '../bml/dto/bml-transaction.dto';
+import { DateUtils } from '../../common/utils/date.utils';
 
 @Injectable()
 export class PaymentsService {
@@ -70,7 +71,7 @@ export class PaymentsService {
         method: PaymentMethod.BANK_TRANSFER,
         status: PaymentStatus.PAID,
         receiptUrl: dto.receiptUrl,
-        paidAt: new Date(),
+        paidAt: DateUtils.nowInMaldives(),
       },
       include: {
         booking: {
@@ -210,8 +211,7 @@ export class PaymentsService {
 
     // Check if payment already exists for this subscription in current billing cycle
     // Check for any payment in the last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgo = DateUtils.addDays(DateUtils.nowInMaldives(), -30);
 
     const existingPayment = await this.prisma.payment.findFirst({
       where: {
@@ -235,7 +235,7 @@ export class PaymentsService {
         method: PaymentMethod.BANK_TRANSFER,
         status: PaymentStatus.PAID,
         receiptUrl: dto.receiptUrl,
-        paidAt: new Date(),
+        paidAt: DateUtils.nowInMaldives(),
       },
       include: {
         subscription: {
@@ -277,8 +277,7 @@ export class PaymentsService {
 
     // Check if payment already exists for this subscription in current billing cycle
     // Check for any payment in the last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgo = DateUtils.addDays(DateUtils.nowInMaldives(), -30);
 
     const existingPayment = await this.prisma.payment.findFirst({
       where: {
@@ -474,7 +473,7 @@ export class PaymentsService {
       where: { id: paymentId },
       data: {
         status: dto.status,
-        verifiedAt: dto.status === PaymentStatus.VERIFIED ? new Date() : null,
+        verifiedAt: dto.status === PaymentStatus.VERIFIED ? DateUtils.nowInMaldives() : null,
         verifiedBy: dto.status === PaymentStatus.VERIFIED ? adminId : null,
         failureReason: dto.failureReason,
       },
@@ -555,8 +554,8 @@ export class PaymentsService {
       data: {
         status: newStatus,
         bmlResponse: { transactionId, state, signature },
-        verifiedAt: isSuccess ? new Date() : null,
-        paidAt: isSuccess ? new Date() : null,
+        verifiedAt: isSuccess ? DateUtils.nowInMaldives() : null,
+        paidAt: isSuccess ? DateUtils.nowInMaldives() : null,
         failureReason: isSuccess ? null : (isCancelled ? 'Payment cancelled by user' : 'Payment failed'),
       },
     });
@@ -630,8 +629,8 @@ export class PaymentsService {
       data: {
         status: isSuccess ? PaymentStatus.VERIFIED : PaymentStatus.FAILED,
         bmlResponse: bmlData,
-        verifiedAt: isSuccess ? new Date() : null,
-        paidAt: isSuccess ? new Date() : null,
+        verifiedAt: isSuccess ? DateUtils.nowInMaldives() : null,
+        paidAt: isSuccess ? DateUtils.nowInMaldives() : null,
         failureReason: isSuccess ? null : bmlData.failureReason,
       },
     });

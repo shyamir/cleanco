@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
 import dayjs from "dayjs";
@@ -11,15 +11,33 @@ type DatePickerCardProps = {
   initialDate?: string;
 };
 
+// Helper to get the next valid date (skipping Fridays)
+const getNextValidDate = (date: dayjs.Dayjs): dayjs.Dayjs => {
+  // Friday is day 5 in dayjs (0 = Sunday)
+  if (date.day() === 5) {
+    return date.add(1, 'day'); // Skip to Saturday
+  }
+  return date;
+};
+
 const DatePickerCard: React.FC<DatePickerCardProps> = ({
   label,
   onDateChange,
   initialDate,
 }) => {
   const {theme} = useTheme();
-  const [selectedDate, setSelectedDate] = useState(
-    initialDate || dayjs().format("YYYY-MM-DD")
-  );
+  // Default to tomorrow (no same-day bookings allowed), skip Friday
+  const tomorrow = getNextValidDate(dayjs().add(1, 'day'));
+  const tomorrowStr = tomorrow.format("YYYY-MM-DD");
+  // If initialDate is today or earlier, or is a Friday, use next valid date
+  const getDefaultDate = () => {
+    if (initialDate && dayjs(initialDate).isAfter(dayjs(), 'day')) {
+      // Skip if it's a Friday
+      return getNextValidDate(dayjs(initialDate)).format("YYYY-MM-DD");
+    }
+    return tomorrowStr;
+  };
+  const [selectedDate, setSelectedDate] = useState(getDefaultDate());
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -30,14 +48,35 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
   }, [selectedDate]);
 
   const handleSelect = (day: any) => {
+    // Don't allow Friday selection (day 5)
+    const selectedDay = dayjs(day.dateString);
+    if (selectedDay.day() === 5) {
+      return; // Ignore Friday clicks
+    }
     setSelectedDate(day.dateString);
     onDateChange?.(day.dateString);
     setIsOpen(false);
   };
 
-  const formattedDate = dayjs(selectedDate).isSame(dayjs(), "day")
-    ? `Today, ${dayjs(selectedDate).format("D MMM YYYY")}`
-    : dayjs(selectedDate).format("ddd, D MMM YYYY");
+  // Generate disabled Fridays for the next 6 months
+  const disabledFridays = useMemo(() => {
+    const fridays: { [key: string]: { disabled: boolean; disableTouchEvent: boolean } } = {};
+    let current = dayjs();
+    const endDate = dayjs().add(6, 'month');
+
+    while (current.isBefore(endDate)) {
+      if (current.day() === 5) { // Friday
+        fridays[current.format("YYYY-MM-DD")] = {
+          disabled: true,
+          disableTouchEvent: true
+        };
+      }
+      current = current.add(1, 'day');
+    }
+    return fridays;
+  }, []);
+
+  const formattedDate = dayjs(selectedDate).format("ddd, D MMM YYYY");
 
   return (
     <Base>
@@ -85,9 +124,10 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
         <View style={styles.calendarWrapper}>
           <Calendar
             current={selectedDate}
-            minDate={dayjs().format("YYYY-MM-DD")}
+            minDate={tomorrowStr}
             onDayPress={handleSelect}
             markedDates={{
+              ...disabledFridays,
               [selectedDate]: {
                 selected: true,
                 selectedColor: theme.colors.calendar.background.active,

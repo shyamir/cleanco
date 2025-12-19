@@ -7,8 +7,8 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AdminBookingsQueryDto } from './dto/admin-bookings-query.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { ConfirmInspectionDto } from './dto/confirm-inspection.dto';
-import { parse } from 'date-fns';
 import { BookingStatus } from '@prisma/client';
+import { DateUtils } from '../../../common/utils/date.utils';
 
 @Injectable()
 export class AdminBookingsService {
@@ -54,10 +54,10 @@ export class AdminBookingsService {
     if (dateFrom || dateTo) {
       where.date = {};
       if (dateFrom) {
-        where.date.gte = parse(dateFrom, 'yyyy-MM-dd', new Date());
+        where.date.gte = DateUtils.parseDateAsMaldives(dateFrom);
       }
       if (dateTo) {
-        where.date.lte = parse(dateTo, 'yyyy-MM-dd', new Date());
+        where.date.lte = DateUtils.parseDateAsMaldives(dateTo);
       }
     }
 
@@ -298,7 +298,7 @@ export class AdminBookingsService {
         totalPrice: confirmedPrice,
         finalPrice: Math.max(0, finalPrice),
         priceAdjustmentReason,
-        inspectedAt: new Date(),
+        inspectedAt: DateUtils.nowInMaldives(),
         inspectedBy: adminId,
         adminApproved: true,
       },

@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ValidatePromoDto } from './dto/validate-promo.dto';
 import { ServiceType } from '@prisma/client';
+import { DateUtils } from '../../common/utils/date.utils';
 
 @Injectable()
 export class PromoCodesService {
@@ -11,7 +12,7 @@ export class PromoCodesService {
    * Get active public promotional codes for carousel display
    */
   async getActivePublicPromos() {
-    const now = new Date();
+    const now = DateUtils.nowInMaldives();
 
     const promos = await this.prisma.promotionalCode.findMany({
       where: {
@@ -91,8 +92,8 @@ export class PromoCodesService {
       };
     }
 
-    // Check date range
-    const now = new Date();
+    // Check date range (in Maldives time)
+    const now = DateUtils.nowInMaldives();
     if (promo.startDate > now || promo.endDate < now) {
       return {
         valid: false,

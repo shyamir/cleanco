@@ -11,6 +11,7 @@ import { MsgOwlService } from '../../integrations/msgowl/msgowl.service';
 import { UserRole } from '@prisma/client';
 import { SendOtpDto, VerifyOtpDto, RefreshTokenDto } from './dto';
 import { addDays } from 'date-fns';
+import { DateUtils } from '../../common/utils/date.utils';
 
 export interface AuthTokens {
   accessToken: string;
@@ -183,7 +184,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      if (new Date() > storedToken.expiresAt) {
+      if (DateUtils.nowInMaldives() > storedToken.expiresAt) {
         throw new UnauthorizedException('Refresh token expired');
       }
 
@@ -266,7 +267,7 @@ export class AuthService {
     token: string,
   ): Promise<void> {
     const expiresAt = addDays(
-      new Date(),
+      DateUtils.nowInMaldives(),
       7, // 7 days - should match JWT_REFRESH_TOKEN_EXPIRY
     );
 

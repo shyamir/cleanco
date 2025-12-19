@@ -2,21 +2,9 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AvailableSlotsQueryDto } from './dto/available-slots-query.dto';
 import { SubscriptionAvailabilityQueryDto } from './dto/subscription-availability-query.dto';
-import { isBefore, addWeeks, setDay, format } from 'date-fns';
+import { isBefore, addWeeks, setDay, format, getDay } from 'date-fns';
 import { ServiceType } from '@prisma/client';
-
-// Helper to create a date at noon UTC from a date string (YYYY-MM-DD)
-// Using noon UTC ensures the calendar date is correct regardless of server timezone
-function parseToNoonUTC(dateString: string): Date {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-}
-
-// Get today's date as noon UTC
-function getTodayNoonUTC(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0));
-}
+import { DateUtils } from '../../common/utils/date.utils';
 
 @Injectable()
 export class TimeSlotsService {
@@ -31,13 +19,20 @@ export class TimeSlotsService {
     // Calculate required cleaners based on booking details
     const requiredCleaners = this.calculateRequiredCleaners(query);
 
-    // Parse the date string to noon UTC for consistent date handling
-    const requestedDate = parseToNoonUTC(dateString);
-    const today = getTodayNoonUTC();
+    // Parse the date string as Maldives time for consistent date handling
+    const requestedDate = DateUtils.parseDateAsMaldives(dateString);
+    const today = DateUtils.todayInMaldives();
+    const tomorrow = DateUtils.addDays(today, 1);
 
-    // Check if date is in the past
-    if (isBefore(requestedDate, today)) {
-      throw new BadRequestException('Cannot book slots for past dates');
+    // Check if date is at least 1 day in advance (no same-day bookings)
+    if (isBefore(requestedDate, tomorrow)) {
+      throw new BadRequestException('Bookings must be made at least 1 day in advance');
+    }
+
+    // Check if the date is a Friday (no bookings on Fridays)
+    // getDay returns 0-6 where 5 = Friday
+    if (getDay(requestedDate) === 5) {
+      throw new BadRequestException('Bookings are not available on Fridays');
     }
 
     // Check if the date is a blackout date
@@ -134,12 +129,19 @@ export class TimeSlotsService {
     // Calculate required cleaners
     const requiredCleaners = this.calculateRequiredCleanersForSubscription(query);
 
-    // Parse start date to noon UTC for consistent date handling
-    const startDate = parseToNoonUTC(startDateString);
-    const today = getTodayNoonUTC();
+    // Parse start date as Maldives time for consistent date handling
+    const startDate = DateUtils.parseDateAsMaldives(startDateString);
+    const today = DateUtils.todayInMaldives();
+    const tomorrow = DateUtils.addDays(today, 1);
 
-    if (isBefore(startDate, today)) {
-      throw new BadRequestException('Start date cannot be in the past');
+    if (isBefore(startDate, tomorrow)) {
+      throw new BadRequestException('Subscription start date must be at least 1 day in advance');
+    }
+
+    // Check if the selected day is Friday (no bookings on Fridays)
+    // dayOfWeek is 0-6 where 5 = Friday
+    if (dayOfWeek === 5) {
+      throw new BadRequestException('Subscriptions are not available on Fridays');
     }
 
     // Generate all 12 dates to check (same day of week for 12 weeks)
@@ -151,10 +153,10 @@ export class TimeSlotsService {
       currentDate = addWeeks(currentDate, 1);
     }
 
-    // Generate 12 weekly dates, converting each to noon UTC for consistent comparison
+    // Generate 12 weekly dates, converting each to Maldives time for consistent comparison
     for (let i = 0; i < 12; i++) {
       const dateStr = format(currentDate, 'yyyy-MM-dd');
-      datesToCheck.push(parseToNoonUTC(dateStr));
+      datesToCheck.push(DateUtils.parseDateAsMaldives(dateStr));
       currentDate = addWeeks(currentDate, 1);
     }
 

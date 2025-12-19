@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CalculateQuoteDto } from './dto/calculate-quote.dto';
 import { ServiceType, SubscriptionFrequency } from '@prisma/client';
+import { DateUtils } from '../../common/utils/date.utils';
 
 @Injectable()
 export class ServicesService {
@@ -100,7 +101,8 @@ export class ServicesService {
         where: { code: promoCode },
       });
 
-      if (promo && promo.isActive && promo.startDate <= new Date() && promo.endDate >= new Date()) {
+      const now = DateUtils.nowInMaldives();
+      if (promo && promo.isActive && promo.startDate <= now && promo.endDate >= now) {
         if (promo.totalUsageLimit && promo.currentUsage >= promo.totalUsageLimit) {
           throw new BadRequestException('Promo code has reached its maximum usage limit');
         }

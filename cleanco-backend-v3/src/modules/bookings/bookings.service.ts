@@ -12,7 +12,8 @@ import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { ServiceType, BookingType, BookingStatus, PaymentStatus } from '@prisma/client';
 import { nanoid } from 'nanoid';
-import { parse, isBefore, startOfDay, differenceInHours } from 'date-fns';
+import { isBefore, differenceInHours } from 'date-fns';
+import { DateUtils } from '../../common/utils/date.utils';
 
 @Injectable()
 export class BookingsService {
@@ -45,12 +46,12 @@ export class BookingsService {
       specialInstructions,
     } = createBookingDto;
 
-    // Parse date
-    const bookingDate = parse(dateString, 'yyyy-MM-dd', new Date());
-    const today = startOfDay(new Date());
+    // Parse date as Maldives time
+    const bookingDate = DateUtils.parseDateAsMaldives(dateString);
+    const today = DateUtils.todayInMaldives();
 
-    // Validate date is not in the past
-    if (isBefore(bookingDate, today)) {
+    // Validate date is not in the past (in Maldives time)
+    if (isBefore(DateUtils.startOfDayInMaldives(bookingDate), today)) {
       throw new BadRequestException('Cannot book for past dates');
     }
 
@@ -142,7 +143,8 @@ export class BookingsService {
         throw new BadRequestException('Invalid or inactive promo code');
       }
 
-      if (promo.startDate > new Date() || promo.endDate < new Date()) {
+      const now = DateUtils.nowInMaldives();
+      if (promo.startDate > now || promo.endDate < now) {
         throw new BadRequestException('Promo code has expired');
       }
 
@@ -329,7 +331,7 @@ export class BookingsService {
    * Get user's next upcoming booking
    */
   async getUpcoming(userId: string) {
-    const today = startOfDay(new Date());
+    const today = DateUtils.todayInMaldives();
 
     const upcomingBooking = await this.prisma.booking.findFirst({
       where: {
@@ -358,7 +360,7 @@ export class BookingsService {
    * Shows only paid bookings (excludes unpaid placeholder bookings)
    */
   async getActivityBookings(userId: string) {
-    const today = startOfDay(new Date());
+    const today = DateUtils.todayInMaldives();
 
     return this.prisma.booking.findMany({
       where: {
@@ -384,7 +386,7 @@ export class BookingsService {
    * Get past/completed bookings for history page
    */
   async getHistoryBookings(userId: string) {
-    const today = startOfDay(new Date());
+    const today = DateUtils.todayInMaldives();
 
     return this.prisma.booking.findMany({
       where: {
@@ -467,16 +469,16 @@ export class BookingsService {
 
     // Check minimum notice (24 hours)
     // If within 24 hours, it will be counted as a cancellation
-    const hoursDiff = differenceInHours(booking.date, new Date());
+    const hoursDiff = differenceInHours(booking.date, DateUtils.nowInMaldives());
     if (hoursDiff < 24) {
       throw new BadRequestException(
         'Bookings cannot be rescheduled within 24 hours of appointment time. This will be counted as a cancellation. Please cancel and create a new booking.',
       );
     }
 
-    // Parse new date
-    const newDate = parse(newDateString, 'yyyy-MM-dd', new Date());
-    const today = startOfDay(new Date());
+    // Parse new date as Maldives time
+    const newDate = DateUtils.parseDateAsMaldives(newDateString);
+    const today = DateUtils.todayInMaldives();
 
     if (isBefore(newDate, today)) {
       throw new BadRequestException('Cannot reschedule to a past date');
@@ -572,7 +574,7 @@ export class BookingsService {
       0
     );
 
-    const hoursDiff = differenceInHours(bookingDateTime, new Date());
+    const hoursDiff = differenceInHours(bookingDateTime, DateUtils.nowInMaldives());
     if (hoursDiff < 24) {
       throw new BadRequestException(
         'Bookings must be canceled at least 24 hours in advance',
@@ -587,7 +589,7 @@ export class BookingsService {
       where: { id },
       data: {
         status: BookingStatus.CANCELED,
-        canceledAt: new Date(),
+        canceledAt: DateUtils.nowInMaldives(),
         cancelReason,
       },
       include: {
