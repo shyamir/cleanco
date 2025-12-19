@@ -30,8 +30,8 @@ type AddressContextType = {
   isLoading: boolean;
   // Error state
   error: string | null;
-  // Load addresses from backend (checks cache first)
-  loadAddresses: () => Promise<void>;
+  // Load addresses from backend (checks cache first, unless forceRefresh is true)
+  loadAddresses: (forceRefresh?: boolean) => Promise<void>;
   // Clear selected address
   clearSelected: () => void;
   // Cache management functions
@@ -52,34 +52,36 @@ export const AddressProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadAddresses = useCallback(async () => {
+  const loadAddresses = useCallback(async (forceRefresh = false) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Check AsyncStorage first
-      const cached = await AsyncStorage.getItem(ADDRESSES_STORAGE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached) as BackendAddress[];
-        // Deduplicate by ID (keep the last occurrence)
-        const deduped = parsed.reduce((acc: BackendAddress[], addr) => {
-          const existingIndex = acc.findIndex(a => a.id === addr.id);
-          if (existingIndex >= 0) {
-            acc[existingIndex] = addr; // Replace with newer
-          } else {
-            acc.push(addr);
+      // Check AsyncStorage first (unless forcing refresh)
+      if (!forceRefresh) {
+        const cached = await AsyncStorage.getItem(ADDRESSES_STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached) as BackendAddress[];
+          // Deduplicate by ID (keep the last occurrence)
+          const deduped = parsed.reduce((acc: BackendAddress[], addr) => {
+            const existingIndex = acc.findIndex(a => a.id === addr.id);
+            if (existingIndex >= 0) {
+              acc[existingIndex] = addr; // Replace with newer
+            } else {
+              acc.push(addr);
+            }
+            return acc;
+          }, []);
+          setSavedAddresses(deduped);
+          // Save deduped version back if there were duplicates
+          if (deduped.length !== parsed.length) {
+            await AsyncStorage.setItem(ADDRESSES_STORAGE_KEY, JSON.stringify(deduped));
           }
-          return acc;
-        }, []);
-        setSavedAddresses(deduped);
-        // Save deduped version back if there were duplicates
-        if (deduped.length !== parsed.length) {
-          await AsyncStorage.setItem(ADDRESSES_STORAGE_KEY, JSON.stringify(deduped));
+          setIsLoading(false);
+          return;
         }
-        setIsLoading(false);
-        return;
       }
 
-      // No cache - fetch from backend and store
+      // Fetch from backend and store
       const addresses = await addressApi.getUserAddresses();
       setSavedAddresses(addresses);
       await AsyncStorage.setItem(ADDRESSES_STORAGE_KEY, JSON.stringify(addresses));

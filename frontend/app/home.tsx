@@ -25,7 +25,7 @@ import ServiceCard from "../components/card/serviceCard";
 export default function Home() {
   const { theme } = useTheme();
   const { setPromoCode, resetBooking } = useBooking();
-  const { clearSelected } = useAddress();
+  const { clearSelected, loadAddresses } = useAddress();
   const {
     homePrice,
     officePrice,
@@ -87,7 +87,10 @@ export default function Home() {
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
-              onRefresh={refreshHomeData}
+              onRefresh={() => {
+                refreshHomeData();
+                loadAddresses(true);
+              }}
               tintColor={theme.colors.system.body.tertiary}
             />
           }
