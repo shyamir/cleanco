@@ -19,7 +19,7 @@ import Button from "@/components/button";
 const Shortcuts = () => {
   const { theme } = useTheme();
   const router = useRouter();
-  const { savedAddresses, loadAddresses, isLoading } = useAddress();
+  const { savedAddresses, loadAddresses, isLoading, removeAddressFromCache } = useAddress();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ const Shortcuts = () => {
             setDeletingId(address.id);
             try {
               await addressApi.deleteAddress(address.id);
-              await loadAddresses();
+              await removeAddressFromCache(address.id);
             } catch (error: any) {
               console.error("Failed to delete address:", error);
               const errorMessage = error.response?.data?.message || "Failed to delete address";

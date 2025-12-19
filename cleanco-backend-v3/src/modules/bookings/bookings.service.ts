@@ -198,62 +198,81 @@ export class BookingsService {
 
     const finalPrice = basePrice - discountAmount;
 
-    // Generate unique booking number
-    const bookingNumber = `BK-${nanoid(10).toUpperCase()}`;
-
-    // Create booking
+    // Create booking with retry on booking number collision
     // Office bookings go to PENDING_INSPECTION, home bookings go to PENDING
     const bookingStatus = isOfficeBooking
       ? BookingStatus.PENDING_INSPECTION
       : BookingStatus.PENDING;
 
-    const booking = await this.prisma.booking.create({
-      data: {
-        bookingNumber,
-        userId,
-        serviceType,
-        bookingType,
-        status: bookingStatus,
-        addressId,
-        // Address snapshot (captured at booking time for historical accuracy)
-        addressLabel: address.label,
-        addressAddress: address.address,
-        addressStreet: address.street,
-        addressLandmark: address.landmark,
-        date: bookingDate,
-        timeSlotId,
-        bedrooms,
-        bathrooms,
-        hasPets: hasPets || false,
-        // Office-specific fields
-        squareFeet,
-        floors,
-        rooms,
-        toilets,
-        // Pricing
-        totalPrice: basePrice,
-        finalPrice,
-        discountAmount,
-        promoCodeId,
-        estimatedPrice, // For office bookings, stores the initial estimate
-        paymentMethod,
-        paymentStatus: PaymentStatus.PAID,
-        specialInstructions,
-      },
-      include: {
-        address: true,
-        timeSlot: true,
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            phoneNumber: true,
-            email: true,
+    let booking;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      const bookingNumber = `BK-${nanoid(10).toUpperCase()}`;
+      try {
+        booking = await this.prisma.booking.create({
+          data: {
+            bookingNumber,
+            userId,
+            serviceType,
+            bookingType,
+            status: bookingStatus,
+            addressId,
+            // Address snapshot (captured at booking time for historical accuracy)
+            addressLabel: address.label,
+            addressAddress: address.address,
+            addressStreet: address.street,
+            addressLandmark: address.landmark,
+            date: bookingDate,
+            timeSlotId,
+            bedrooms,
+            bathrooms,
+            hasPets: hasPets || false,
+            // Office-specific fields
+            squareFeet,
+            floors,
+            rooms,
+            toilets,
+            // Pricing
+            totalPrice: basePrice,
+            finalPrice,
+            discountAmount,
+            promoCodeId,
+            estimatedPrice, // For office bookings, stores the initial estimate
+            paymentMethod,
+            paymentStatus: PaymentStatus.PAID,
+            specialInstructions,
           },
-        },
-      },
-    });
+          include: {
+            address: true,
+            timeSlot: true,
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phoneNumber: true,
+                email: true,
+              },
+            },
+          },
+        });
+        break; // Success - exit loop
+      } catch (error: any) {
+        // Check if it's a unique constraint violation on bookingNumber (Prisma error P2002)
+        if (error.code === 'P2002' && error.meta?.target?.includes('bookingNumber')) {
+          attempts++;
+          this.logger.warn(`Booking number collision, retrying (${attempts}/${maxAttempts})`);
+          continue;
+        }
+        throw error; // Re-throw other errors
+      }
+    }
+
+    if (!booking) {
+      throw new BadRequestException('Failed to generate unique booking number. Please try again.');
+    }
 
     // If promo code was used, increment usage count and create usage record
     if (promoCodeId) {

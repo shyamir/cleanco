@@ -31,7 +31,7 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyCExFwNPZx7589yT31YLEFOidnQsDgXkvg";
 const SaveAddress = () => {
   const { theme, mode } = useTheme();
   const router = useRouter();
-  const { selected, setSelected } = useAddress();
+  const { selected, setSelected, savedAddresses, addAddressToCache, updateAddressInCache } = useAddress();
   const { setAddressId } = useBooking();
 
   // --- State ---
@@ -86,72 +86,72 @@ const SaveAddress = () => {
     loadZones();
   }, [editId]);
 
-  // Load existing address for editing (wait for zones to be loaded first)
+  // Load existing address for editing (use local cache, wait for zones to be loaded first)
   useEffect(() => {
-    const loadExistingAddress = async () => {
-      if (!editId) {
-        // Set label from param if creating new address
-        if (labelParam) {
-          setLabel(labelParam);
-        }
-        return;
+    if (!editId) {
+      // Set label from param if creating new address
+      if (labelParam) {
+        setLabel(labelParam);
       }
+      return;
+    }
 
-      // Wait for zones to be loaded before loading address
-      if (zones.length === 0) {
-        return;
+    // Wait for zones to be loaded before loading address
+    if (zones.length === 0) {
+      return;
+    }
+
+    // Find address in local cache
+    const address = savedAddresses.find(a => a.id === editId);
+    if (!address) {
+      console.error("Address not found in local cache:", editId);
+      Alert.alert("Error", "Address not found");
+      return;
+    }
+
+    // Pre-populate form fields from cached address
+    setAddressLine(address.address || "");
+    setStreet(address.street || "");
+    setLandmark(address.landmark || "");
+    if (address.zone?.name) {
+      setSelectedZone(address.zone.name);
+    } else if (address.zoneId) {
+      // Fallback: find zone by ID if name not included
+      const zone = zones.find(z => z.id === address.zoneId);
+      if (zone) {
+        setSelectedZone(zone.name);
       }
-
-      setIsLoadingAddress(true);
-      try {
-        const address = await addressApi.getAddress(editId);
-        // Pre-populate form fields
-        setAddressLine(address.address || "");
-        setStreet(address.street || "");
-        setLandmark(address.landmark || "");
-        if (address.zone?.name) {
-          setSelectedZone(address.zone.name);
-        } else if (address.zoneId) {
-          // Fallback: find zone by ID if name not included
-          const zone = zones.find(z => z.id === address.zoneId);
-          if (zone) {
-            setSelectedZone(zone.name);
-          }
-        }
-        if (address.label) {
-          if (["Home", "Work"].includes(address.label)) {
-            setLabel(address.label);
-          } else {
-            setLabel("Other");
-            setCustomLabel(address.label);
-          }
-        }
-        // Set coordinates if available
-        if (address.latitude && address.longitude) {
-          setCoords({ latitude: address.latitude, longitude: address.longitude });
-          setCurrentMapLabel(address.label || "Address");
-          const displayAddress = [address.address, address.street, address.landmark]
-            .filter(Boolean)
-            .join(", ");
-          setCurrentMapAddress(displayAddress);
-        }
-      } catch (error) {
-        console.error("Failed to load address:", error);
-        Alert.alert("Error", "Failed to load address details");
-      } finally {
-        setIsLoadingAddress(false);
+    }
+    if (address.label) {
+      if (["Home", "Work"].includes(address.label)) {
+        setLabel(address.label);
+      } else {
+        setLabel("Other");
+        setCustomLabel(address.label);
       }
-    };
+    }
+    // Set coordinates if available
+    if (address.latitude && address.longitude) {
+      setCoords({ latitude: address.latitude, longitude: address.longitude });
+      setCurrentMapLabel(address.label || "Address");
+      const displayAddress = [address.address, address.street, address.landmark]
+        .filter(Boolean)
+        .join(", ");
+      setCurrentMapAddress(displayAddress);
+    }
+  }, [editId, labelParam, zones, savedAddresses]);
 
-    loadExistingAddress();
-  }, [editId, labelParam, zones]);
+  // Check if custom label is a reserved label (Home/Work)
+  const isReservedLabel = label === "Other" &&
+    ["home", "work"].includes(customLabel.trim().toLowerCase());
 
   // Check if all required fields are filled
   const isFormValid = Boolean(
     addressLine.trim() &&
     street.trim() &&
     landmark.trim() &&
-    selectedZone
+    selectedZone &&
+    !isReservedLabel
   );
 
   // Get zone ID from selected zone name
@@ -216,6 +216,13 @@ const SaveAddress = () => {
       const savedAddress = editId
         ? await addressApi.updateAddress(editId, request)
         : await addressApi.createAddress(request);
+
+      // Update local cache
+      if (editId) {
+        await updateAddressInCache(savedAddress);
+      } else {
+        await addAddressToCache(savedAddress);
+      }
 
       // Build display address from separate fields
       const displayAddress = [savedAddress.address, savedAddress.street, savedAddress.landmark]
@@ -536,43 +543,58 @@ const SaveAddress = () => {
                 onSelect={setSelectedZone}
               />
 
-              <View
-                style={[
-                  styles.labelGroup,
-                  {
-                    borderColor: theme.colors.system.border.default,
-                    backgroundColor: theme.colors.system.background.default,
-                  },
-                ]}
-              >
-                <ToggleGroup
-                  options={["Home", "Work", "Other"]}
-                  initialValue={label}
-                  onChange={(value) => setLabel(value)}
-                  optionIcons={{
-                    Home: (
-                      <Icon.home color={theme.colors.system.body.default} />
-                    ),
-                    Work: (
-                      <Icon.briefcase
-                        color={theme.colors.system.body.default}
-                      />
-                    ),
-                    Other: (
-                      <Icon.pin color={theme.colors.system.body.default} />
-                    ),
-                  }}
-                />
-
-                {label === "Other" && (
-                  <TextField
-                    label="Address label"
-                    placeholder="e.g. Mom's Place"
-                    value={customLabel}
-                    onChangeText={setCustomLabel}
+              {/* Hide label selection when editing Home/Work from account page */}
+              {!(source === "account" && (labelParam === "Home" || labelParam === "Work")) && (
+                <View
+                  style={[
+                    styles.labelGroup,
+                    {
+                      borderColor: theme.colors.system.border.default,
+                      backgroundColor: theme.colors.system.background.default,
+                    },
+                  ]}
+                >
+                  <ToggleGroup
+                    options={["Home", "Work", "Other"]}
+                    initialValue={label}
+                    onChange={(value) => setLabel(value)}
+                    optionIcons={{
+                      Home: (
+                        <Icon.home color={theme.colors.system.body.default} />
+                      ),
+                      Work: (
+                        <Icon.briefcase
+                          color={theme.colors.system.body.default}
+                        />
+                      ),
+                      Other: (
+                        <Icon.pin color={theme.colors.system.body.default} />
+                      ),
+                    }}
                   />
-                )}
-              </View>
+
+                  {label === "Other" && (
+                    <>
+                      <TextField
+                        label="Address label"
+                        placeholder="e.g. Mom's Place"
+                        value={customLabel}
+                        onChangeText={setCustomLabel}
+                      />
+                      {isReservedLabel && (
+                        <Text
+                          style={[
+                            theme.typography.body.sm.regular,
+                            { color: theme.colors.button.label.error, marginTop: -8 },
+                          ]}
+                        >
+                          "Home" and "Work" are reserved. Please use the toggle above.
+                        </Text>
+                      )}
+                    </>
+                  )}
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>

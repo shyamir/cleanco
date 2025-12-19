@@ -31,7 +31,7 @@ export default function Home() {
   const router = useRouter();
   const { theme, mode, setMode } = useTheme();
   const { clearBookings } = useActivity();
-  const { savedAddresses, loadAddresses } = useAddress();
+  const { savedAddresses, loadAddresses, clearAddresses } = useAddress();
 
   // Load saved addresses on mount
   useEffect(() => {
@@ -193,6 +193,7 @@ export default function Home() {
         onSignOutPress={async () => {
           setSignOutVisible(false);
           clearBookings();
+          await clearAddresses();
           await authService.logout();
           router.replace("/login");
         }}

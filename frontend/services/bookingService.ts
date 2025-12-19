@@ -190,6 +190,8 @@ export interface CreateSubscriptionRequest {
   floors?: number;
   rooms?: number;
   toilets?: number;
+  specialInstructions?: string;
+  promoCode?: string;
 }
 
 export interface Address {

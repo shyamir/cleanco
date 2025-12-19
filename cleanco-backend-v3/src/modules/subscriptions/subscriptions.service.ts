@@ -36,6 +36,8 @@ export class SubscriptionsService {
       officeSize,
       floors,
       rooms,
+      squareFeet,
+      toilets,
     } = createSubscriptionDto;
 
     // Verify address belongs to user
@@ -85,6 +87,7 @@ export class SubscriptionsService {
     const startDate = startOfDay(addDays(new Date(), 1));
 
     // Create subscription with daySlots relation
+    // Subscription is ACTIVE for all types, but office bookings will be PENDING_INSPECTION
     const subscription = await this.prisma.subscription.create({
       data: {
         userId,
@@ -103,6 +106,8 @@ export class SubscriptionsService {
         officeSize,
         floors,
         rooms,
+        squareFeet,
+        toilets,
         monthlyPrice,
         nextBillingDate: startDate, // Temporary, will be updated
         startDate,
@@ -592,6 +597,12 @@ export class SubscriptionsService {
             paidBookingsCreated++;
           }
 
+          // Office subscriptions go to PENDING_INSPECTION, home subscriptions go to PENDING
+          const isOfficeBooking = subscription.serviceType === ServiceType.OFFICE;
+          const bookingStatus = isOfficeBooking
+            ? BookingStatus.PENDING_INSPECTION
+            : BookingStatus.PENDING;
+
           bookings.push({
             bookingNumber,
             userId: subscription.userId,
@@ -613,10 +624,14 @@ export class SubscriptionsService {
             officeSize: subscription.officeSize,
             floors: subscription.floors,
             rooms: subscription.rooms,
+            squareFeet: subscription.squareFeet,
+            toilets: subscription.toilets,
             subscriptionId: subscription.id,
-            status: BookingStatus.PENDING,
+            status: bookingStatus,
             paymentStatus: isPaidBooking ? PaymentStatus.PAID : PaymentStatus.PENDING,
             adminApproved: false,
+            // Store estimated price for office bookings
+            estimatedPrice: isOfficeBooking ? subscriptionPrice : undefined,
           });
         }
       }

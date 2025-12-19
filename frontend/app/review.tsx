@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,17 +7,15 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/theme/ThemeProvider";
 import GradientText from "../components/gradientText";
-import {
-  useNavigation,
-  usePathname,
-  useRouter,
-} from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import Button from "../components/button";
 import { Icon } from "@/constants/icon";
 import InfoRow from "../components/infoRow";
@@ -26,7 +24,15 @@ import { useAddress } from "../context/address-context";
 import { useBooking } from "@/context/booking-context";
 import useCleaningBooking from "./hooks/useCleaningBooking";
 import { promoApi } from "@/services/promoService";
-import { bookingApi, ServiceType, mapFrequencyToBackend } from "@/services/bookingService";
+import {
+  bookingApi,
+  ServiceType,
+  BookingType,
+  PaymentMethod,
+  mapFrequencyToBackend,
+  CreateBookingRequest,
+  CreateSubscriptionRequest,
+} from "@/services/bookingService";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 
@@ -64,6 +70,10 @@ const Review = () => {
     toilets,
     isEstimate,
     setIsEstimate,
+    // Fields needed for booking creation
+    addressId,
+    timeSlotId,
+    daySlots,
   } = useBooking();
   const { bedrooms, bathrooms, total: homeCleaningTotal, slots } = useCleaningBooking();
 
@@ -74,52 +84,56 @@ const Review = () => {
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [officeTotal, setOfficeTotal] = useState<number | null>(null);
+  // State for submitting office quote
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Use correct total based on service type
   // For office: use local officeTotal state (not affected by useCleaningBooking)
   // For home: use homeCleaningTotal from useCleaningBooking hook
   const total = isOfficeBooking ? (officeTotal ?? 0) : homeCleaningTotal;
 
-  // Fetch office quote on mount
-  useEffect(() => {
-    const fetchOfficeQuote = async () => {
+  // Fetch office quote only when review page is focused (prevents fetching when screen is in background)
+  useFocusEffect(
+    useCallback(() => {
       if (!isOfficeBooking) return;
 
-      setIsLoadingQuote(true);
-      setQuoteError(null);
+      const fetchOfficeQuote = async () => {
+        setIsLoadingQuote(true);
+        setQuoteError(null);
 
-      try {
-        const { subscriptionFrequency } = mapFrequencyToBackend(frequency);
-        const response = await bookingApi.calculateQuote({
-          serviceType: ServiceType.OFFICE,
-          squareFeet,
-          rooms,
-          toilets,
-          frequency: subscriptionFrequency,
-          promoCode: promoCode || undefined,
-        });
+        try {
+          const { subscriptionFrequency } = mapFrequencyToBackend(frequency);
+          const response = await bookingApi.calculateQuote({
+            serviceType: ServiceType.OFFICE,
+            squareFeet,
+            rooms,
+            toilets,
+            frequency: subscriptionFrequency,
+            promoCode: promoCode || undefined,
+          });
 
-        // Use local state for office total to avoid useCleaningBooking overwriting it
-        setOfficeTotal(response.pricing.finalPrice);
-        // Also update booking context for payment flow
-        setTotal(response.pricing.finalPrice);
-        setIsEstimate(response.isEstimate ?? true);
+          // Use local state for office total to avoid useCleaningBooking overwriting it
+          setOfficeTotal(response.pricing.finalPrice);
+          // Also update booking context for payment flow
+          setTotal(response.pricing.finalPrice);
+          setIsEstimate(response.isEstimate ?? true);
 
-        // Store original total for promo calculations
-        if (response.pricing.discount > 0) {
-          setOriginalTotal(response.pricing.basePrice);
-          setPromoDiscount(response.pricing.discount);
+          // Store original total for promo calculations
+          if (response.pricing.discount > 0) {
+            setOriginalTotal(response.pricing.basePrice);
+            setPromoDiscount(response.pricing.discount);
+          }
+        } catch (error: any) {
+          console.error("Failed to fetch office quote:", error);
+          setQuoteError("Failed to calculate quote. Please try again.");
+        } finally {
+          setIsLoadingQuote(false);
         }
-      } catch (error: any) {
-        console.error("Failed to fetch office quote:", error);
-        setQuoteError("Failed to calculate quote. Please try again.");
-      } finally {
-        setIsLoadingQuote(false);
-      }
-    };
+      };
 
-    fetchOfficeQuote();
-  }, [isOfficeBooking, squareFeet, rooms, toilets, frequency]);
+      fetchOfficeQuote();
+    }, [isOfficeBooking, squareFeet, rooms, toilets, frequency])
+  );
 
   // Local state for promo validation
   const [promoError, setPromoError] = useState<string | null>(null);
@@ -135,6 +149,7 @@ const Review = () => {
   }, [promoCode, total, hasAutoValidated]);
 
   const handleApplyPromo = async (code: string) => {
+    setHasAutoValidated(true); // Prevent auto-validate effect from running
     setIsValidatingPromo(true);
     setPromoError(null);
 
@@ -156,7 +171,12 @@ const Review = () => {
         }
 
         // Update total with discount
-        setTotal(Math.max(0, basePrice - result.discount));
+        const newTotal = Math.max(0, basePrice - result.discount);
+        setTotal(newTotal);
+        // Also update local office total for display
+        if (isOfficeBooking) {
+          setOfficeTotal(newTotal);
+        }
       } else {
         setPromoError(result.message || "Invalid promo code");
         // Clear promo state if validation fails
@@ -182,7 +202,83 @@ const Review = () => {
     setPromoError(null);
     if (originalTotal > 0) {
       setTotal(originalTotal);
+      // Also restore local office total for display
+      if (isOfficeBooking) {
+        setOfficeTotal(originalTotal);
+      }
       setOriginalTotal(0);
+    }
+  };
+
+  // Submit office quote - creates booking with PENDING_INSPECTION status
+  const handleSubmitQuote = async () => {
+    // Validate required fields
+    if (!addressId) {
+      Alert.alert("Error", "Please select an address before submitting.");
+      return;
+    }
+
+    const { isSubscription, subscriptionFrequency } = mapFrequencyToBackend(frequency);
+
+    // For subscriptions, check daySlots; for one-time bookings, check timeSlotId
+    if (isSubscription && daySlots.length === 0) {
+      Alert.alert("Error", "Please select days and time slots before submitting.");
+      return;
+    }
+    if (!isSubscription && !timeSlotId) {
+      Alert.alert("Error", "Please select a time slot before submitting.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (isSubscription && subscriptionFrequency) {
+        // Create a subscription for office cleaning
+        const subscriptionRequest: CreateSubscriptionRequest = {
+          serviceType: ServiceType.OFFICE,
+          frequency: subscriptionFrequency,
+          addressId,
+          daySlots: daySlots.length > 0 ? daySlots : [{ day: 1, timeSlotId: timeSlotId! }],
+          squareFeet,
+          rooms,
+          toilets,
+          hasPets: pet !== "None",
+          specialInstructions: instructions || undefined,
+          promoCode: promoCode || undefined,
+        };
+
+        await bookingApi.createSubscription(subscriptionRequest);
+      } else {
+        // Create a one-time office booking
+        const bookingRequest: CreateBookingRequest = {
+          serviceType: ServiceType.OFFICE,
+          bookingType: BookingType.ONE_TIME,
+          addressId,
+          date: startDate || new Date().toISOString().split("T")[0],
+          timeSlotId: timeSlotId!,
+          squareFeet,
+          rooms,
+          toilets,
+          hasPets: pet !== "None",
+          paymentMethod: PaymentMethod.BANK_TRANSFER, // Placeholder - payment after inspection
+          specialInstructions: instructions || undefined,
+          promoCode: promoCode || undefined,
+        };
+
+        await bookingApi.createBooking(bookingRequest);
+      }
+
+      // Navigate to confirmation page
+      router.push("/confirmation");
+    } catch (error: any) {
+      console.error("Failed to submit quote:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to submit quote. Please try again.";
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -473,12 +569,20 @@ const Review = () => {
           {/* Button */}
           <View style={styles.buttonWrapper}>
             <Button
-              label="Confirm & Pay"
+              label={
+                isSubmitting
+                  ? "Submitting..."
+                  : isOfficeBooking
+                  ? "Submit Quote"
+                  : "Confirm & Pay"
+              }
               variant="filled"
-              disabled={isLoadingQuote || !!quoteError}
-              onPress={() => {
-                router.push("/payment");
-              }}
+              disabled={isLoadingQuote || !!quoteError || isSubmitting}
+              onPress={
+                isOfficeBooking
+                  ? handleSubmitQuote
+                  : () => router.push("/payment")
+              }
             />
           </View>
         </View>

@@ -88,7 +88,7 @@ export class CreateSubscriptionDto {
   })
   @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   officeSize?: string;
 
   @ApiPropertyOptional({ description: 'Number of floors (for OFFICE service)', example: 2 })
@@ -104,4 +104,18 @@ export class CreateSubscriptionDto {
   @Min(1)
   @IsOptional()
   rooms?: number;
+
+  @ApiPropertyOptional({ description: 'Square footage (for OFFICE service)', example: 500 })
+  @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
+  @IsInt()
+  @Min(100)
+  @IsOptional()
+  squareFeet?: number;
+
+  @ApiPropertyOptional({ description: 'Number of toilets (for OFFICE service)', example: 2 })
+  @ValidateIf((o) => o.serviceType === ServiceType.OFFICE)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  toilets?: number;
 }

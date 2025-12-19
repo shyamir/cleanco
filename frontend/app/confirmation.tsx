@@ -26,9 +26,12 @@ const Confirmation = ({}) => {
   const router = useRouter();
 
   const { selected, clearSelected } = useAddress();
-  const { service, schedule, frequency, startDate, resetBooking } = useBooking();
+  const { service, schedule, frequency, startDate, resetBooking, isEstimate } = useBooking();
   const { refreshBookings } = useActivity();
   const { refreshHomeData } = useHomeData();
+
+  // Determine if this was an office booking
+  const isOfficeBooking = service === "Office Cleaning";
 
   // Refresh activity bookings and home data when confirmation page mounts (booking just created)
   useEffect(() => {
@@ -77,7 +80,7 @@ const Confirmation = ({}) => {
         {/* Header */}
         <View style={styles.header}>
           <GradientText
-            text="Booking"
+            text={isOfficeBooking ? "Quote" : "Booking"}
             colors={theme.colors.system.heading.secondary}
             variant={theme.typography.heading.sm}
           />
@@ -89,7 +92,7 @@ const Confirmation = ({}) => {
               } as any,
             ]}
           >
-            Confirmed!
+            {isOfficeBooking ? "Submitted!" : "Confirmed!"}
           </Text>
         </View>
 
@@ -110,7 +113,9 @@ const Confirmation = ({}) => {
                   } as any,
                 ]}
               >
-                Thank you for your booking!
+                {isOfficeBooking
+                  ? "Thank you for your quote request!"
+                  : "Thank you for your booking!"}
               </Text>
               <Text
                 style={[
@@ -120,8 +125,9 @@ const Confirmation = ({}) => {
                   } as any,
                 ]}
               >
-                Booking confirmation has been sent to your registered phone
-                number
+                {isOfficeBooking
+                  ? "We will contact you to schedule an inspection. The final price will be confirmed after the inspection."
+                  : "Booking confirmation has been sent to your registered phone number"}
               </Text>
             </View>
             <View style={styles.content}>
@@ -176,7 +182,7 @@ const Confirmation = ({}) => {
         {/* Footer / Buttons */}
         <View style={styles.buttonRow}>
           <Button
-            label="View Booking"
+            label={isOfficeBooking ? "View Quote" : "View Booking"}
             variant="outline"
             onPress={handleViewBooking}
           />

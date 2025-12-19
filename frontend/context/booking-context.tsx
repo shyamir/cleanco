@@ -118,7 +118,8 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     setDaySlots([]);
     setPaymentMethod(PaymentMethod.BANK_TRANSFER);
     setIsLoadingPrice(false);
-    setPromoCode(null);
+    // Note: Don't reset promoCode - user may have applied it from home carousel before starting booking
+    // Promo will be validated on review page. Reset discount values so they get recalculated.
     setPromoDiscount(0);
     setPromoDiscountType(null);
     setPromoDiscountValue(0);
