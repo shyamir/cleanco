@@ -2,8 +2,13 @@ import React, { useEffect, useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 type DatePickerCardProps = {
   label?: string;
@@ -20,18 +25,22 @@ const getNextValidDate = (date: dayjs.Dayjs): dayjs.Dayjs => {
   return date;
 };
 
+// Get current date in Maldives timezone
+const getMaldivesNow = () => dayjs().tz("Indian/Maldives");
+
 const DatePickerCard: React.FC<DatePickerCardProps> = ({
   label,
   onDateChange,
   initialDate,
 }) => {
   const {theme} = useTheme();
-  // Default to tomorrow (no same-day bookings allowed), skip Friday
-  const tomorrow = getNextValidDate(dayjs().add(1, 'day'));
+  // Default to tomorrow in Maldives time (no same-day bookings allowed), skip Friday
+  const maldivesToday = getMaldivesNow();
+  const tomorrow = getNextValidDate(maldivesToday.add(1, 'day'));
   const tomorrowStr = tomorrow.format("YYYY-MM-DD");
-  // If initialDate is today or earlier, or is a Friday, use next valid date
+  // If initialDate is today or earlier (in Maldives time), or is a Friday, use next valid date
   const getDefaultDate = () => {
-    if (initialDate && dayjs(initialDate).isAfter(dayjs(), 'day')) {
+    if (initialDate && dayjs(initialDate).isAfter(maldivesToday, 'day')) {
       // Skip if it's a Friday
       return getNextValidDate(dayjs(initialDate)).format("YYYY-MM-DD");
     }
