@@ -243,7 +243,8 @@ export class BookingsService {
             promoCodeId,
             estimatedPrice, // For office bookings, stores the initial estimate
             paymentMethod,
-            paymentStatus: PaymentStatus.PAID,
+            // Office bookings start as PENDING (awaiting inspection/quote confirmation)
+            paymentStatus: isOfficeBooking ? PaymentStatus.PENDING : PaymentStatus.PAID,
             specialInstructions,
           },
           include: {
@@ -349,7 +350,10 @@ export class BookingsService {
         address: true,
         timeSlot: true,
       },
-      orderBy: { date: 'asc' },
+      orderBy: [
+        { date: 'asc' },
+        { timeSlot: { orderIndex: 'asc' } },
+      ],
     });
 
     return upcomingBooking;
@@ -378,7 +382,10 @@ export class BookingsService {
         address: true,
         timeSlot: true,
       },
-      orderBy: { date: 'asc' },
+      orderBy: [
+        { date: 'asc' },
+        { timeSlot: { orderIndex: 'asc' } },
+      ],
     });
   }
 
@@ -401,6 +408,24 @@ export class BookingsService {
         timeSlot: true,
       },
       orderBy: { date: 'desc' },
+    });
+  }
+
+  /**
+   * Get user's quotes (pending inspection bookings)
+   * These are office bookings awaiting price confirmation
+   */
+  async getQuotes(userId: string) {
+    return this.prisma.booking.findMany({
+      where: {
+        userId,
+        status: 'PENDING_INSPECTION',
+      },
+      include: {
+        address: true,
+        timeSlot: true,
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

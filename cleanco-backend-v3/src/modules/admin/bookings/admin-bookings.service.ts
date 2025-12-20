@@ -7,7 +7,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AdminBookingsQueryDto } from './dto/admin-bookings-query.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { ConfirmInspectionDto } from './dto/confirm-inspection.dto';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, PaymentStatus } from '@prisma/client';
 import { DateUtils } from '../../../common/utils/date.utils';
 
 @Injectable()
@@ -290,10 +290,13 @@ export class AdminBookingsService {
     const finalPrice = confirmedPrice - discountAmount;
 
     // Update booking with confirmed price
+    // Set status to ASSIGNED since cleaners are already assigned during booking creation
+    // Also set paymentStatus to PAID so it appears in activity
     const updatedBooking = await this.prisma.booking.update({
       where: { id: bookingId },
       data: {
-        status: BookingStatus.CONFIRMED,
+        status: BookingStatus.ASSIGNED,
+        paymentStatus: PaymentStatus.PAID,
         confirmedPrice,
         totalPrice: confirmedPrice,
         finalPrice: Math.max(0, finalPrice),

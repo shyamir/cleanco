@@ -11,9 +11,10 @@ dayjs.extend(utc);
 
 type HistoryRowProps = {
   booking: ActivityBooking;
+  hideRebook?: boolean;
 };
 
-export default function HistoryRow({ booking }: HistoryRowProps) {
+export default function HistoryRow({ booking, hideRebook = false }: HistoryRowProps) {
   const { theme } = useTheme();
   const router = useRouter();
 
@@ -105,7 +106,7 @@ export default function HistoryRow({ booking }: HistoryRowProps) {
           </View>
         </View>
 
-        {!isCancelled && (
+        {!isCancelled && !hideRebook && (
           <Button
             variant="outline"
             label="Rebook"

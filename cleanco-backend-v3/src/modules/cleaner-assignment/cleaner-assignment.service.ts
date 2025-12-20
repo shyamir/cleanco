@@ -54,11 +54,14 @@ export class CleanerAssignmentService {
     // Assign cleaners to booking
     await this.assignCleanersToBooking(bookingId, availableCleaners);
 
-    // Update booking status to ASSIGNED
-    await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: 'ASSIGNED' },
-    });
+    // Only update status to ASSIGNED if not pending inspection
+    // Office bookings stay in PENDING_INSPECTION until admin confirms price
+    if (booking.status !== 'PENDING_INSPECTION') {
+      await this.prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: 'ASSIGNED' },
+      });
+    }
 
     this.logger.log(
       `Successfully assigned ${availableCleaners.length} cleaner(s) to booking ${booking.bookingNumber}`,
@@ -231,11 +234,14 @@ export class CleanerAssignmentService {
       cleaners.map((c) => ({ id: c.id, userId: c.userId })),
     );
 
-    // Update booking status to ASSIGNED
-    await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: 'ASSIGNED' },
-    });
+    // Only update status to ASSIGNED if not pending inspection
+    // Office bookings stay in PENDING_INSPECTION until admin confirms price
+    if (booking.status !== 'PENDING_INSPECTION') {
+      await this.prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: 'ASSIGNED' },
+      });
+    }
 
     this.logger.log(
       `Manually assigned ${cleaners.length} cleaner(s) to booking ${booking.bookingNumber}`,

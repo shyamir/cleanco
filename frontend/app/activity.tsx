@@ -27,8 +27,10 @@ dayjs.extend(utc);
 export default function Activity() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { upcomingBookings, isLoading, isRefreshing, refreshBookings } =
+  const { upcomingBookings, quotes, isLoading, isRefreshing, refreshBookings } =
     useActivity();
+
+  const quotesCount = quotes.length;
 
   // Check if booking is today or tomorrow
   const isTodayOrTomorrow = (dateStr: string): boolean => {
@@ -78,12 +80,27 @@ export default function Activity() {
             >
               Activity
             </Text>
-            <TouchableOpacity
-              style={styles.historyIcon}
-              onPress={() => router.push("/history")}
-            >
-              <Icon.history color={theme.colors.system.body.default} />
-            </TouchableOpacity>
+            <View style={styles.headerIcons}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => router.push("/quotes")}
+              >
+                <Icon.bill color={theme.colors.system.body.default} />
+                {quotesCount > 0 && (
+                  <View style={[styles.badge, { backgroundColor: theme.colors.pill.background.warning }]}>
+                    <Text style={[styles.badgeText, { color: theme.colors.pill.label.warning }]}>
+                      {quotesCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => router.push("/history")}
+              >
+                <Icon.history color={theme.colors.system.body.default} />
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={styles.loadingContainer}>
             <ActivityIndicator
@@ -116,12 +133,27 @@ export default function Activity() {
           >
             Activity
           </Text>
-          <TouchableOpacity
-            style={styles.historyIcon}
-            onPress={() => router.push("/history")}
-          >
-            <Icon.history color={theme.colors.system.body.default} />
-          </TouchableOpacity>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push("/quotes")}
+            >
+              <Icon.bill color={theme.colors.system.body.default} />
+              {quotesCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: theme.colors.pill.background.warning }]}>
+                  <Text style={[styles.badgeText, { color: theme.colors.pill.label.warning }]}>
+                    {quotesCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push("/history")}
+            >
+              <Icon.history color={theme.colors.system.body.default} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {!hasUpcoming ? (
@@ -206,13 +238,6 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 16,
   },
-  historyIcon: {
-    width: 48,
-    height: 48,
-    alignContent: "center",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   header: {
     justifyContent: "space-between",
     flexDirection: "row",
@@ -220,6 +245,33 @@ const styles = StyleSheet.create({
     height: 48,
     alignContent: "center",
     alignItems: "center",
+  },
+  headerIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  badge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   body: { flexDirection: "column", gap: 0 },
   scrollContainer: { flexGrow: 1, paddingBottom: 80, gap: 8 },

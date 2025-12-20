@@ -64,6 +64,14 @@ export class BookingsController {
     return this.bookingsService.getHistoryBookings(user.userId);
   }
 
+  @Get('quotes')
+  @ApiOperation({ summary: 'Get pending inspection bookings (quotes)' })
+  @ApiResponse({ status: 200, description: 'List of quotes awaiting price confirmation' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getQuotes(@CurrentUser() user: CurrentUserPayload) {
+    return this.bookingsService.getQuotes(user.userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get booking details by ID' })
   @ApiResponse({ status: 200, description: 'Booking details' })

@@ -6,8 +6,10 @@ import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 
 dayjs.extend(utc);
+dayjs.extend(timezone);
 
 type UpcomingServiceCardProps = {
   serviceType: "home" | "office";
@@ -40,16 +42,18 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
   };
 
   const getRelativeDateLabel = () => {
-    const bookingDate = dayjs.utc(date);
-    const today = dayjs().startOf("day");
-    const tomorrow = today.add(1, "day");
+    // Compare date strings in Maldives timezone
+    const bookingDateStr = dayjs.utc(date).format("YYYY-MM-DD");
+    const maldivesNow = dayjs().tz("Indian/Maldives");
+    const todayStr = maldivesNow.format("YYYY-MM-DD");
+    const tomorrowStr = maldivesNow.add(1, "day").format("YYYY-MM-DD");
 
-    if (bookingDate.isSame(today, "day")) {
+    if (bookingDateStr === todayStr) {
       return "Today";
-    } else if (bookingDate.isSame(tomorrow, "day")) {
+    } else if (bookingDateStr === tomorrowStr) {
       return "Tomorrow";
     } else {
-      return bookingDate.format("dddd"); // Day name like "Wednesday"
+      return dayjs.utc(date).format("dddd"); // Day name like "Wednesday"
     }
   };
 

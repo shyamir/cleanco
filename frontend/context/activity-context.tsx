@@ -14,6 +14,7 @@ import { bookingApi, ActivityBooking } from "@/services/bookingService";
 type ActivityContextType = {
   upcomingBookings: ActivityBooking[];
   historyBookings: ActivityBooking[];
+  quotes: ActivityBooking[];
   isLoading: boolean;
   isRefreshing: boolean;
   refreshBookings: () => Promise<void>;
@@ -29,6 +30,7 @@ export const ActivityProvider = ({ children }: { children: ReactNode }) => {
     []
   );
   const [historyBookings, setHistoryBookings] = useState<ActivityBooking[]>([]);
+  const [quotes, setQuotes] = useState<ActivityBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const appState = useRef(AppState.currentState);
@@ -49,13 +51,15 @@ export const ActivityProvider = ({ children }: { children: ReactNode }) => {
         setIsRefreshing(true);
       }
 
-      const [activity, history] = await Promise.all([
+      const [activity, history, quotesData] = await Promise.all([
         bookingApi.getActivityBookings(),
         bookingApi.getHistoryBookings(),
+        bookingApi.getQuotes(),
       ]);
 
       setUpcomingBookings(activity);
       setHistoryBookings(history);
+      setQuotes(quotesData);
     } catch (error: any) {
       // Only log non-401 errors (401 means not authenticated)
       if (error.response?.status !== 401) {
@@ -71,6 +75,7 @@ export const ActivityProvider = ({ children }: { children: ReactNode }) => {
   const clearBookings = useCallback(() => {
     setUpcomingBookings([]);
     setHistoryBookings([]);
+    setQuotes([]);
     setIsLoading(true);
     hasLoadedRef.current = false;
   }, []);
@@ -116,6 +121,7 @@ export const ActivityProvider = ({ children }: { children: ReactNode }) => {
       value={{
         upcomingBookings,
         historyBookings,
+        quotes,
         isLoading,
         isRefreshing,
         refreshBookings,

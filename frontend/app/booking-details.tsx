@@ -27,10 +27,11 @@ dayjs.extend(utc);
 
 // Map backend status to frontend status pill
 // Also considers booking date - past bookings that aren't CANCELED show as completed
+// PENDING_INSPECTION status shows as "quote"
 const mapStatus = (
   backendStatus: string,
   bookingDate: string
-): "upcoming" | "completed" | "cancelled" | "pending" => {
+): "upcoming" | "completed" | "cancelled" | "pending" | "quote" => {
   // Cancelled bookings always show as cancelled
   if (backendStatus === "CANCELED") {
     return "cancelled";
@@ -50,8 +51,9 @@ const mapStatus = (
   // Future bookings show based on status
   switch (backendStatus) {
     case "PENDING":
-    case "PENDING_INSPECTION":
       return "pending";
+    case "PENDING_INSPECTION":
+      return "quote";
     case "CONFIRMED":
     case "ASSIGNED":
     case "IN_PROGRESS":
@@ -193,7 +195,8 @@ export default function BookingDetailsScreen() {
       priceDisplay = `MVR ${booking.confirmedPrice}`;
       priceLabel = "Confirmed Price";
     } else if (booking.estimatedPrice !== null && booking.estimatedPrice !== undefined) {
-      priceDisplay = `MVR ${booking.estimatedPrice} (Est.)`;
+      // Use finalPrice for estimated display as it includes promo discount
+      priceDisplay = `MVR ${booking.finalPrice} (Est.)`;
       priceLabel = "Estimated Price";
     }
   }

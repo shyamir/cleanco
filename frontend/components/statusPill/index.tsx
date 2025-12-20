@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 
 type StatusPillProps = {
-  status: "upcoming" | "completed" | "cancelled" | "pending";
+  status: "upcoming" | "completed" | "cancelled" | "pending" | "quote";
 };
 
 const getStatusStyle = (theme: any, status: string) => {
@@ -25,6 +25,13 @@ const getStatusStyle = (theme: any, status: string) => {
       };
 
     case "pending":
+      return {
+        bg: theme.colors.pill.background.warning,
+        text: theme.colors.pill.label.warning,
+        border: theme.colors.pill.border.warning,
+      };
+
+    case "quote":
       return {
         bg: theme.colors.pill.background.warning,
         text: theme.colors.pill.label.warning,

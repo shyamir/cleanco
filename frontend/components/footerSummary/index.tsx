@@ -36,7 +36,7 @@ const FooterSummary: React.FC<FooterSummaryProps> = ({
 }) => {
   const {theme} = useTheme();
   const isOnce = frequency === "Once";
-  const hasDiscount = promoCode && promoDiscount && promoDiscount > 0 && originalTotal && originalTotal > 0;
+  const hasDiscount = !!(promoCode && promoDiscount && promoDiscount > 0 && originalTotal && originalTotal > 0);
 
   return (
     <View

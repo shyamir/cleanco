@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AvailableSlotsQueryDto } from './dto/available-slots-query.dto';
 import { SubscriptionAvailabilityQueryDto } from './dto/subscription-availability-query.dto';
-import { isBefore, addWeeks, setDay, format, getDay } from 'date-fns';
+import { isBefore, addWeeks, setDay, format } from 'date-fns';
 import { ServiceType } from '@prisma/client';
 import { DateUtils } from '../../common/utils/date.utils';
 
@@ -30,8 +30,8 @@ export class TimeSlotsService {
     }
 
     // Check if the date is a Friday (no bookings on Fridays)
-    // getDay returns 0-6 where 5 = Friday
-    if (getDay(requestedDate) === 5) {
+    // getDayOfWeekInMaldives returns 0-6 where 5 = Friday
+    if (DateUtils.getDayOfWeekInMaldives(requestedDate) === 5) {
       throw new BadRequestException('Bookings are not available on Fridays');
     }
 

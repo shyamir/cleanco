@@ -219,6 +219,7 @@ export interface UpcomingBooking {
   serviceType: ServiceType;
   bookingType: BookingType;
   status: string;
+  paymentStatus: string;
   date: string;
   totalPrice: number;
   finalPrice: number;
@@ -419,6 +420,15 @@ export const bookingApi = {
    */
   getHistoryBookings: async (): Promise<ActivityBooking[]> => {
     const response = await api.get('/bookings/history');
+    return response.data;
+  },
+
+  /**
+   * Get quotes (pending inspection bookings)
+   * These are office bookings awaiting price confirmation
+   */
+  getQuotes: async (): Promise<ActivityBooking[]> => {
+    const response = await api.get('/bookings/quotes');
     return response.data;
   },
 

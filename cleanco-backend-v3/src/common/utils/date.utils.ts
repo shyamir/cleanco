@@ -99,6 +99,15 @@ export class DateUtils {
     const maldivesDate = toZonedTime(date, MALDIVES_TIMEZONE);
     return startOfDay(maldivesDate);
   }
+
+  /**
+   * Get day of week in Maldives timezone (0=Sunday, 1=Monday, ..., 5=Friday, 6=Saturday)
+   * Use this instead of getDay() to ensure correct day calculation regardless of server timezone
+   */
+  static getDayOfWeekInMaldives(date: Date): number {
+    const maldivesDate = toZonedTime(date, MALDIVES_TIMEZONE);
+    return maldivesDate.getDay();
+  }
   /**
    * Add days to a date
    */
