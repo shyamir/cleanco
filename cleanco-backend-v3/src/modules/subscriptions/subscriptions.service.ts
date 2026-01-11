@@ -10,7 +10,7 @@ import { CleanerAssignmentService } from '../cleaner-assignment/cleaner-assignme
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { ServiceType, SubscriptionFrequency, SubscriptionStatus, BookingType, BookingStatus, PaymentStatus } from '@prisma/client';
-import { addMonths, addDays, addWeeks, getDay, setDay, differenceInWeeks } from 'date-fns';
+import { addMonths, addDays, addWeeks, differenceInWeeks } from 'date-fns';
 import { DateUtils } from '../../common/utils/date.utils';
 
 @Injectable()
@@ -31,6 +31,7 @@ export class SubscriptionsService {
       frequency,
       addressId,
       daySlots,
+      startDate: startDateStr,
       bedrooms,
       bathrooms,
       hasPets,
@@ -85,8 +86,22 @@ export class SubscriptionsService {
       rooms,
     );
 
-    // Set start date to tomorrow (in Maldives time)
-    const startDate = addDays(DateUtils.todayInMaldives(), 1);
+    // Determine start date: use provided date or default to tomorrow
+    let startDate: Date;
+    const today = DateUtils.todayInMaldives();
+
+    if (startDateStr) {
+      // Parse the provided start date as a Maldives date
+      startDate = DateUtils.parseDateAsMaldives(startDateStr);
+
+      // Validate the start date is not in the past
+      if (startDate < today) {
+        throw new BadRequestException('Start date cannot be in the past');
+      }
+    } else {
+      // Default to tomorrow for backward compatibility
+      startDate = addDays(today, 1);
+    }
 
     // Create subscription with daySlots relation
     // Subscription is ACTIVE for all types, but office bookings will be PENDING_INSPECTION
@@ -539,7 +554,8 @@ export class SubscriptionsService {
     weeksToGenerate: number,
   ) {
     const bookings = [];
-    const today = DateUtils.nowInMaldives();
+    // Get today's date string in Maldives timezone for date-only comparison
+    const todayStr = DateUtils.formatInMaldives(new Date(), 'yyyy-MM-dd');
 
     // Fetch address for snapshot
     const address = await this.prisma.address.findUnique({
@@ -577,20 +593,33 @@ export class SubscriptionsService {
     let bookingCounter = 0;
     let paidBookingsCreated = 0;
 
+    // Helper function to find first occurrence of a day of week on or after startDate
+    // This avoids timezone issues with setDay by using Maldives timezone
+    const findFirstOccurrence = (startDate: Date, targetDayOfWeek: number): Date => {
+      const startDayInMaldives = DateUtils.getDayOfWeekInMaldives(startDate);
+      let daysToAdd = targetDayOfWeek - startDayInMaldives;
+      if (daysToAdd < 0) {
+        daysToAdd += 7; // Move to next week if the day has passed this week
+      }
+      return addDays(startDate, daysToAdd);
+    };
+
     // Generate bookings for each week
     for (let week = 0; week < weeksToGenerate; week++) {
-      const weekStart = addWeeks(subscription.startDate, week);
-
       // Create booking for each selected day in this week
       for (const dayOfWeek of subscription.selectedDays) {
-        // Calculate the actual date for this day in this week
-        const bookingDate = setDay(weekStart, dayOfWeek, { weekStartsOn: 0 }); // 0 = Sunday
+        // Find the first occurrence of this day, then add weeks
+        const firstOccurrence = findFirstOccurrence(subscription.startDate, dayOfWeek);
+        const bookingDate = addWeeks(firstOccurrence, week);
 
         // Get the time slot for this day (from daySlots or fallback)
         const timeSlotId = dayToTimeSlot[dayOfWeek] || fallbackTimeSlotId;
 
-        // Only create bookings for future dates
-        if (bookingDate > today && timeSlotId) {
+        // Compare dates as strings in Maldives timezone to avoid time component issues
+        const bookingDateStr = DateUtils.formatInMaldives(bookingDate, 'yyyy-MM-dd');
+
+        // Only create bookings for today or future dates
+        if (bookingDateStr >= todayStr && timeSlotId) {
           const bookingNumber = `BK${Date.now()}${bookingCounter++}`;
 
           // First month's worth of bookings are PAID, rest are PENDING (placeholders)

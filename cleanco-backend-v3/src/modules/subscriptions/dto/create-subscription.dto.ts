@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   IsNotEmpty,
   IsUUID,
@@ -15,6 +15,7 @@ import {
   ArrayMaxSize,
   ValidateIf,
   ValidateNested,
+  IsDateString,
 } from 'class-validator';
 import { ServiceType, SubscriptionFrequency } from '@prisma/client';
 
@@ -59,6 +60,14 @@ export class CreateSubscriptionDto {
   @ValidateNested({ each: true })
   @Type(() => DaySlotDto)
   daySlots: DaySlotDto[];
+
+  @ApiPropertyOptional({
+    description: 'Start date for the subscription (YYYY-MM-DD format). Defaults to tomorrow if not provided.',
+    example: '2026-01-11',
+  })
+  @IsDateString()
+  @IsOptional()
+  startDate?: string;
 
   // Home cleaning specific fields
   @ApiPropertyOptional({ description: 'Number of bedrooms (for HOME service)', example: 3 })

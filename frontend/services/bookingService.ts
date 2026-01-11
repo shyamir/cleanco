@@ -181,6 +181,7 @@ export interface CreateSubscriptionRequest {
   frequency: SubscriptionFrequency;
   addressId: string;
   daySlots: DaySlot[]; // Array of day-timeslot pairs
+  startDate?: string; // Start date in YYYY-MM-DD format (defaults to tomorrow if not provided)
   // Home-specific fields
   bedrooms?: number;
   bathrooms?: number;

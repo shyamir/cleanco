@@ -21,6 +21,10 @@ import {
   SubscriptionFrequency,
   ServiceType,
 } from "@/services/bookingService";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -97,13 +101,7 @@ const formatDaySlots = (subscription: Subscription): string => {
 
 const formatDate = (dateString: string | undefined): string => {
   if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return dayjs.utc(dateString).format("MMM D, YYYY");
 };
 
 const getServiceTitle = (serviceType: ServiceType): string => {

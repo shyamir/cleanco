@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
 import { ActivityBooking, ServiceType } from "@/services/bookingService";
 
 dayjs.extend(utc);
+dayjs.extend(timezone);
 
 type ActivityCardProps = {
   booking: ActivityBooking;
@@ -26,16 +28,18 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
 
   // Get relative day label (Today, Tomorrow, or day name)
   const getRelativeDayLabel = () => {
-    const bookingDate = dayjs.utc(booking.date);
-    const today = dayjs().startOf("day");
-    const tomorrow = today.add(1, "day");
+    // Compare date strings in Maldives timezone
+    const bookingDateStr = dayjs.utc(booking.date).format("YYYY-MM-DD");
+    const maldivesNow = dayjs().tz("Indian/Maldives");
+    const todayStr = maldivesNow.format("YYYY-MM-DD");
+    const tomorrowStr = maldivesNow.add(1, "day").format("YYYY-MM-DD");
 
-    if (bookingDate.isSame(today, "day")) {
+    if (bookingDateStr === todayStr) {
       return "Today";
-    } else if (bookingDate.isSame(tomorrow, "day")) {
+    } else if (bookingDateStr === tomorrowStr) {
       return "Tomorrow";
     } else {
-      return bookingDate.format("dddd");
+      return dayjs.utc(booking.date).format("dddd");
     }
   };
 

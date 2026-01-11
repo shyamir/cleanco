@@ -87,6 +87,7 @@ const Payment = () => {
           frequency: subscriptionFrequency,
           addressId,
           daySlots: daySlots.length > 0 ? daySlots : [{ day: 1, timeSlotId: timeSlotId! }], // Fallback for backward compatibility
+          startDate: startDate || undefined, // Pass the user's selected start date
           bedrooms,
           bathrooms,
           hasPets: pet !== "None",
