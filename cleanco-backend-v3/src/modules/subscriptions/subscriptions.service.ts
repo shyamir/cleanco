@@ -55,11 +55,12 @@ export class SubscriptionsService {
 
     // Verify all time slots exist and are active
     const timeSlotIds = daySlots.map((ds) => ds.timeSlotId);
+    const uniqueTimeSlotIds = [...new Set(timeSlotIds)];
     const timeSlots = await this.prisma.timeSlot.findMany({
-      where: { id: { in: timeSlotIds } },
+      where: { id: { in: uniqueTimeSlotIds } },
     });
 
-    if (timeSlots.length !== timeSlotIds.length) {
+    if (timeSlots.length !== uniqueTimeSlotIds.length) {
       throw new NotFoundException('One or more time slots not found');
     }
 

@@ -301,7 +301,10 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
 
     // If time is being updated, also store the timeSlotId
     if (key === "time" && value) {
-      updated[index].timeSlotId = findTimeSlotId(value, index);
+      const foundId = findTimeSlotId(value, index);
+      console.log('DEBUG findTimeSlotId:', { displayTime: value, slotIndex: index, foundId });
+      console.log('DEBUG subscriptionSlots for index:', subscriptionSlots.get(index));
+      updated[index].timeSlotId = foundId;
     }
 
     setSlots(updated);
@@ -344,6 +347,8 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
           day: mapDayToNumber(s.day),
           timeSlotId: s.timeSlotId!,
         }));
+      console.log('DEBUG daySlotsPairs being set:', daySlotsPairs);
+      console.log('DEBUG all slots state:', updated);
       setDaySlots(daySlotsPairs);
     }
   };

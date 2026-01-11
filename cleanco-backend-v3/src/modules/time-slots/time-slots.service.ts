@@ -22,12 +22,15 @@ export class TimeSlotsService {
     // Parse the date string as Maldives time for consistent date handling
     const requestedDate = DateUtils.parseDateAsMaldives(dateString);
     const today = DateUtils.todayInMaldives();
-    const tomorrow = DateUtils.addDays(today, 1);
+    const now = DateUtils.nowInMaldives();
 
-    // Check if date is at least 1 day in advance (no same-day bookings)
-    if (isBefore(requestedDate, tomorrow)) {
-      throw new BadRequestException('Bookings must be made at least 1 day in advance');
+    // Check if date is in the past
+    if (isBefore(requestedDate, today)) {
+      throw new BadRequestException('Cannot book for past dates');
     }
+
+    // Check if this is a same-day booking
+    const isToday = format(requestedDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
 
     // Check if the date is a Friday (no bookings on Fridays)
     // getDayOfWeekInMaldives returns 0-6 where 5 = Friday
@@ -112,10 +115,32 @@ export class TimeSlotsService {
       }),
     );
 
+    // For same-day bookings, mark slots less than 6 hours from now as unavailable
+    let finalSlots = slotsWithAvailability;
+    if (isToday) {
+      // Get current time in Maldives timezone as hours and minutes
+      const currentTimeInMaldives = DateUtils.formatInMaldives(now, 'HH:mm');
+      const [currentHours, currentMinutes] = currentTimeInMaldives.split(':').map(Number);
+
+      // Calculate cutoff time in minutes since midnight (6 hours from now)
+      const cutoffMinutes = currentHours * 60 + currentMinutes + 6 * 60;
+
+      finalSlots = slotsWithAvailability.map((slot) => {
+        const [slotHours, slotMinutes] = slot.startTime.split(':').map(Number);
+        const slotTotalMinutes = slotHours * 60 + slotMinutes;
+        const isWithinMinimumNotice = slotTotalMinutes < cutoffMinutes;
+
+        return {
+          ...slot,
+          isAvailable: isWithinMinimumNotice ? false : slot.isAvailable,
+        };
+      });
+    }
+
     return {
       date: dateString,
       isBlackoutDate: false,
-      availableSlots: slotsWithAvailability,
+      availableSlots: finalSlots,
     };
   }
 
@@ -132,10 +157,11 @@ export class TimeSlotsService {
     // Parse start date as Maldives time for consistent date handling
     const startDate = DateUtils.parseDateAsMaldives(startDateString);
     const today = DateUtils.todayInMaldives();
-    const tomorrow = DateUtils.addDays(today, 1);
+    const now = DateUtils.nowInMaldives();
 
-    if (isBefore(startDate, tomorrow)) {
-      throw new BadRequestException('Subscription start date must be at least 1 day in advance');
+    // Check if date is in the past
+    if (isBefore(startDate, today)) {
+      throw new BadRequestException('Subscription start date cannot be in the past');
     }
 
     // Check if the selected day is Friday (no bookings on Fridays)
@@ -263,12 +289,49 @@ export class TimeSlotsService {
       }),
     );
 
+    // Check if the FIRST booking date for this day of week is today (for 6-hour minimum notice)
+    const firstBookingDate = datesToCheck[0];
+    const firstBookingDateIsToday = format(firstBookingDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+
+    // For same-day bookings, mark slots less than 6 hours from now as unavailable
+    let finalSlots = slotsWithAvailability;
+    if (firstBookingDateIsToday) {
+      // Get current time in Maldives timezone as hours and minutes
+      const currentTimeInMaldives = DateUtils.formatInMaldives(now, 'HH:mm');
+      const [currentHours, currentMinutes] = currentTimeInMaldives.split(':').map(Number);
+
+      // Calculate cutoff time in minutes since midnight (6 hours from now)
+      const cutoffMinutes = currentHours * 60 + currentMinutes + 6 * 60;
+
+      finalSlots = slotsWithAvailability.map((slot) => {
+        const [slotHours, slotMinutes] = slot.startTime.split(':').map(Number);
+        const slotTotalMinutes = slotHours * 60 + slotMinutes;
+        const isWithinMinimumNotice = slotTotalMinutes < cutoffMinutes;
+
+        if (isWithinMinimumNotice) {
+          // Add today to unavailable dates and mark as not available for 12 weeks
+          const firstDateStr = format(firstBookingDate, 'yyyy-MM-dd');
+          const updatedUnavailableDates = slot.unavailableDates
+            ? [...slot.unavailableDates, firstDateStr]
+            : [firstDateStr];
+
+          return {
+            ...slot,
+            isAvailableFor12Weeks: false,
+            unavailableDates: updatedUnavailableDates,
+          };
+        }
+
+        return slot;
+      });
+    }
+
     return {
       startDate: startDateString,
       dayOfWeek,
       datesToCheck: dateStrings,
       blackoutDatesFound: blackoutDateStrings,
-      availableSlots: slotsWithAvailability,
+      availableSlots: finalSlots,
     };
   }
 

@@ -34,17 +34,17 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
   initialDate,
 }) => {
   const {theme} = useTheme();
-  // Default to tomorrow in Maldives time (no same-day bookings allowed), skip Friday
+  // Allow same-day bookings (backend will filter unavailable time slots based on 6-hour minimum)
   const maldivesToday = getMaldivesNow();
-  const tomorrow = getNextValidDate(maldivesToday.add(1, 'day'));
-  const tomorrowStr = tomorrow.format("YYYY-MM-DD");
-  // If initialDate is today or earlier (in Maldives time), or is a Friday, use next valid date
+  const minDate = getNextValidDate(maldivesToday); // Today, or Saturday if today is Friday
+  const minDateStr = minDate.format("YYYY-MM-DD");
+  // If initialDate is before today (in Maldives time), or is a Friday, use next valid date
   const getDefaultDate = () => {
-    if (initialDate && dayjs(initialDate).isAfter(maldivesToday, 'day')) {
+    if (initialDate && !dayjs(initialDate).isBefore(maldivesToday, 'day')) {
       // Skip if it's a Friday
       return getNextValidDate(dayjs(initialDate)).format("YYYY-MM-DD");
     }
-    return tomorrowStr;
+    return minDateStr;
   };
   const [selectedDate, setSelectedDate] = useState(getDefaultDate());
   const [isOpen, setIsOpen] = useState(false);
@@ -133,7 +133,7 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
         <View style={styles.calendarWrapper}>
           <Calendar
             current={selectedDate}
-            minDate={tomorrowStr}
+            minDate={minDateStr}
             onDayPress={handleSelect}
             markedDates={{
               ...disabledFridays,
