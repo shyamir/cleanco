@@ -27,7 +27,7 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
   const { theme } = useTheme();
   const { setPaymentMethod } = useBooking();
 
-  const [expandedCard, setExpandedCard] = useState<PaymentOption>("bml");
+  const [expandedCard, setExpandedCard] = useState<PaymentOption>("bank");
 
   // Bank upload (for bank transfer)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -48,7 +48,7 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
 
   // Set initial payment method
   useEffect(() => {
-    setPaymentMethod(PaymentMethod.BML_GATEWAY);
+    setPaymentMethod(PaymentMethod.BANK_TRANSFER);
   }, []);
 
   const bankAccountNumber = "1234 5678 9087"; // Replace with your account number
@@ -116,6 +116,8 @@ const PaymentGroup: React.FC<PaymentGroupProps> = ({ onValidationChange }) => {
         icon={<Icon.card color={theme.colors.system.body.disabled} />}
         expanded={expandedCard === "bml"}
         onToggle={() => toggleCard("bml")}
+        disabled={true}
+        badge="Coming soon"
       >
         <View style={styles.bmlContainer}>
           <Text
