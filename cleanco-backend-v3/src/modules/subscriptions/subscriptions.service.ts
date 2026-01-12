@@ -4,9 +4,11 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CleanerAssignmentService } from '../cleaner-assignment/cleaner-assignment.service';
+import { BookingLockService, SlotReservation } from '../../common/services/booking-lock.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { ServiceType, SubscriptionFrequency, SubscriptionStatus, BookingType, BookingStatus, PaymentStatus } from '@prisma/client';
@@ -20,6 +22,7 @@ export class SubscriptionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cleanerAssignmentService: CleanerAssignmentService,
+    private readonly bookingLockService: BookingLockService,
   ) {}
 
   /**
@@ -392,25 +395,27 @@ export class SubscriptionsService {
 
     const today = DateUtils.todayInMaldives();
 
-    // Get all future bookings for this subscription that are not already canceled
-    const futureBookings = await this.prisma.booking.findMany({
+    // Calculate required cleaners for this subscription
+    const requiredCleaners = this.calculateRequiredCleaners(subscription);
+
+    // Get UNPAID future bookings that will be deleted
+    // (Paid bookings remain as-is so customer still gets the cleanings they paid for)
+    const unpaidFutureBookings = await this.prisma.booking.findMany({
       where: {
         subscriptionId: id,
         date: { gte: today },
+        paymentStatus: PaymentStatus.PENDING,
         status: { not: BookingStatus.CANCELED },
-      },
-      include: {
-        cleanerAssignments: true,
       },
     });
 
-    // Update availability cache for each booking being canceled
-    for (const booking of futureBookings) {
-      const assignedCount = booking.cleanerAssignments.length;
-      if (assignedCount > 0) {
-        // Decrease booked capacity (negative count)
-        await this.updateAvailabilityCache(booking.date, booking.timeSlotId, -assignedCount);
-      }
+    // Release reserved slots only for unpaid bookings being deleted
+    for (const booking of unpaidFutureBookings) {
+      await this.bookingLockService.releaseSlot({
+        date: booking.date,
+        timeSlotId: booking.timeSlotId,
+        requiredCapacity: requiredCleaners,
+      });
     }
 
     // Delete unpaid future bookings (placeholders that shouldn't show in history)
@@ -423,25 +428,35 @@ export class SubscriptionsService {
       },
     });
 
-    // Cancel paid future bookings (keep in history)
-    const canceledBookings = await this.prisma.booking.updateMany({
+    // Find the last paid booking to determine the subscription end date
+    const lastPaidBooking = await this.prisma.booking.findFirst({
+      where: {
+        subscriptionId: id,
+        paymentStatus: { in: [PaymentStatus.PAID, PaymentStatus.VERIFIED] },
+        status: { not: BookingStatus.CANCELED },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    // Count paid future bookings that will remain (for logging)
+    const paidBookingsCount = await this.prisma.booking.count({
       where: {
         subscriptionId: id,
         date: { gte: today },
         paymentStatus: { in: [PaymentStatus.PAID, PaymentStatus.VERIFIED] },
         status: { not: BookingStatus.CANCELED },
       },
-      data: {
-        status: BookingStatus.CANCELED,
-      },
     });
+
+    // End date is the last paid booking date, or today if no paid bookings
+    const subscriptionEndDate = lastPaidBooking?.date ?? DateUtils.nowInMaldives();
 
     // Update subscription status
     const updated = await this.prisma.subscription.update({
       where: { id },
       data: {
         status: SubscriptionStatus.CANCELED,
-        endDate: DateUtils.nowInMaldives(),
+        endDate: subscriptionEndDate,
         autoRenew: false,
       },
       include: {
@@ -457,7 +472,10 @@ export class SubscriptionsService {
       },
     });
 
-    this.logger.log(`Canceled subscription ${id}, deleted ${deletedBookings.count} unpaid bookings, canceled ${canceledBookings.count} paid bookings`);
+    const endDateStr = subscriptionEndDate instanceof Date
+      ? subscriptionEndDate.toISOString().split('T')[0]
+      : new Date(subscriptionEndDate).toISOString().split('T')[0];
+    this.logger.log(`Canceled subscription ${id}, end date set to ${endDateStr}, deleted ${deletedBookings.count} unpaid bookings, ${paidBookingsCount} paid bookings remain active`);
 
     return updated;
   }
@@ -554,6 +572,7 @@ export class SubscriptionsService {
     weeksToGenerate: number,
   ) {
     const bookings = [];
+    const reservations: SlotReservation[] = [];
     // Get today's date string in Maldives timezone for date-only comparison
     const todayStr = DateUtils.formatInMaldives(new Date(), 'yyyy-MM-dd');
 
@@ -589,6 +608,9 @@ export class SubscriptionsService {
     // Use full subscription monthly price for all bookings
     const subscriptionPrice = Number(subscription.monthlyPrice);
 
+    // Calculate required cleaners for this subscription
+    const requiredCleaners = this.calculateRequiredCleaners(subscription);
+
     // Get next booking number and track paid sessions
     let bookingCounter = 0;
     let paidBookingsCreated = 0;
@@ -604,7 +626,7 @@ export class SubscriptionsService {
       return addDays(startDate, daysToAdd);
     };
 
-    // Generate bookings for each week
+    // Generate bookings and reservations for each week
     for (let week = 0; week < weeksToGenerate; week++) {
       // Create booking for each selected day in this week
       for (const dayOfWeek of subscription.selectedDays) {
@@ -621,6 +643,14 @@ export class SubscriptionsService {
         // Only create bookings for today or future dates
         if (bookingDateStr >= todayStr && timeSlotId) {
           const bookingNumber = `BK${Date.now()}${bookingCounter++}`;
+          const bookingDateNormalized = DateUtils.startOfDayInMaldives(bookingDate);
+
+          // Add to reservations list
+          reservations.push({
+            date: bookingDateNormalized,
+            timeSlotId,
+            requiredCapacity: requiredCleaners,
+          });
 
           // First month's worth of bookings are PAID, rest are PENDING (placeholders)
           const isPaidBooking = paidBookingsCreated < paidSessionsCount;
@@ -646,7 +676,7 @@ export class SubscriptionsService {
             serviceType: subscription.serviceType,
             bookingType: BookingType.SUBSCRIPTION,
             timeSlotId,
-            date: DateUtils.startOfDayInMaldives(bookingDate),
+            date: bookingDateNormalized,
             totalPrice: subscriptionPrice,
             finalPrice: subscriptionPrice,
             bedrooms: subscription.bedrooms,
@@ -668,8 +698,24 @@ export class SubscriptionsService {
       }
     }
 
-    // Create all bookings in a single transaction
-    if (bookings.length > 0) {
+    if (bookings.length === 0) {
+      return 0;
+    }
+
+    // STEP 1: Reserve all slots atomically FIRST
+    try {
+      await this.bookingLockService.reserveMultipleSlots(reservations);
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw new BadRequestException(
+          `Unable to create subscription: some time slots are no longer available. ${error.message}`,
+        );
+      }
+      throw error;
+    }
+
+    // STEP 2: Create all bookings
+    try {
       await this.prisma.booking.createMany({
         data: bookings,
       });
@@ -689,80 +735,44 @@ export class SubscriptionsService {
       for (const booking of createdBookings) {
         try {
           await this.cleanerAssignmentService.autoAssignCleaners(booking.id);
-
-          // Update availability cache based on assigned cleaners
-          const assignedCount = await this.getAssignedCleanersCount(booking.id);
-          if (assignedCount > 0) {
-            await this.updateAvailabilityCache(booking.date, booking.timeSlotId, assignedCount);
-          }
         } catch (error) {
           this.logger.error(`Auto-assignment failed for subscription booking ${booking.id}: ${error.message}`);
           // Don't fail the subscription creation if auto-assignment fails
         }
       }
+    } catch (error) {
+      // Rollback: release all reserved slots
+      for (const reservation of reservations) {
+        await this.bookingLockService.releaseSlot(reservation);
+      }
+      throw error;
     }
 
     return bookings.length;
   }
 
   /**
-   * Get count of cleaners assigned to a booking
+   * Calculate required cleaners based on service type and property details
    */
-  private async getAssignedCleanersCount(bookingId: string): Promise<number> {
-    return this.prisma.cleanerAssignment.count({
-      where: { bookingId },
-    });
-  }
+  private calculateRequiredCleaners(subscription: any): number {
+    const { serviceType, bedrooms, rooms, floors } = subscription;
 
-  /**
-   * Calculate total available cleaners for a given date
-   */
-  private async getAvailableCleanersCount(date: Date): Promise<number> {
-    return this.prisma.cleanerProfile.count({
-      where: {
-        isAvailable: true,
-        vacations: {
-          none: {
-            startDate: { lte: date },
-            endDate: { gte: date },
-          },
-        },
-      },
-    });
-  }
-
-  /**
-   * Update or create AvailabilityCache entry for a date/slot
-   */
-  private async updateAvailabilityCache(
-    date: Date,
-    timeSlotId: string,
-    cleanerCount: number,
-  ): Promise<void> {
-    const existingCache = await this.prisma.availabilityCache.findUnique({
-      where: {
-        date_timeSlotId: { date, timeSlotId },
-      },
-    });
-
-    if (existingCache) {
-      await this.prisma.availabilityCache.update({
-        where: { id: existingCache.id },
-        data: {
-          bookedCapacity: Math.max(0, existingCache.bookedCapacity + cleanerCount),
-        },
-      });
-    } else {
-      const totalCapacity = await this.getAvailableCleanersCount(date);
-      await this.prisma.availabilityCache.create({
-        data: {
-          date,
-          timeSlotId,
-          totalCapacity,
-          bookedCapacity: Math.max(0, cleanerCount),
-        },
-      });
+    if (serviceType === ServiceType.HOME) {
+      if (!bedrooms || bedrooms <= 2) return 1;
+      if (bedrooms === 3) return 2;
+      if (bedrooms === 4) return 2;
+      return 3;
     }
+
+    if (serviceType === ServiceType.OFFICE) {
+      const roomCount = rooms ?? 0;
+      const floorCount = floors ?? 1;
+      if (roomCount <= 3 && floorCount === 1) return 1;
+      if (roomCount <= 6 || floorCount === 2) return 2;
+      return 3;
+    }
+
+    return 1;
   }
 
   /**

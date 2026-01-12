@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { CommonServicesModule } from './common/services/services.module';
 import { QueueModule } from './common/queues/queue.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -36,6 +37,9 @@ import configuration from './config/configuration';
 
     // Database
     PrismaModule,
+
+    // Common services (booking locks, etc.)
+    CommonServicesModule,
 
     // Queue system for background jobs
     QueueModule,

@@ -26,6 +26,20 @@ import utc from "dayjs/plugin/utc";
 
 dayjs.extend(utc);
 
+// Get current date in Maldives timezone (UTC+5, no daylight saving)
+const getMaldivesNow = () => {
+  const MALDIVES_OFFSET_HOURS = 5;
+  return dayjs.utc().add(MALDIVES_OFFSET_HOURS, 'hour');
+};
+
+// Check if a date is in the past (in Maldives timezone)
+const isDateInPast = (dateString: string | undefined): boolean => {
+  if (!dateString) return false;
+  const date = dayjs.utc(dateString);
+  const today = getMaldivesNow().startOf('day');
+  return date.isBefore(today);
+};
+
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const formatFrequency = (frequency: SubscriptionFrequency): string => {
@@ -200,6 +214,15 @@ export default function SubscriptionScreen() {
       >
         {subscriptions.map((subscription) => {
           const isCanceled = subscription.status === "CANCELED";
+          const startDateValue = subscription.bookings?.[0]?.date || subscription.startDate;
+          const endDateValue = isCanceled ? subscription.endDate : subscription.nextBillingDate;
+
+          // Determine labels based on whether dates are in the past
+          const startLabel = isDateInPast(startDateValue) ? "Started" : "Starts";
+          const endLabel = isCanceled
+            ? (isDateInPast(endDateValue) ? "Ended" : "Ends")
+            : "Next Renewal";
+
           return (
             <SubscriptionCard
               key={subscription.id}
@@ -211,9 +234,10 @@ export default function SubscriptionScreen() {
               days={formatDays(subscription.selectedDays)}
               time={formatDaySlots(subscription)}
               price={`MVR ${subscription.monthlyPrice}/month`}
-              startDate={formatDate(subscription.bookings?.[0]?.date || subscription.startDate)}
-              renewalOrEndDate={formatDate(isCanceled ? subscription.endDate : subscription.nextBillingDate)}
-              renewalOrEndLabel={isCanceled ? "Ended" : "Next Renewal"}
+              startDate={formatDate(startDateValue)}
+              startLabel={startLabel}
+              renewalOrEndDate={formatDate(endDateValue)}
+              renewalOrEndLabel={endLabel}
               status={subscription.status}
               onCancel={() => handleCancel(subscription)}
             />

@@ -3,14 +3,18 @@ import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
 import BaseCard from "./base";
 import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
 import { ActivityBooking, ServiceType } from "@/services/bookingService";
 
 dayjs.extend(utc);
-dayjs.extend(timezone);
+
+// Get current date in Maldives timezone (UTC+5, no daylight saving)
+const getMaldivesNow = () => {
+  const MALDIVES_OFFSET_HOURS = 5;
+  return dayjs.utc().add(MALDIVES_OFFSET_HOURS, 'hour');
+};
 
 type ActivityCardProps = {
   booking: ActivityBooking;
@@ -30,7 +34,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
   const getRelativeDayLabel = () => {
     // Compare date strings in Maldives timezone
     const bookingDateStr = dayjs.utc(booking.date).format("YYYY-MM-DD");
-    const maldivesNow = dayjs().tz("Indian/Maldives");
+    const maldivesNow = getMaldivesNow();
     const todayStr = maldivesNow.format("YYYY-MM-DD");
     const tomorrowStr = maldivesNow.add(1, "day").format("YYYY-MM-DD");
 

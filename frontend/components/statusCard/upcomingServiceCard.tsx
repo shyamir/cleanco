@@ -6,10 +6,14 @@ import InfoRow from "../infoRow";
 import { Icon } from "@/constants/icon";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
 
 dayjs.extend(utc);
-dayjs.extend(timezone);
+
+// Get current date in Maldives timezone (UTC+5, no daylight saving)
+const getMaldivesNow = () => {
+  const MALDIVES_OFFSET_HOURS = 5;
+  return dayjs.utc().add(MALDIVES_OFFSET_HOURS, 'hour');
+};
 
 type UpcomingServiceCardProps = {
   serviceType: "home" | "office";
@@ -44,7 +48,7 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
   const getRelativeDateLabel = () => {
     // Compare date strings in Maldives timezone
     const bookingDateStr = dayjs.utc(date).format("YYYY-MM-DD");
-    const maldivesNow = dayjs().tz("Indian/Maldives");
+    const maldivesNow = getMaldivesNow();
     const todayStr = maldivesNow.format("YYYY-MM-DD");
     const tomorrowStr = maldivesNow.add(1, "day").format("YYYY-MM-DD");
 

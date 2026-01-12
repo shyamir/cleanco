@@ -3,12 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
 import { useTheme } from "@/theme/ThemeProvider";
 import Base from "./base";
 
 dayjs.extend(utc);
-dayjs.extend(timezone);
 
 type DatePickerCardProps = {
   label?: string;
@@ -25,8 +23,12 @@ const getNextValidDate = (date: dayjs.Dayjs): dayjs.Dayjs => {
   return date;
 };
 
-// Get current date in Maldives timezone
-const getMaldivesNow = () => dayjs().tz("Indian/Maldives");
+// Get current date in Maldives timezone (UTC+5, no daylight saving)
+// Manually calculate since dayjs timezone plugin doesn't work reliably in React Native
+const getMaldivesNow = () => {
+  const MALDIVES_OFFSET_HOURS = 5;
+  return dayjs.utc().add(MALDIVES_OFFSET_HOURS, 'hour');
+};
 
 const DatePickerCard: React.FC<DatePickerCardProps> = ({
   label,
@@ -34,10 +36,19 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
   initialDate,
 }) => {
   const {theme} = useTheme();
-  // Allow same-day bookings (backend will filter unavailable time slots based on 6-hour minimum)
-  const maldivesToday = getMaldivesNow();
-  const minDate = getNextValidDate(maldivesToday); // Today, or Saturday if today is Friday
-  const minDateStr = minDate.format("YYYY-MM-DD");
+
+  // Use useMemo to ensure we get fresh Maldives date on each render
+  const { maldivesToday, minDate, minDateStr } = useMemo(() => {
+    const now = getMaldivesNow();
+    const min = getNextValidDate(now);
+    console.log('[DatePicker] Maldives now:', now.format('YYYY-MM-DD HH:mm:ss Z'));
+    console.log('[DatePicker] Min date:', min.format('YYYY-MM-DD'));
+    return {
+      maldivesToday: now,
+      minDate: min,
+      minDateStr: min.format("YYYY-MM-DD"),
+    };
+  }, []);
   // If initialDate is before today (in Maldives time), or is a Friday, use next valid date
   const getDefaultDate = () => {
     if (initialDate && !dayjs(initialDate).isBefore(maldivesToday, 'day')) {
@@ -48,6 +59,15 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
   };
   const [selectedDate, setSelectedDate] = useState(getDefaultDate());
   const [isOpen, setIsOpen] = useState(false);
+
+  // Ensure date is valid on mount (handles timezone initialization edge cases)
+  useEffect(() => {
+    const correctDate = getDefaultDate();
+    console.log('[DatePicker] Initial selectedDate:', selectedDate, 'Correct date:', correctDate);
+    if (selectedDate !== correctDate && (!initialDate || initialDate === '')) {
+      setSelectedDate(correctDate);
+    }
+  }, [minDateStr]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -67,11 +87,11 @@ const DatePickerCard: React.FC<DatePickerCardProps> = ({
     setIsOpen(false);
   };
 
-  // Generate disabled Fridays for the next 6 months
+  // Generate disabled Fridays for the next 6 months (using Maldives timezone)
   const disabledFridays = useMemo(() => {
     const fridays: { [key: string]: { disabled: boolean; disableTouchEvent: boolean } } = {};
-    let current = dayjs();
-    const endDate = dayjs().add(6, 'month');
+    let current = getMaldivesNow();
+    const endDate = getMaldivesNow().add(6, 'month');
 
     while (current.isBefore(endDate)) {
       if (current.day() === 5) { // Friday

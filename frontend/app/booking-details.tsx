@@ -71,6 +71,23 @@ const canModifyBooking = (status: string, bookingDate: string): boolean => {
   return isModifiableStatus && isFutureBooking;
 };
 
+// Get current time in Maldives timezone (UTC+5)
+const getMaldivesNow = () => {
+  const MALDIVES_OFFSET_HOURS = 5;
+  return dayjs.utc().add(MALDIVES_OFFSET_HOURS, 'hour');
+};
+
+// Check if booking is within 24 hours (for refund policy)
+const isBookingWithin24Hours = (bookingDate: string, startTime: string): boolean => {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const bookingDateTime = dayjs.utc(bookingDate)
+    .hour(hours)
+    .minute(minutes)
+    .second(0);
+  const hoursDiff = bookingDateTime.diff(getMaldivesNow(), 'hour');
+  return hoursDiff < 24;
+};
+
 export default function BookingDetailsScreen() {
   const { theme } = useTheme();
   const router = useRouter();
@@ -202,6 +219,7 @@ export default function BookingDetailsScreen() {
   }
   const status = mapStatus(booking.status, booking.date);
   const showModifyButtons = canModifyBooking(booking.status, booking.date);
+  const within24Hours = isBookingWithin24Hours(booking.date, booking.timeSlot.startTime);
 
   const handleCancelBooking = async () => {
     setCancelVisible(false);
@@ -337,8 +355,9 @@ export default function BookingDetailsScreen() {
                 },
               ]}
             >
-              You can reschedule or cancel bookings up to 24 hours before the
-              appointment time.
+              {within24Hours
+                ? "Cancellations within 24 hours of the appointment are not eligible for refunds."
+                : "You can reschedule or cancel this booking. Cancellations within 24 hours are not eligible for refunds."}
             </Text>
           </View>
           <View
@@ -400,6 +419,7 @@ export default function BookingDetailsScreen() {
           setCancelVisible(false);
           setRescheduleVisible(true);
         }}
+        isWithin24Hours={within24Hours}
       />
       <RescheduleBooking
         visible={rescheduleVisible}

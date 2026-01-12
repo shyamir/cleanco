@@ -720,6 +720,7 @@ model AvailabilityCache {
 
   totalCapacity   Int      // Total cleaners available
   bookedCapacity  Int      // Cleaners already booked
+  version         Int      @default(0) // For optimistic locking
 
   lastUpdated     DateTime @updatedAt
 

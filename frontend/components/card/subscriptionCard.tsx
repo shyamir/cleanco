@@ -17,6 +17,7 @@ type SubscriptionCardProps = {
   time: string;
   price: string;
   startDate: string;
+  startLabel?: string;
   renewalOrEndDate: string;
   renewalOrEndLabel: string;
   status: string;
@@ -33,6 +34,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   time,
   price,
   startDate,
+  startLabel = "Started",
   renewalOrEndDate,
   renewalOrEndLabel,
   status,
@@ -114,7 +116,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
           <View style={styles.datesRow}>
             <View style={styles.dateItem}>
               <Text style={[theme.typography.body.sm, { color: theme.colors.system.body.disabled }]}>
-                Started
+                {startLabel}
               </Text>
               <Text style={[theme.typography.body.md, { color: theme.colors.system.body.default }]}>
                 {startDate}

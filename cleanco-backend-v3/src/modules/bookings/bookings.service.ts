@@ -3,10 +3,12 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CleanerAssignmentService } from '../cleaner-assignment/cleaner-assignment.service';
+import { BookingLockService } from '../../common/services/booking-lock.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { CancelBookingDto } from './dto/cancel-booking.dto';
@@ -22,6 +24,7 @@ export class BookingsService {
   constructor(
     private prisma: PrismaService,
     private cleanerAssignmentService: CleanerAssignmentService,
+    private bookingLockService: BookingLockService,
   ) {}
 
   /**
@@ -84,20 +87,26 @@ export class BookingsService {
       );
     }
 
-    // Check time slot availability
-    const existingBookings = await this.prisma.booking.count({
-      where: {
-        date: bookingDate,
-        timeSlotId,
-        status: {
-          in: ['PENDING', 'CONFIRMED', 'ASSIGNED', 'IN_PROGRESS'],
-        },
-      },
+    // Calculate required cleaners for this booking
+    const requiredCleaners = this.calculateRequiredCleaners({
+      serviceType,
+      bedrooms,
+      rooms,
+      floors,
     });
 
-    // Simple capacity check (default 10 slots per time)
-    if (existingBookings >= 10) {
-      throw new BadRequestException('This time slot is fully booked');
+    // ATOMIC: Reserve slot first to prevent race conditions
+    try {
+      await this.bookingLockService.reserveSlot({
+        date: bookingDate,
+        timeSlotId,
+        requiredCapacity: requiredCleaners,
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw new BadRequestException('This time slot is fully booked');
+      }
+      throw error;
     }
 
     // Calculate pricing based on service type
@@ -305,11 +314,7 @@ export class BookingsService {
       // The booking will remain in CONFIRMED status for manual assignment
     }
 
-    // Update availability cache based on actual assignments
-    const assignedCount = await this.getAssignedCleanersCount(booking.id);
-    if (assignedCount > 0) {
-      await this.updateAvailabilityCache(bookingDate, timeSlotId, assignedCount);
-    }
+    // Note: Availability cache is already updated atomically in reserveSlot()
 
     return booking;
   }
@@ -518,33 +523,62 @@ export class BookingsService {
       throw new BadRequestException('Invalid or inactive time slot');
     }
 
-    // Count assigned cleaners BEFORE rescheduling
-    const assignedCount = await this.getAssignedCleanersCount(booking.id);
-
-    // Update booking
-    const updatedBooking = await this.prisma.booking.update({
-      where: { id },
-      data: {
-        date: newDate,
-        timeSlotId: newTimeSlotId,
-        originalDate: booking.originalDate || booking.date,
-        originalTimeSlotId:
-          booking.originalTimeSlotId || booking.timeSlotId,
-        rescheduledCount: { increment: 1 },
-      },
-      include: {
-        address: true,
-        timeSlot: true,
-      },
+    // Calculate required cleaners for this booking
+    const requiredCleaners = this.calculateRequiredCleaners({
+      serviceType: booking.serviceType,
+      bedrooms: booking.bedrooms ?? undefined,
+      rooms: booking.rooms ?? undefined,
+      floors: booking.floors ?? undefined,
     });
 
-    // Update cache for both slots (if cleaners were assigned)
-    if (assignedCount > 0) {
-      // Free up old slot
-      await this.updateAvailabilityCache(booking.date, booking.timeSlotId, -assignedCount);
-      // Book new slot
-      await this.updateAvailabilityCache(newDate, newTimeSlotId, assignedCount);
+    // STEP 1: Reserve new slot atomically (fail fast if unavailable)
+    try {
+      await this.bookingLockService.reserveSlot({
+        date: newDate,
+        timeSlotId: newTimeSlotId,
+        requiredCapacity: requiredCleaners,
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw new BadRequestException('The new time slot is fully booked');
+      }
+      throw error;
     }
+
+    // STEP 2: Update booking
+    let updatedBooking;
+    try {
+      updatedBooking = await this.prisma.booking.update({
+        where: { id },
+        data: {
+          date: newDate,
+          timeSlotId: newTimeSlotId,
+          originalDate: booking.originalDate || booking.date,
+          originalTimeSlotId:
+            booking.originalTimeSlotId || booking.timeSlotId,
+          rescheduledCount: { increment: 1 },
+        },
+        include: {
+          address: true,
+          timeSlot: true,
+        },
+      });
+    } catch (error) {
+      // Rollback: release the newly reserved slot
+      await this.bookingLockService.releaseSlot({
+        date: newDate,
+        timeSlotId: newTimeSlotId,
+        requiredCapacity: requiredCleaners,
+      });
+      throw error;
+    }
+
+    // STEP 3: Release old slot (after successful update)
+    await this.bookingLockService.releaseSlot({
+      date: booking.date,
+      timeSlotId: booking.timeSlotId,
+      requiredCapacity: requiredCleaners,
+    });
 
     // Reassign cleaners for the new date/time
     try {
@@ -584,30 +618,17 @@ export class BookingsService {
       throw new BadRequestException('Cannot cancel completed bookings');
     }
 
-    // Check minimum notice (24 hours)
-    // Combine booking date with time slot start time for accurate comparison
-    // Use UTC methods to avoid timezone issues - times are in Maldives (UTC+5)
-    const [hours, minutes] = booking.timeSlot.startTime.split(':').map(Number);
-    const bookingDate = new Date(booking.date);
-    const bookingDateTime = new Date(
-      bookingDate.getUTCFullYear(),
-      bookingDate.getUTCMonth(),
-      bookingDate.getUTCDate(),
-      hours,
-      minutes,
-      0,
-      0
-    );
+    // Note: Cancellations are allowed at any time, but no refund is given
+    // if canceled within 24 hours of the appointment time.
+    // The refund policy is handled on the frontend/payment side.
 
-    const hoursDiff = differenceInHours(bookingDateTime, DateUtils.nowInMaldives());
-    if (hoursDiff < 24) {
-      throw new BadRequestException(
-        'Bookings must be canceled at least 24 hours in advance',
-      );
-    }
-
-    // Count assigned cleaners BEFORE updating status
-    const assignedCount = await this.getAssignedCleanersCount(booking.id);
+    // Calculate required cleaners for this booking
+    const requiredCleaners = this.calculateRequiredCleaners({
+      serviceType: booking.serviceType,
+      bedrooms: booking.bedrooms ?? undefined,
+      rooms: booking.rooms ?? undefined,
+      floors: booking.floors ?? undefined,
+    });
 
     // Update booking
     const updatedBooking = await this.prisma.booking.update({
@@ -623,10 +644,12 @@ export class BookingsService {
       },
     });
 
-    // Free up the slot based on actual assignments
-    if (assignedCount > 0) {
-      await this.updateAvailabilityCache(booking.date, booking.timeSlotId, -assignedCount);
-    }
+    // Release the reserved slot atomically
+    await this.bookingLockService.releaseSlot({
+      date: booking.date,
+      timeSlotId: booking.timeSlotId,
+      requiredCapacity: requiredCleaners,
+    });
 
     // Remove all cleaner assignments for this booking
     await this.prisma.cleanerAssignment.deleteMany({
@@ -732,68 +755,31 @@ export class BookingsService {
   }
 
   /**
-   * Count cleaners assigned to a booking
+   * Calculate required cleaners based on service type and property details
    */
-  private async getAssignedCleanersCount(bookingId: string): Promise<number> {
-    return this.prisma.cleanerAssignment.count({
-      where: { bookingId },
-    });
-  }
+  private calculateRequiredCleaners(params: {
+    serviceType: ServiceType;
+    bedrooms?: number;
+    rooms?: number;
+    floors?: number;
+  }): number {
+    const { serviceType, bedrooms, rooms, floors } = params;
 
-  /**
-   * Calculate total available cleaners for a given date
-   * Available = cleaners with isAvailable:true - cleaners on vacation
-   */
-  private async getAvailableCleanersCount(date: Date): Promise<number> {
-    return this.prisma.cleanerProfile.count({
-      where: {
-        isAvailable: true,
-        vacations: {
-          none: {
-            startDate: { lte: date },
-            endDate: { gte: date },
-          },
-        },
-      },
-    });
-  }
-
-  /**
-   * Update or create AvailabilityCache entry for a date/slot
-   * @param date - Booking date
-   * @param timeSlotId - Time slot ID
-   * @param cleanerCount - Number of cleaners to add/remove (+N for create, -N for cancel)
-   */
-  private async updateAvailabilityCache(
-    date: Date,
-    timeSlotId: string,
-    cleanerCount: number,
-  ): Promise<void> {
-    const existingCache = await this.prisma.availabilityCache.findUnique({
-      where: {
-        date_timeSlotId: { date, timeSlotId },
-      },
-    });
-
-    if (existingCache) {
-      // Update existing cache
-      await this.prisma.availabilityCache.update({
-        where: { id: existingCache.id },
-        data: {
-          bookedCapacity: Math.max(0, existingCache.bookedCapacity + cleanerCount),
-        },
-      });
-    } else {
-      // Create new cache entry
-      const totalCapacity = await this.getAvailableCleanersCount(date);
-      await this.prisma.availabilityCache.create({
-        data: {
-          date,
-          timeSlotId,
-          totalCapacity,
-          bookedCapacity: Math.max(0, cleanerCount),
-        },
-      });
+    if (serviceType === ServiceType.HOME) {
+      if (!bedrooms || bedrooms <= 2) return 1;
+      if (bedrooms === 3) return 2;
+      if (bedrooms === 4) return 2;
+      return 3;
     }
+
+    if (serviceType === ServiceType.OFFICE) {
+      const roomCount = rooms ?? 0;
+      const floorCount = floors ?? 1;
+      if (roomCount <= 3 && floorCount === 1) return 1;
+      if (roomCount <= 6 || floorCount === 2) return 2;
+      return 3;
+    }
+
+    return 1;
   }
 }

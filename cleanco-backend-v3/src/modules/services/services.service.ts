@@ -303,13 +303,12 @@ export class ServicesService {
       orderBy: { price: 'asc' },
     });
 
-    // Get minimum price for OFFICE service
-    const officeMinPrice = await this.prisma.pricingRule.findFirst({
+    // Get minimum price for OFFICE service from OfficePricingTier table
+    const officeMinPrice = await this.prisma.officePricingTier.findFirst({
       where: {
-        serviceType: ServiceType.OFFICE,
         isActive: true,
       },
-      orderBy: { price: 'asc' },
+      orderBy: { basePrice: 'asc' },
     });
 
     return {
@@ -318,7 +317,7 @@ export class ServicesService {
         currency: 'MVR',
       },
       office: {
-        minPrice: officeMinPrice ? Number(officeMinPrice.price) : null,
+        minPrice: officeMinPrice ? Number(officeMinPrice.basePrice) : null,
         currency: 'MVR',
       },
     };

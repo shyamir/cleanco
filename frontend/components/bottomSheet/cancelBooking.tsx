@@ -10,6 +10,7 @@ type CancelBookingProps = {
   onClose: () => void;
   onCancelPress: () => void;
   onReschedulePress: () => void;
+  isWithin24Hours?: boolean;
 };
 
 const CancelBooking: React.FC<CancelBookingProps> = ({
@@ -17,8 +18,13 @@ const CancelBooking: React.FC<CancelBookingProps> = ({
   onClose,
   onCancelPress,
   onReschedulePress,
+  isWithin24Hours = false,
 }) => {
   const {theme} = useTheme();
+
+  const message = isWithin24Hours
+    ? "You are canceling within 24 hours of your appointment. No refunds will be given for late cancellations. Are you sure you want to cancel?"
+    : "Are you sure you want to cancel this booking?";
 
   return (
     <Base
@@ -33,7 +39,7 @@ const CancelBooking: React.FC<CancelBookingProps> = ({
           { color: theme.colors.system.body.default, marginBottom: 16 },
         ]}
       >
-        No refunds will be given for cancellations. Are you sure want to cancel?
+        {message}
       </Text>
 
       <View style={styles.buttonContainer}>
