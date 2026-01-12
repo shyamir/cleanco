@@ -30,10 +30,10 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
     ? require("@/assets/images/home-cleaning.png")
     : require("@/assets/images/office-cleaning.png");
 
-  // Get relative day label (Today, Tomorrow, or day name)
+  // Get relative day label (Today, Tomorrow, day name for this week, or date)
   const getRelativeDayLabel = () => {
-    // Compare date strings in Maldives timezone
-    const bookingDateStr = dayjs.utc(booking.date).format("YYYY-MM-DD");
+    const bookingDate = dayjs.utc(booking.date);
+    const bookingDateStr = bookingDate.format("YYYY-MM-DD");
     const maldivesNow = getMaldivesNow();
     const todayStr = maldivesNow.format("YYYY-MM-DD");
     const tomorrowStr = maldivesNow.add(1, "day").format("YYYY-MM-DD");
@@ -43,7 +43,13 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
     } else if (bookingDateStr === tomorrowStr) {
       return "Tomorrow";
     } else {
-      return dayjs.utc(booking.date).format("dddd");
+      // Show day name only for dates within next 6 days
+      const daysUntil = bookingDate.diff(maldivesNow, "day");
+      if (daysUntil <= 6) {
+        return bookingDate.format("dddd"); // "Wednesday"
+      } else {
+        return bookingDate.format("ddd, D MMM"); // "Wed, 21 Jan"
+      }
     }
   };
 

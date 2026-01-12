@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   Image,
   ScrollView,
   Alert,
-  ActivityIndicator,
   Linking,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -22,12 +21,7 @@ import PaymentGroup from "@/components/paymentGroup";
 import { useRouter } from "expo-router";
 import {
   bookingApi,
-  ServiceType,
-  BookingType,
   PaymentMethod,
-  mapFrequencyToBackend,
-  CreateBookingRequest,
-  CreateSubscriptionRequest,
 } from "@/services/bookingService";
 
 const Payment = () => {
@@ -38,121 +32,161 @@ const Payment = () => {
   const { total, clearPricingCache } = useCleaningBooking();
   const {
     frequency,
-    bedrooms,
-    bathrooms,
-    pet,
-    instructions,
-    startDate,
-    addressId,
-    timeSlotId,
-    selectedDays,
-    daySlots,
     paymentMethod,
     promoCode,
     promoDiscount,
     originalTotal,
-    resetBooking,
+    checkoutSession,
+    setCheckoutSession,
   } = useBooking();
 
   const [isPaymentValid, setIsPaymentValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Checkout session timer state
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(
+    checkoutSession?.holdDurationSeconds ?? 0
+  );
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Format remaining time as M:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Validate checkout session exists on mount
+  useEffect(() => {
+    if (!checkoutSession) {
+      Alert.alert(
+        "Error",
+        "No active checkout session. Please go back and try again.",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
+    }
+
+    // Cleanup timer on unmount
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!checkoutSession || remainingSeconds <= 0) return;
+
+    timerRef.current = setInterval(() => {
+      setRemainingSeconds((prev) => {
+        const newValue = prev - 1;
+        if (newValue <= 0) {
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
+          // Session expired
+          Alert.alert(
+            "Session Expired",
+            "Your slot reservation has expired. Please go back and try again.",
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
+          return 0;
+        }
+        return newValue;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [checkoutSession]);
+
+  // Cancel checkout session when navigating away
+  const handleGoBack = useCallback(async () => {
+    if (checkoutSession) {
+      try {
+        await bookingApi.cancelCheckout(checkoutSession.checkoutSessionId);
+      } catch (error) {
+        // Ignore errors when canceling - session will expire anyway
+        console.log("Failed to cancel checkout session:", error);
+      }
+      // Clear session from context
+      setCheckoutSession(null);
+    }
+    navigation.goBack();
+  }, [checkoutSession, navigation, setCheckoutSession]);
+
   const handleConfirm = async () => {
-    // Validate required fields
-    if (!addressId) {
-      Alert.alert("Error", "Please select an address before confirming.");
+    // Ensure we have a valid checkout session
+    if (!checkoutSession) {
+      Alert.alert("Error", "No active checkout session. Please go back and try again.");
       return;
     }
 
-    // For subscriptions, check daySlots; for one-time bookings, check timeSlotId
-    const { isSubscription: isSubCheck } = mapFrequencyToBackend(frequency);
-    if (isSubCheck && daySlots.length === 0) {
-      Alert.alert("Error", "Please select days and time slots before confirming.");
-      return;
-    }
-    if (!isSubCheck && !timeSlotId) {
-      Alert.alert("Error", "Please select a time slot before confirming.");
+    // Check if session is still valid
+    if (remainingSeconds <= 0) {
+      Alert.alert(
+        "Session Expired",
+        "Your slot reservation has expired. Please go back and try again.",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const { isSubscription, subscriptionFrequency } = mapFrequencyToBackend(frequency);
+      // Handle payment based on method
+      if (paymentMethod === PaymentMethod.BML_GATEWAY) {
+        // Initiate BML payment for checkout session
+        const bmlResponse = await bookingApi.initiateCheckoutBmlPayment(
+          checkoutSession.checkoutSessionId
+        );
 
-      if (isSubscription && subscriptionFrequency) {
-        // Create a subscription with day-specific time slots
-        const subscriptionRequest: CreateSubscriptionRequest = {
-          serviceType: ServiceType.HOME,
-          frequency: subscriptionFrequency,
-          addressId,
-          daySlots: daySlots.length > 0 ? daySlots : [{ day: 1, timeSlotId: timeSlotId! }], // Fallback for backward compatibility
-          startDate: startDate || undefined, // Pass the user's selected start date
-          bedrooms,
-          bathrooms,
-          hasPets: pet !== "None",
-        };
-
-        await bookingApi.createSubscription(subscriptionRequest);
-
-        // Clear cached pricing rules so they're refetched next time
+        // Clear cached pricing rules
         clearPricingCache();
 
-        // Navigate to confirmation for subscriptions (payment handled separately)
-        router.push("/confirmation");
-      } else {
-        // Create a one-time booking
-        const bookingRequest: CreateBookingRequest = {
-          serviceType: ServiceType.HOME,
-          bookingType: BookingType.ONE_TIME,
-          addressId,
-          date: startDate || new Date().toISOString().split("T")[0],
-          timeSlotId: timeSlotId!,
-          bedrooms,
-          bathrooms,
-          hasPets: pet !== "None",
-          paymentMethod,
-          specialInstructions: instructions || undefined,
-          promoCode: promoCode || undefined,
-        };
-
-        const booking = await bookingApi.createBooking(bookingRequest);
-
-        // Handle BML payment flow
-        if (paymentMethod === PaymentMethod.BML_GATEWAY) {
-          // Initiate BML payment
-          const bmlResponse = await bookingApi.initiateBmlPayment(booking.id);
-
-          // Clear cached pricing rules
-          clearPricingCache();
-
-          // Open BML payment page in external browser
-          const canOpen = await Linking.canOpenURL(bmlResponse.paymentUrl);
-          if (canOpen) {
-            await Linking.openURL(bmlResponse.paymentUrl);
-            // User will be redirected back to app via deep link after payment
-          } else {
-            Alert.alert(
-              "Error",
-              "Unable to open payment page. Please try again."
-            );
-          }
+        // Open BML payment page in external browser
+        const canOpen = await Linking.canOpenURL(bmlResponse.redirectUrl);
+        if (canOpen) {
+          await Linking.openURL(bmlResponse.redirectUrl);
+          // User will be redirected back to app via deep link after payment
         } else {
-          // Bank transfer - go directly to confirmation
-          clearPricingCache();
-          router.push("/confirmation");
+          Alert.alert("Error", "Unable to open payment page. Please try again.");
         }
+      } else {
+        // Bank transfer - complete checkout and create booking/subscription
+        await bookingApi.processCheckoutBankTransfer(checkoutSession.checkoutSessionId);
+
+        // Clear cached pricing rules
+        clearPricingCache();
+
+        // Navigate to confirmation
+        router.push("/confirmation");
       }
     } catch (error: any) {
-      console.error("Failed to create booking:", error);
+      console.error("Failed to process payment:", error);
       const errorMessage =
         error.response?.data?.message ||
-        "Failed to create booking. Please try again.";
+        "Failed to process payment. Please try again.";
       Alert.alert("Error", errorMessage);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // If no checkout session, don't render (alert will show and navigate back)
+  if (!checkoutSession) {
+    return null;
+  }
 
   return (
     <SafeAreaProvider>
@@ -174,12 +208,12 @@ const Payment = () => {
               {/* Back Button */}
               <TouchableOpacity
                 style={styles.backButton}
-                onPress={() => navigation.goBack()}
+                onPress={handleGoBack}
               >
                 <Icon.back color={theme.colors.system.body.default} />
               </TouchableOpacity>
 
-              {/* Header */}
+              {/* Header with Timer */}
               <View style={styles.header}>
                 <GradientText
                   text="Payment"
@@ -191,17 +225,38 @@ const Payment = () => {
                   colors={theme.colors.system.heading.default}
                   variant={theme.typography.heading.sm}
                 />
-                {/* <Text
+              </View>
+
+              {/* Countdown Timer */}
+              {checkoutSession && remainingSeconds > 0 && (
+                <View
                   style={[
+                    styles.timerContainer,
                     {
-                      ...theme.typography.heading.sm,
-                      color: theme.colors.system.body.tertiary,
-                    } as any,
+                      backgroundColor: remainingSeconds <= 60
+                        ? theme.colors.pill.background.error
+                        : theme.colors.system.background.secondary,
+                    },
                   ]}
                 >
-                  Method
-                </Text> */}
-              </View>
+                  <Text
+                    style={[
+                      theme.typography.body.sm.regular,
+                      {
+                        color: remainingSeconds <= 60
+                          ? theme.colors.system.body.error
+                          : theme.colors.system.body.secondary,
+                      },
+                    ]}
+                  >
+                    Complete payment in{" "}
+                    <Text style={theme.typography.body.sm.medium}>
+                      {formatTime(remainingSeconds)}
+                    </Text>
+                  </Text>
+                </View>
+              )}
+
               <PaymentGroup onValidationChange={setIsPaymentValid} />
             </ScrollView>
           </View>
@@ -215,8 +270,8 @@ const Payment = () => {
           primaryLabel={isSubmitting ? "Processing..." : "Confirm"}
           secondaryLabel="Back"
           onPrimaryPress={handleConfirm}
-          onSecondaryPress={() => navigation.goBack()}
-          disabledPrimary={!isPaymentValid || isSubmitting}
+          onSecondaryPress={handleGoBack}
+          disabledPrimary={!isPaymentValid || isSubmitting || !checkoutSession}
           originalTotal={originalTotal}
           promoDiscount={promoDiscount}
           promoCode={promoCode}
@@ -257,7 +312,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "column",
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  timerContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: "center",
   },
 });
 

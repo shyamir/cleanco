@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -22,6 +23,7 @@ import { AdminPaymentsModule } from './modules/admin/payments/admin-payments.mod
 import { ZonesModule } from './modules/zones/zones.module';
 import { PromoCodesModule } from './modules/promo-codes/promo-codes.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { CheckoutModule } from './modules/checkout/checkout.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import configuration from './config/configuration';
@@ -35,10 +37,13 @@ import configuration from './config/configuration';
       envFilePath: ['.env.local', '.env'],
     }),
 
+    // Scheduling for cron jobs
+    ScheduleModule.forRoot(),
+
     // Database
     PrismaModule,
 
-    // Common services (booking locks, etc.)
+    // Common services (booking locks, slot holds, etc.)
     CommonServicesModule,
 
     // Queue system for background jobs
@@ -61,6 +66,7 @@ import configuration from './config/configuration';
     ZonesModule,
     PromoCodesModule,
     SettingsModule,
+    CheckoutModule,
   ],
   controllers: [AppController],
   providers: [

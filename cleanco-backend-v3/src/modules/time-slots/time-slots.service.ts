@@ -101,7 +101,19 @@ export class TimeSlotsService {
           });
         }
         const bookedCapacity = cache?.bookedCapacity || bookingCount;
-        const availableCapacity = totalCapacity - bookedCapacity;
+
+        // Sum active slot holds for this slot
+        const activeHoldsSum = await this.prisma.slotHold.aggregate({
+          where: {
+            date: requestedDate,
+            timeSlotId: slot.id,
+            expiresAt: { gt: new Date() },
+          },
+          _sum: { capacity: true },
+        });
+        const heldCapacity = activeHoldsSum._sum.capacity ?? 0;
+
+        const availableCapacity = totalCapacity - bookedCapacity - heldCapacity;
 
         return {
           id: slot.id,
@@ -263,7 +275,19 @@ export class TimeSlotsService {
           }
 
           const bookedCapacity = cache?.bookedCapacity || bookingCount;
-          const availableCapacity = totalCapacity - bookedCapacity;
+
+          // Sum active slot holds for this slot
+          const activeHoldsSum = await this.prisma.slotHold.aggregate({
+            where: {
+              date: date,
+              timeSlotId: slot.id,
+              expiresAt: { gt: new Date() },
+            },
+            _sum: { capacity: true },
+          });
+          const heldCapacity = activeHoldsSum._sum.capacity ?? 0;
+
+          const availableCapacity = totalCapacity - bookedCapacity - heldCapacity;
 
           minCapacity = Math.min(minCapacity, availableCapacity);
 

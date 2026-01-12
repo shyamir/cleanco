@@ -13,9 +13,11 @@ import { InitiateBmlPaymentDto } from './dto/initiate-bml-payment.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
 import { CreateSubscriptionBankTransferPaymentDto } from './dto/create-subscription-bank-transfer-payment.dto';
 import { InitiateSubscriptionBmlPaymentDto } from './dto/initiate-subscription-bml-payment.dto';
-import { PaymentMethod, PaymentStatus, BookingStatus } from '@prisma/client';
+import { CheckoutBankTransferPaymentDto, CheckoutBmlPaymentDto } from './dto/checkout-payment.dto';
+import { PaymentMethod, PaymentStatus, BookingStatus, CheckoutType } from '@prisma/client';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { BmlService } from '../bml/bml.service';
+import { CheckoutService } from '../checkout/checkout.service';
 import { BmlTransactionState } from '../bml/dto/bml-transaction.dto';
 import { DateUtils } from '../../common/utils/date.utils';
 
@@ -28,6 +30,7 @@ export class PaymentsService {
     @Inject(forwardRef(() => SubscriptionsService))
     private readonly subscriptionsService: SubscriptionsService,
     private readonly bmlService: BmlService,
+    private readonly checkoutService: CheckoutService,
   ) {}
 
   /**
@@ -691,5 +694,241 @@ export class PaymentsService {
     }
 
     return payment;
+  }
+
+  // ============================================
+  // Checkout-based Payment Methods
+  // ============================================
+
+  /**
+   * Process bank transfer payment for a checkout session
+   * Completes the checkout (creates booking/subscription) and records the payment
+   */
+  async processCheckoutBankTransfer(
+    userId: string,
+    dto: CheckoutBankTransferPaymentDto,
+  ) {
+    // Verify checkout session exists and belongs to user
+    const session = await this.prisma.checkoutSession.findFirst({
+      where: { id: dto.checkoutSessionId, userId },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Checkout session not found');
+    }
+
+    if (session.status === 'COMPLETED') {
+      throw new BadRequestException('Checkout already completed');
+    }
+
+    if (session.status === 'EXPIRED') {
+      throw new BadRequestException('Checkout session expired. Please try again.');
+    }
+
+    // Complete the checkout (creates booking/subscription)
+    const result = await this.checkoutService.completeCheckout(dto.checkoutSessionId);
+
+    // Create payment record
+    const isBooking = session.type === CheckoutType.BOOKING;
+    const payment = await this.prisma.payment.create({
+      data: {
+        bookingId: isBooking ? result.id : null,
+        subscriptionId: isBooking ? null : result.id,
+        amount: result.finalPrice ?? result.monthlyPrice,
+        method: PaymentMethod.BANK_TRANSFER,
+        status: PaymentStatus.PAID,
+        receiptUrl: dto.receiptUrl,
+        paidAt: DateUtils.nowInMaldives(),
+      },
+      include: {
+        booking: isBooking
+          ? {
+              include: {
+                user: true,
+                address: true,
+                timeSlot: true,
+              },
+            }
+          : false,
+        subscription: !isBooking
+          ? {
+              include: {
+                user: true,
+                address: true,
+              },
+            }
+          : false,
+      },
+    });
+
+    return {
+      payment,
+      booking: isBooking ? result : undefined,
+      subscription: !isBooking ? result : undefined,
+    };
+  }
+
+  /**
+   * Initiate BML payment for a checkout session
+   * Creates a pending payment and returns BML redirect URL
+   */
+  async initiateCheckoutBmlPayment(
+    userId: string,
+    dto: CheckoutBmlPaymentDto,
+  ) {
+    if (!this.bmlService.isConfigured()) {
+      throw new BadRequestException('BML payment gateway is not configured');
+    }
+
+    // Verify checkout session exists and belongs to user
+    const session = await this.prisma.checkoutSession.findFirst({
+      where: { id: dto.checkoutSessionId, userId },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Checkout session not found');
+    }
+
+    if (session.status === 'COMPLETED') {
+      throw new BadRequestException('Checkout already completed');
+    }
+
+    if (session.status === 'EXPIRED') {
+      throw new BadRequestException('Checkout session expired. Please try again.');
+    }
+
+    // Get price from session details
+    const details = session.details as any;
+    let amount: number;
+
+    if (session.type === CheckoutType.BOOKING) {
+      // For bookings, we need to calculate the price
+      // The checkout service already validated and calculated the price
+      const priceInfo = await this.getCheckoutPrice(session);
+      amount = priceInfo.finalPrice;
+    } else {
+      // For subscriptions
+      const priceInfo = await this.getCheckoutPrice(session);
+      amount = priceInfo.finalPrice;
+    }
+
+    // Create a pending payment record linked to checkout session
+    const payment = await this.prisma.payment.create({
+      data: {
+        amount,
+        method: PaymentMethod.BML_GATEWAY,
+        status: PaymentStatus.PENDING,
+        // Store checkout session ID in bmlResponse for later reference
+        bmlResponse: { checkoutSessionId: dto.checkoutSessionId } as any,
+      },
+    });
+
+    // Create BML transaction
+    const bmlResult = await this.bmlService.createTransaction({
+      amount,
+      currency: 'MVR',
+      localId: payment.id,
+    });
+
+    if (!bmlResult.success || !bmlResult.transactionId) {
+      throw new BadRequestException(bmlResult.error || 'Failed to create BML transaction');
+    }
+
+    // Update payment with BML transaction details
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        transactionId: bmlResult.transactionId,
+        bmlResponse: {
+          checkoutSessionId: dto.checkoutSessionId,
+          ...bmlResult,
+        } as any,
+      },
+    });
+
+    return {
+      paymentId: payment.id,
+      redirectUrl: bmlResult.paymentUrl,
+      transactionId: bmlResult.transactionId,
+      expiresAt: session.expiresAt,
+    };
+  }
+
+  /**
+   * Complete checkout after BML payment callback
+   * Called internally when BML payment is confirmed
+   */
+  async completeCheckoutAfterBmlPayment(paymentId: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+    });
+
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
+    }
+
+    const bmlResponse = payment.bmlResponse as any;
+    const checkoutSessionId = bmlResponse?.checkoutSessionId;
+
+    if (!checkoutSessionId) {
+      // This is a legacy payment without checkout session
+      return null;
+    }
+
+    const session = await this.prisma.checkoutSession.findUnique({
+      where: { id: checkoutSessionId },
+    });
+
+    if (!session || session.status !== 'PENDING') {
+      return null;
+    }
+
+    // Complete the checkout
+    const result = await this.checkoutService.completeCheckout(checkoutSessionId);
+
+    // Update payment with booking/subscription reference
+    const isBooking = session.type === CheckoutType.BOOKING;
+    await this.prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        bookingId: isBooking ? result.id : null,
+        subscriptionId: isBooking ? null : result.id,
+      },
+    });
+
+    return result;
+  }
+
+  /**
+   * Get price for a checkout session
+   */
+  private async getCheckoutPrice(session: any) {
+    const details = session.details as any;
+
+    if (session.type === CheckoutType.BOOKING) {
+      // Calculate booking price (simplified - actual logic in checkout service)
+      if (details.serviceType === 'HOME') {
+        const rule = await this.prisma.homePricingRule.findFirst({
+          where: { bedrooms: details.bedrooms, frequency: null, isActive: true },
+        });
+        return { basePrice: Number(rule?.price ?? 0), finalPrice: Number(rule?.price ?? 0) };
+      } else {
+        const tier = await this.prisma.officePricingTier.findFirst({
+          where: {
+            frequency: null,
+            sqftMin: { lte: details.squareFeet ?? 200 },
+            sqftMax: { gte: details.squareFeet ?? 200 },
+            isActive: true,
+          },
+        });
+        return { basePrice: Number(tier?.basePrice ?? 0), finalPrice: Number(tier?.basePrice ?? 0) };
+      }
+    } else {
+      // Subscription price
+      const rule = await this.prisma.homePricingRule.findFirst({
+        where: { bedrooms: details.bedrooms, frequency: details.frequency, isActive: true },
+      });
+      return { basePrice: Number(rule?.price ?? 0), finalPrice: Number(rule?.price ?? 0) };
+    }
   }
 }

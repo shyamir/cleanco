@@ -47,7 +47,8 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
 
   const getRelativeDateLabel = () => {
     // Compare date strings in Maldives timezone
-    const bookingDateStr = dayjs.utc(date).format("YYYY-MM-DD");
+    const bookingDate = dayjs.utc(date);
+    const bookingDateStr = bookingDate.format("YYYY-MM-DD");
     const maldivesNow = getMaldivesNow();
     const todayStr = maldivesNow.format("YYYY-MM-DD");
     const tomorrowStr = maldivesNow.add(1, "day").format("YYYY-MM-DD");
@@ -57,7 +58,14 @@ const UpcomingServiceCard: React.FC<UpcomingServiceCardProps> = ({
     } else if (bookingDateStr === tomorrowStr) {
       return "Tomorrow";
     } else {
-      return dayjs.utc(date).format("dddd"); // Day name like "Wednesday"
+      // Check if within next 6 days - show day name only
+      // Beyond 6 days - show abbreviated date to avoid confusion
+      const daysUntil = bookingDate.diff(maldivesNow, "day");
+      if (daysUntil <= 6) {
+        return bookingDate.format("dddd"); // "Wednesday"
+      } else {
+        return bookingDate.format("ddd, D MMM"); // "Wed, 21 Jan"
+      }
     }
   };
 

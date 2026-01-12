@@ -257,36 +257,37 @@ export class ServicesService {
   }
 
   /**
-   * Get all pricing rules for a specific service type
+   * Get all pricing rules for HOME service type
    * Used for client-side price calculation
    */
   async getPricingRules(serviceType: ServiceType) {
-    const rules = await this.prisma.pricingRule.findMany({
-      where: {
-        serviceType,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        serviceType: true,
-        frequency: true,
-        bedrooms: true,
-        officeSize: true,
-        floors: true,
-        rooms: true,
-        price: true,
-      },
-      orderBy: [
-        { bedrooms: 'asc' },
-        { frequency: 'asc' },
-      ],
-    });
+    if (serviceType === ServiceType.HOME) {
+      const rules = await this.prisma.homePricingRule.findMany({
+        where: {
+          isActive: true,
+        },
+        select: {
+          id: true,
+          frequency: true,
+          bedrooms: true,
+          price: true,
+        },
+        orderBy: [
+          { bedrooms: 'asc' },
+          { frequency: 'asc' },
+        ],
+      });
 
-    // Convert Decimal to number for JSON serialization
-    return rules.map(rule => ({
-      ...rule,
-      price: Number(rule.price),
-    }));
+      // Convert Decimal to number for JSON serialization
+      return rules.map(rule => ({
+        ...rule,
+        serviceType: ServiceType.HOME,
+        price: Number(rule.price),
+      }));
+    }
+
+    // For OFFICE, return empty - use OfficePricingTier instead
+    return [];
   }
 
   /**
@@ -294,10 +295,9 @@ export class ServicesService {
    * Returns the lowest price for HOME and OFFICE services
    */
   async getMinimumPrices() {
-    // Get minimum price for HOME service
-    const homeMinPrice = await this.prisma.pricingRule.findFirst({
+    // Get minimum price for HOME service from HomePricingRule
+    const homeMinPrice = await this.prisma.homePricingRule.findFirst({
       where: {
-        serviceType: ServiceType.HOME,
         isActive: true,
       },
       orderBy: { price: 'asc' },
@@ -324,8 +324,8 @@ export class ServicesService {
   }
 
   /**
-   * Find the best matching pricing rule
-   * Matches based on all non-null parameters
+   * Find the best matching pricing rule for HOME service
+   * Uses HomePricingRule table with unique constraint on [frequency, bedrooms]
    */
   private async findBestMatchingPricingRule(params: {
     serviceType: ServiceType;
@@ -335,72 +335,20 @@ export class ServicesService {
     floors: number | null;
     rooms: number | null;
   }) {
-    const where: any = {
-      serviceType: params.serviceType,
-      isActive: true,
-    };
-
-    // Add frequency condition (null for one-time, specific value for subscriptions)
-    if (params.frequency === null) {
-      where.frequency = null;
-    } else {
-      where.frequency = params.frequency;
+    // Only HOME service uses this method - OFFICE uses calculateOfficeQuote
+    if (params.serviceType !== ServiceType.HOME) {
+      return null;
     }
 
-    // Add other parameters if provided
-    if (params.bedrooms !== null) {
-      where.bedrooms = params.bedrooms;
-    }
-
-    if (params.officeSize !== null) {
-      where.officeSize = params.officeSize;
-    }
-
-    if (params.floors !== null) {
-      where.floors = params.floors;
-    }
-
-    if (params.rooms !== null) {
-      where.rooms = params.rooms;
-    }
-
-    // Try to find exact match first
-    let pricingRule = await this.prisma.pricingRule.findFirst({
-      where,
-      orderBy: { createdAt: 'desc' },
+    // Find by frequency and bedrooms using HomePricingRule
+    const rule = await this.prisma.homePricingRule.findFirst({
+      where: {
+        frequency: params.frequency as any,
+        bedrooms: params.bedrooms ?? undefined,
+        isActive: true,
+      },
     });
 
-    // If no exact match, try to find a rule with only required parameters
-    if (!pricingRule) {
-      const minimalWhere: any = {
-        serviceType: params.serviceType,
-        isActive: true,
-      };
-
-      if (params.frequency === null) {
-        minimalWhere.frequency = null;
-      } else {
-        minimalWhere.frequency = params.frequency;
-      }
-
-      // For HOME service, only bedrooms is required
-      if (params.serviceType === ServiceType.HOME && params.bedrooms !== null) {
-        minimalWhere.bedrooms = params.bedrooms;
-      }
-
-      // For OFFICE service, only officeSize is required
-      if (params.serviceType === ServiceType.OFFICE && params.officeSize !== null) {
-        minimalWhere.officeSize = params.officeSize;
-        minimalWhere.floors = null;
-        minimalWhere.rooms = null;
-      }
-
-      pricingRule = await this.prisma.pricingRule.findFirst({
-        where: minimalWhere,
-        orderBy: { createdAt: 'desc' },
-      });
-    }
-
-    return pricingRule;
+    return rule;
   }
 }

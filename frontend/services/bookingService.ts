@@ -44,6 +44,42 @@ export interface BmlPaymentResponse {
   message: string;
 }
 
+// Checkout session types
+export interface CheckoutSessionResponse {
+  checkoutSessionId: string;
+  expiresAt: string;
+  holdDurationSeconds: number;
+  price: {
+    basePrice: number;
+    discountAmount: number;
+    finalPrice: number;
+  };
+  slotsReserved?: number; // For subscriptions
+}
+
+export interface CheckoutSessionStatus {
+  id: string;
+  type: 'BOOKING' | 'SUBSCRIPTION';
+  status: 'PENDING' | 'COMPLETED' | 'EXPIRED';
+  expiresAt: string;
+  remainingSeconds: number;
+  isExpired: boolean;
+  createdAt: string;
+}
+
+export interface CheckoutBmlPaymentResponse {
+  paymentId: string;
+  redirectUrl: string;
+  transactionId: string;
+  expiresAt: string;
+}
+
+export interface CheckoutBankTransferResponse {
+  payment: any;
+  booking?: Booking;
+  subscription?: Subscription;
+}
+
 export interface PaymentStatus {
   id: string;
   bookingId?: string;
@@ -499,6 +535,69 @@ export const bookingApi = {
    */
   getPaymentStatus: async (paymentId: string): Promise<PaymentStatus> => {
     const response = await api.get(`/payments/status/${paymentId}`);
+    return response.data;
+  },
+
+  // ============================================
+  // Checkout Session Methods (Soft Slot Holds)
+  // ============================================
+
+  /**
+   * Create a checkout session for a one-time booking
+   * This reserves the slot for 5 minutes while user completes payment
+   */
+  createBookingCheckout: async (request: CreateBookingRequest): Promise<CheckoutSessionResponse> => {
+    const response = await api.post('/checkout/booking', request);
+    return response.data;
+  },
+
+  /**
+   * Create a checkout session for a subscription
+   * This reserves all slots for 12 weeks for 5 minutes
+   */
+  createSubscriptionCheckout: async (request: CreateSubscriptionRequest): Promise<CheckoutSessionResponse> => {
+    const response = await api.post('/checkout/subscription', request);
+    return response.data;
+  },
+
+  /**
+   * Get checkout session status and remaining time
+   */
+  getCheckoutSession: async (sessionId: string): Promise<CheckoutSessionStatus> => {
+    const response = await api.get(`/checkout/${sessionId}`);
+    return response.data;
+  },
+
+  /**
+   * Cancel a checkout session and release slot holds
+   */
+  cancelCheckout: async (sessionId: string): Promise<void> => {
+    await api.delete(`/checkout/${sessionId}`);
+  },
+
+  /**
+   * Complete checkout with bank transfer
+   * Creates the booking/subscription and records payment as pending
+   */
+  processCheckoutBankTransfer: async (
+    checkoutSessionId: string,
+    receiptUrl?: string
+  ): Promise<CheckoutBankTransferResponse> => {
+    const response = await api.post('/payments/checkout/bank-transfer', {
+      checkoutSessionId,
+      receiptUrl,
+    });
+    return response.data;
+  },
+
+  /**
+   * Initiate BML payment for checkout session
+   * Returns URL to redirect user to BML payment page
+   */
+  initiateCheckoutBmlPayment: async (
+    checkoutSessionId: string
+  ): Promise<CheckoutBmlPaymentResponse> => {
+    const response = await api.post('/payments/checkout/bml', { checkoutSessionId });
     return response.data;
   },
 };

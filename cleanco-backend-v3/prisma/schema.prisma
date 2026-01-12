@@ -118,6 +118,17 @@ enum DiscountType {
   FIXED_AMOUNT
 }
 
+enum CheckoutType {
+  BOOKING
+  SUBSCRIPTION
+}
+
+enum CheckoutStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
 // ==================== MODELS ====================
 
 model User {
@@ -145,6 +156,8 @@ model User {
   complaints           Complaint[]
   refreshTokens        RefreshToken[]
   cleanerBlacklistBy   CleanerBlacklist[] @relation("CustomerBlacklist")
+  slotHolds            SlotHold[]
+  checkoutSessions     CheckoutSession[]
 
   @@index([phoneNumber])
   @@index([role])
@@ -206,31 +219,7 @@ model Service {
   @@map("services")
 }
 
-model PricingRule {
-  id              String                 @id @default(uuid())
-  serviceType     ServiceType
-  frequency       SubscriptionFrequency?
-
-  // Home cleaning parameters
-  bedrooms        Int?
-
-  // Office cleaning parameters (DEPRECATED - use OfficePricingTier)
-  officeSize      String?  // Small, Medium, Large
-  floors          Int?
-  rooms           Int?
-
-  price           Decimal  @db.Decimal(10, 2)
-  isActive        Boolean  @default(true)
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@unique([serviceType, frequency, bedrooms, officeSize, floors, rooms])
-  @@index([serviceType])
-  @@map("pricing_rules")
-}
-
-// Separate pricing table for home cleaning
+// Home cleaning pricing table
 model HomePricingRule {
   id        String                 @id @default(uuid())
   frequency SubscriptionFrequency?
@@ -291,6 +280,7 @@ model TimeSlot {
   subscriptions         Subscription[]
   subscriptionDaySlots  SubscriptionDaySlot[]
   availabilityCaches    AvailabilityCache[]
+  slotHolds             SlotHold[]
 
   @@unique([startTime])
   @@index([orderIndex])
@@ -756,4 +746,43 @@ model Zone {
 
   @@index([orderIndex])
   @@map("zones")
+}
+
+// Temporary slot hold for checkout flow
+model SlotHold {
+  id          String   @id @default(uuid())
+  userId      String
+  holdGroupId String   // Links multiple holds for subscriptions
+  date        DateTime @db.Date
+  timeSlotId  String
+  capacity    Int      // Number of cleaners needed
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeSlot    TimeSlot @relation(fields: [timeSlotId], references: [id])
+
+  @@index([holdGroupId])
+  @@index([date, timeSlotId])
+  @@index([expiresAt])
+  @@map("slot_holds")
+}
+
+// Checkout session for pending payments
+model CheckoutSession {
+  id          String         @id @default(uuid())
+  userId      String
+  type        CheckoutType
+  details     Json           // All booking/subscription details
+  holdGroupId String         @unique
+  expiresAt   DateTime
+  status      CheckoutStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([status])
+  @@map("checkout_sessions")
 }

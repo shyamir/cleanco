@@ -2,14 +2,12 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
-import { CreatePricingRuleDto } from './dto/create-pricing-rule.dto';
-import { UpdatePricingRuleDto } from './dto/update-pricing-rule.dto';
-import { QueryPricingRulesDto } from './dto/query-pricing-rules.dto';
 import { CreateOfficePricingTierDto } from './dto/create-office-pricing-tier.dto';
 import { UpdateOfficePricingTierDto } from './dto/update-office-pricing-tier.dto';
 import { CreateOfficeAddOnPricingDto } from './dto/create-office-addon-pricing.dto';
 import { UpdateOfficeAddOnPricingDto } from './dto/update-office-addon-pricing.dto';
-import { ServiceType } from '@prisma/client';
+import { CreateHomePricingRuleDto } from './dto/create-home-pricing-rule.dto';
+import { UpdateHomePricingRuleDto } from './dto/update-home-pricing-rule.dto';
 
 @Injectable()
 export class AdminServicesService {
@@ -71,103 +69,6 @@ export class AdminServicesService {
     });
 
     return { message: 'Service deleted successfully' };
-  }
-
-  /**
-   * Create a new pricing rule
-   */
-  async createPricingRule(createDto: CreatePricingRuleDto) {
-    // Check for duplicate pricing rule
-    const existing = await this.prisma.pricingRule.findFirst({
-      where: {
-        serviceType: createDto.serviceType,
-        frequency: createDto.frequency || null,
-        bedrooms: createDto.bedrooms || null,
-        officeSize: createDto.officeSize || null,
-        floors: createDto.floors || null,
-        rooms: createDto.rooms || null,
-      },
-    });
-
-    if (existing) {
-      throw new ConflictException('A pricing rule with these parameters already exists');
-    }
-
-    return this.prisma.pricingRule.create({
-      data: {
-        ...createDto,
-        bedrooms: createDto.bedrooms || null,
-        officeSize: createDto.officeSize || null,
-        floors: createDto.floors || null,
-        rooms: createDto.rooms || null,
-      },
-    });
-  }
-
-  /**
-   * Get all pricing rules with optional filtering
-   */
-  async findAllPricingRules(query: QueryPricingRulesDto) {
-    const where: any = {};
-
-    if (query.serviceType) {
-      where.serviceType = query.serviceType;
-    }
-
-    return this.prisma.pricingRule.findMany({
-      where,
-      orderBy: [
-        { serviceType: 'asc' },
-        { frequency: 'asc' },
-        { createdAt: 'desc' },
-      ],
-    });
-  }
-
-  /**
-   * Get a pricing rule by ID
-   */
-  async findOnePricingRule(id: string) {
-    const pricingRule = await this.prisma.pricingRule.findUnique({
-      where: { id },
-    });
-
-    if (!pricingRule) {
-      throw new NotFoundException('Pricing rule not found');
-    }
-
-    return pricingRule;
-  }
-
-  /**
-   * Update a pricing rule
-   */
-  async updatePricingRule(id: string, updateDto: UpdatePricingRuleDto) {
-    await this.findOnePricingRule(id); // Check if exists
-
-    return this.prisma.pricingRule.update({
-      where: { id },
-      data: {
-        ...updateDto,
-        bedrooms: updateDto.bedrooms !== undefined ? updateDto.bedrooms : undefined,
-        officeSize: updateDto.officeSize !== undefined ? updateDto.officeSize : undefined,
-        floors: updateDto.floors !== undefined ? updateDto.floors : undefined,
-        rooms: updateDto.rooms !== undefined ? updateDto.rooms : undefined,
-      },
-    });
-  }
-
-  /**
-   * Delete a pricing rule
-   */
-  async removePricingRule(id: string) {
-    await this.findOnePricingRule(id); // Check if exists
-
-    await this.prisma.pricingRule.delete({
-      where: { id },
-    });
-
-    return { message: 'Pricing rule deleted successfully' };
   }
 
   // ==================== Office Pricing Tiers ====================
@@ -326,5 +227,82 @@ export class AdminServicesService {
     });
 
     return { message: 'Office add-on pricing deleted successfully' };
+  }
+
+  // ==================== Home Pricing Rules ====================
+
+  /**
+   * Create a new home pricing rule
+   */
+  async createHomePricingRule(createDto: CreateHomePricingRuleDto) {
+    // Check for duplicate (unique constraint on [frequency, bedrooms])
+    const existing = await this.prisma.homePricingRule.findFirst({
+      where: {
+        frequency: createDto.frequency || null,
+        bedrooms: createDto.bedrooms,
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException('A home pricing rule with these parameters already exists');
+    }
+
+    return this.prisma.homePricingRule.create({
+      data: {
+        frequency: createDto.frequency || null,
+        bedrooms: createDto.bedrooms,
+        price: createDto.price,
+        isActive: createDto.isActive ?? true,
+      },
+    });
+  }
+
+  /**
+   * Get all home pricing rules
+   */
+  async findAllHomePricingRules() {
+    return this.prisma.homePricingRule.findMany({
+      orderBy: [{ frequency: 'asc' }, { bedrooms: 'asc' }],
+    });
+  }
+
+  /**
+   * Get a home pricing rule by ID
+   */
+  async findOneHomePricingRule(id: string) {
+    const rule = await this.prisma.homePricingRule.findUnique({
+      where: { id },
+    });
+
+    if (!rule) {
+      throw new NotFoundException('Home pricing rule not found');
+    }
+
+    return rule;
+  }
+
+  /**
+   * Update a home pricing rule
+   */
+  async updateHomePricingRule(id: string, updateDto: UpdateHomePricingRuleDto) {
+    await this.findOneHomePricingRule(id);
+
+    return this.prisma.homePricingRule.update({
+      where: { id },
+      data: updateDto,
+    });
+  }
+
+  /**
+   * Delete a home pricing rule
+   */
+  async removeHomePricingRule(id: string) {
+    await this.findOneHomePricingRule(id);
+
+    await this.prisma.homePricingRule.delete({
+      where: { id },
+    });
+
+    return { message: 'Home pricing rule deleted successfully' };
   }
 }

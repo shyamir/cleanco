@@ -529,6 +529,7 @@ export class SubscriptionsService {
 
   /**
    * Calculate monthly price for a subscription
+   * Uses HomePricingRule for HOME service, OfficePricingTier for OFFICE
    */
   private async calculateMonthlyPrice(
     serviceType: ServiceType,
@@ -538,29 +539,25 @@ export class SubscriptionsService {
     floors?: number,
     rooms?: number,
   ): Promise<number> {
-    // Find pricing rule
-    const pricingRule = await this.prisma.pricingRule.findFirst({
-      where: {
-        serviceType,
-        frequency,
-        ...(serviceType === ServiceType.HOME && {
+    if (serviceType === ServiceType.HOME) {
+      // Use HomePricingRule for HOME service
+      const rule = await this.prisma.homePricingRule.findFirst({
+        where: {
+          frequency,
           bedrooms,
-        }),
-        ...(serviceType === ServiceType.OFFICE && {
-          officeSize,
-          floors,
-          rooms,
-        }),
-        isActive: true,
-      },
-    });
+          isActive: true,
+        },
+      });
 
-    if (!pricingRule) {
-      throw new NotFoundException('No pricing rule found for the provided parameters');
+      if (!rule) {
+        throw new NotFoundException('No pricing rule found for the provided parameters');
+      }
+
+      return Number(rule.price);
     }
 
-    // pricingRule.price is already the monthly price for subscription frequencies
-    return Number(pricingRule.price);
+    // OFFICE service uses OfficePricingTier (legacy PricingRule not used)
+    throw new NotFoundException('Office subscription pricing not supported via this method');
   }
 
   /**

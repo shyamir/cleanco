@@ -472,9 +472,10 @@ export class BookingsService {
   ) {
     const { newDate: newDateString, newTimeSlotId } = rescheduleDto;
 
-    // Find booking
+    // Find booking with time slot for accurate time calculation
     const booking = await this.prisma.booking.findFirst({
       where: { id, userId },
+      include: { timeSlot: true },
     });
 
     if (!booking) {
@@ -498,8 +499,12 @@ export class BookingsService {
     }
 
     // Check minimum notice (24 hours)
-    // If within 24 hours, it will be counted as a cancellation
-    const hoursDiff = differenceInHours(booking.date, DateUtils.nowInMaldives());
+    // Calculate actual appointment time by combining date with time slot
+    const bookingDateStr = DateUtils.formatInMaldives(booking.date, 'yyyy-MM-dd');
+    const appointmentTimeStr = `${bookingDateStr}T${booking.timeSlot.startTime}:00`;
+    const appointmentTime = DateUtils.fromMaldivesTime(new Date(appointmentTimeStr));
+
+    const hoursDiff = differenceInHours(appointmentTime, new Date());
     if (hoursDiff < 24) {
       throw new BadRequestException(
         'Bookings cannot be rescheduled within 24 hours of appointment time. This will be counted as a cancellation. Please cancel and create a new booking.',
@@ -664,6 +669,7 @@ export class BookingsService {
 
   /**
    * Helper: Find matching pricing rule (for HOME service)
+   * Uses HomePricingRule table
    */
   private async findMatchingPricingRule(params: {
     serviceType: ServiceType;
@@ -671,12 +677,11 @@ export class BookingsService {
     floors?: number;
     rooms?: number;
   }) {
-    const { serviceType, bedrooms } = params;
+    const { bedrooms } = params;
 
-    // For HOME service, find by bedrooms
-    return this.prisma.pricingRule.findFirst({
+    // For HOME service, use HomePricingRule
+    return this.prisma.homePricingRule.findFirst({
       where: {
-        serviceType,
         frequency: null, // ONE_TIME booking
         bedrooms,
         isActive: true,

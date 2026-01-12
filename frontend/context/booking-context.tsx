@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { CLEANING_PRICING } from "@/constants/pricing";
-import { PaymentMethod, DaySlot } from "@/services/bookingService";
+import { PaymentMethod, DaySlot, CheckoutSessionResponse } from "@/services/bookingService";
 import { PricingRule } from "@/services/services";
 
 type BookingContextType = {
@@ -64,6 +64,9 @@ type BookingContextType = {
   setHomePricingRules: (rules: PricingRule[]) => void;
   homePricingLoaded: boolean;
   setHomePricingLoaded: (loaded: boolean) => void;
+  // Checkout session (created before navigating to payment)
+  checkoutSession: CheckoutSessionResponse | null;
+  setCheckoutSession: (session: CheckoutSessionResponse | null) => void;
 };
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -100,6 +103,8 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   // Home pricing cache (persists across navigations)
   const [homePricingRules, setHomePricingRules] = useState<PricingRule[]>([]);
   const [homePricingLoaded, setHomePricingLoaded] = useState(false);
+  // Checkout session (created before navigating to payment)
+  const [checkoutSession, setCheckoutSession] = useState<CheckoutSessionResponse | null>(null);
 
   const resetBooking = () => {
     setBedrooms(1);
@@ -131,6 +136,8 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     setIsEstimate(false);
     // Reset pricing cache to fetch fresh prices
     setHomePricingLoaded(false);
+    // Clear checkout session
+    setCheckoutSession(null);
   };
 
   return (
@@ -191,6 +198,8 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         setHomePricingRules,
         homePricingLoaded,
         setHomePricingLoaded,
+        checkoutSession,
+        setCheckoutSession,
       }}
     >
       {children}

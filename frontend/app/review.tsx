@@ -32,6 +32,7 @@ import {
   mapFrequencyToBackend,
   CreateBookingRequest,
   CreateSubscriptionRequest,
+  CheckoutSessionResponse,
 } from "@/services/bookingService";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -74,6 +75,8 @@ const Review = () => {
     addressId,
     timeSlotId,
     daySlots,
+    // Checkout session
+    setCheckoutSession,
   } = useBooking();
   const { bedrooms, bathrooms, total: homeCleaningTotal, slots } = useCleaningBooking();
 
@@ -86,6 +89,8 @@ const Review = () => {
   const [officeTotal, setOfficeTotal] = useState<number | null>(null);
   // State for submitting office quote
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // State for creating checkout session (home cleaning)
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
 
   // Use correct total based on service type
   // For office: use local officeTotal state (not affected by useCleaningBooking)
@@ -279,6 +284,78 @@ const Review = () => {
       Alert.alert("Error", errorMessage);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Create checkout session and navigate to payment (home cleaning)
+  const handleConfirmAndPay = async () => {
+    // Validate required fields
+    if (!addressId) {
+      Alert.alert("Error", "Please select an address before proceeding to payment.");
+      return;
+    }
+
+    const { isSubscription, subscriptionFrequency } = mapFrequencyToBackend(frequency);
+
+    if (isSubscription && daySlots.length === 0) {
+      Alert.alert("Error", "Please select days and time slots before proceeding to payment.");
+      return;
+    }
+
+    if (!isSubscription && !timeSlotId) {
+      Alert.alert("Error", "Please select a time slot before proceeding to payment.");
+      return;
+    }
+
+    setIsCreatingCheckout(true);
+
+    try {
+      let session: CheckoutSessionResponse;
+
+      if (isSubscription && subscriptionFrequency) {
+        // Create subscription checkout
+        const request: CreateSubscriptionRequest = {
+          serviceType: ServiceType.HOME,
+          frequency: subscriptionFrequency,
+          addressId,
+          daySlots: daySlots.length > 0 ? daySlots : [{ day: 1, timeSlotId: timeSlotId! }],
+          startDate: startDate || undefined,
+          bedrooms,
+          bathrooms,
+          hasPets: pet !== "None",
+          specialInstructions: instructions || undefined,
+          promoCode: promoCode || undefined,
+        };
+        session = await bookingApi.createSubscriptionCheckout(request);
+      } else {
+        // Create booking checkout
+        const request: CreateBookingRequest = {
+          serviceType: ServiceType.HOME,
+          bookingType: BookingType.ONE_TIME,
+          addressId,
+          date: startDate || new Date().toISOString().split("T")[0],
+          timeSlotId: timeSlotId!,
+          bedrooms,
+          bathrooms,
+          hasPets: pet !== "None",
+          paymentMethod: PaymentMethod.BANK_TRANSFER, // Placeholder - will be set on payment page
+          specialInstructions: instructions || undefined,
+          promoCode: promoCode || undefined,
+        };
+        session = await bookingApi.createBookingCheckout(request);
+      }
+
+      // Store session in context and navigate to payment
+      setCheckoutSession(session);
+      router.push("/payment");
+    } catch (error: any) {
+      console.error("Failed to create checkout session:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to reserve your time slot. Please try again.";
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setIsCreatingCheckout(false);
     }
   };
 
@@ -570,18 +647,20 @@ const Review = () => {
           <View style={styles.buttonWrapper}>
             <Button
               label={
-                isSubmitting
-                  ? "Submitting..."
+                isSubmitting || isCreatingCheckout
+                  ? isOfficeBooking
+                    ? "Submitting..."
+                    : "Reserving slot..."
                   : isOfficeBooking
                   ? "Submit Quote"
                   : "Confirm & Pay"
               }
               variant="filled"
-              disabled={isLoadingQuote || !!quoteError || isSubmitting}
+              disabled={isLoadingQuote || !!quoteError || isSubmitting || isCreatingCheckout}
               onPress={
                 isOfficeBooking
                   ? handleSubmitQuote
-                  : () => router.push("/payment")
+                  : handleConfirmAndPay
               }
             />
           </View>

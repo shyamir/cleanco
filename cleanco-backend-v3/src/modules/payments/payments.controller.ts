@@ -24,6 +24,7 @@ import { CreateBankTransferPaymentDto } from './dto/create-bank-transfer-payment
 import { InitiateBmlPaymentDto } from './dto/initiate-bml-payment.dto';
 import { CreateSubscriptionBankTransferPaymentDto } from './dto/create-subscription-bank-transfer-payment.dto';
 import { InitiateSubscriptionBmlPaymentDto } from './dto/initiate-subscription-bml-payment.dto';
+import { CheckoutBankTransferPaymentDto, CheckoutBmlPaymentDto } from './dto/checkout-payment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -196,5 +197,60 @@ export class PaymentsController {
     @Body() dto: InitiateSubscriptionBmlPaymentDto,
   ) {
     return await this.paymentsService.initiateSubscriptionBmlPayment(userId, dto);
+  }
+
+  // ============================================
+  // Checkout-based Payment Endpoints (New Flow)
+  // ============================================
+
+  @Post('checkout/bank-transfer')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CUSTOMER')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Submit bank transfer payment for checkout session',
+    description: 'Completes the checkout (creates booking/subscription) and records the payment',
+  })
+  @ApiResponse({ status: 201, description: 'Payment processed and booking/subscription created' })
+  @ApiResponse({ status: 400, description: 'Checkout expired or already completed' })
+  @ApiResponse({ status: 404, description: 'Checkout session not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async processCheckoutBankTransfer(
+    @GetUser('id') userId: string,
+    @Body() dto: CheckoutBankTransferPaymentDto,
+  ) {
+    return await this.paymentsService.processCheckoutBankTransfer(userId, dto);
+  }
+
+  @Post('checkout/bml')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CUSTOMER')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Initiate BML payment for checkout session',
+    description: 'Creates a pending payment and returns BML redirect URL. Booking is created on payment confirmation.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'BML payment initiated',
+    schema: {
+      properties: {
+        paymentId: { type: 'string' },
+        redirectUrl: { type: 'string' },
+        transactionId: { type: 'string' },
+        expiresAt: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Checkout expired or already completed' })
+  @ApiResponse({ status: 404, description: 'Checkout session not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async initiateCheckoutBmlPayment(
+    @GetUser('id') userId: string,
+    @Body() dto: CheckoutBmlPaymentDto,
+  ) {
+    return await this.paymentsService.initiateCheckoutBmlPayment(userId, dto);
   }
 }

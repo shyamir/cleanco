@@ -1,9 +1,9 @@
-import { PrismaClient, ServiceType, SubscriptionFrequency } from '@prisma/client';
+import { PrismaClient, SubscriptionFrequency } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-async function seedPricingRules() {
-  console.log('🌱 Seeding pricing rules...');
+async function seedHomePricingRules() {
+  console.log('Seeding home pricing rules...');
 
   // Pricing data from frontend constants/pricing.ts
   // Format: { bedrooms: { frequency: price } }
@@ -26,7 +26,7 @@ async function seedPricingRules() {
   let created = 0;
   let skipped = 0;
 
-  // Create pricing rules for each bedroom count and frequency combination
+  // Create home pricing rules for each bedroom count and frequency combination
   for (const [bedroomsStr, frequencies] of Object.entries(homePricing)) {
     const bedrooms = parseInt(bedroomsStr);
 
@@ -34,11 +34,7 @@ async function seedPricingRules() {
       const frequency = frequencyMap[freqLabel];
 
       const ruleData = {
-        serviceType: ServiceType.HOME,
         bedrooms,
-        officeSize: null,
-        floors: null,
-        rooms: null,
         frequency,
         price: basePrice,
         isActive: true,
@@ -46,9 +42,8 @@ async function seedPricingRules() {
 
       try {
         // Check if rule already exists
-        const existing = await prisma.pricingRule.findFirst({
+        const existing = await prisma.homePricingRule.findFirst({
           where: {
-            serviceType: ServiceType.HOME,
             bedrooms,
             frequency,
           },
@@ -57,40 +52,40 @@ async function seedPricingRules() {
         if (existing) {
           skipped++;
           console.log(
-            `⏭️  Skipped (exists): HOME - ${bedrooms} bedroom(s) - ${freqLabel} (MVR ${basePrice})`
+            `  Skipped (exists): ${bedrooms} bedroom(s) - ${freqLabel} (MVR ${basePrice})`
           );
         } else {
-          await prisma.pricingRule.create({
+          await prisma.homePricingRule.create({
             data: ruleData,
           });
           created++;
           console.log(
-            `✅ Created: HOME - ${bedrooms} bedroom(s) - ${freqLabel} (MVR ${basePrice})`
+            `  Created: ${bedrooms} bedroom(s) - ${freqLabel} (MVR ${basePrice})`
           );
         }
       } catch (error: any) {
         console.error(
-          `❌ Error creating rule for ${bedrooms} bedroom(s) - ${freqLabel}:`,
+          `  Error creating rule for ${bedrooms} bedroom(s) - ${freqLabel}:`,
           error.message
         );
       }
     }
   }
 
-  console.log(`\n📊 Summary: ${created} created, ${skipped} skipped`);
+  console.log(`\nSummary: ${created} created, ${skipped} skipped`);
 }
 
 async function main() {
-  console.log('🚀 Starting pricing rules seed process...\n');
+  console.log('Starting home pricing rules seed process...\n');
 
-  await seedPricingRules();
+  await seedHomePricingRules();
 
-  console.log('\n✅ Pricing rules seed completed successfully!');
+  console.log('\nHome pricing rules seed completed successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error('Seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {

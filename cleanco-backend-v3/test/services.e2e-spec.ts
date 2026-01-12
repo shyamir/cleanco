@@ -41,7 +41,7 @@ describe('Services (e2e)', () => {
 
   afterAll(async () => {
     // Clean up test data
-    await prisma.pricingRule.deleteMany({
+    await prisma.homePricingRule.deleteMany({
       where: {
         OR: [
           { bedrooms: 10 }, // Test pricing rules
@@ -119,41 +119,34 @@ describe('Services (e2e)', () => {
     });
     serviceId = service.id;
 
-    // Create test pricing rules
-    await prisma.pricingRule.create({
-      data: {
-        serviceType: ServiceType.HOME,
-        frequency: null,
-        bedrooms: 2,
-        bathrooms: 2,
-        price: 250,
-        isActive: true,
-      },
+    // Create test home pricing rules (skip if already exists)
+    const existingRule1 = await prisma.homePricingRule.findFirst({
+      where: { frequency: null, bedrooms: 2 },
     });
+    if (!existingRule1) {
+      await prisma.homePricingRule.create({
+        data: {
+          frequency: null,
+          bedrooms: 2,
+          price: 250,
+          isActive: true,
+        },
+      });
+    }
 
-    await prisma.pricingRule.create({
-      data: {
-        serviceType: ServiceType.HOME,
-        frequency: SubscriptionFrequency.ONCE_A_WEEK,
-        bedrooms: 3,
-        bathrooms: 2,
-        price: 300,
-        isActive: true,
-      },
+    const existingRule2 = await prisma.homePricingRule.findFirst({
+      where: { frequency: SubscriptionFrequency.ONCE_A_WEEK, bedrooms: 3 },
     });
-
-    await prisma.pricingRule.create({
-      data: {
-        serviceType: ServiceType.OFFICE,
-        frequency: null,
-        officeSize: 'Medium',
-        floors: 1,
-        rooms: 5,
-        bathrooms: 2,
-        price: 400,
-        isActive: true,
-      },
-    });
+    if (!existingRule2) {
+      await prisma.homePricingRule.create({
+        data: {
+          frequency: SubscriptionFrequency.ONCE_A_WEEK,
+          bedrooms: 3,
+          price: 300,
+          isActive: true,
+        },
+      });
+    }
 
     // Create a test promo code
     await prisma.promotionalCode.upsert({
