@@ -10,6 +10,7 @@ export interface SlotReservation {
   date: Date;
   timeSlotId: string;
   requiredCapacity: number;
+  excludeHoldGroupId?: string; // Exclude this hold group when calculating held capacity (for checkout conversion)
 }
 
 @Injectable()
@@ -22,9 +23,10 @@ export class BookingLockService {
   /**
    * Reserve capacity for a single slot atomically
    * Uses pessimistic locking with SELECT FOR UPDATE
+   * Considers active holds when calculating available capacity
    */
   async reserveSlot(reservation: SlotReservation): Promise<void> {
-    const { date, timeSlotId, requiredCapacity } = reservation;
+    const { date, timeSlotId, requiredCapacity, excludeHoldGroupId } = reservation;
 
     for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
       try {
@@ -45,12 +47,29 @@ export class BookingLockService {
               FOR UPDATE
             `;
 
+            // Sum active holds for this slot (excluding the specified hold group if provided)
+            const activeHoldsSum = await tx.slotHold.aggregate({
+              where: {
+                date,
+                timeSlotId,
+                expiresAt: { gt: new Date() },
+                ...(excludeHoldGroupId ? { holdGroupId: { not: excludeHoldGroupId } } : {}),
+              },
+              _sum: { capacity: true },
+            });
+            const heldCapacity = activeHoldsSum._sum.capacity ?? 0;
+
             if (cache.length === 0) {
               // Create new cache entry with reservation
               const totalCapacity = await this.getAvailableCleanersCount(tx, date);
+              const availableCapacity = totalCapacity - heldCapacity;
 
-              if (totalCapacity < requiredCapacity) {
-                throw new ConflictException('Insufficient capacity for this time slot');
+              if (availableCapacity < requiredCapacity) {
+                throw new ConflictException(
+                  heldCapacity > 0
+                    ? `Insufficient capacity - ${heldCapacity} slot(s) held by users at checkout`
+                    : 'Insufficient capacity for this time slot',
+                );
               }
 
               await tx.availabilityCache.create({
@@ -64,10 +83,14 @@ export class BookingLockService {
               });
             } else {
               const currentCache = cache[0];
-              const availableCapacity = currentCache.totalCapacity - currentCache.bookedCapacity;
+              const availableCapacity = currentCache.totalCapacity - currentCache.bookedCapacity - heldCapacity;
 
               if (availableCapacity < requiredCapacity) {
-                throw new ConflictException('This time slot is no longer available');
+                throw new ConflictException(
+                  heldCapacity > 0
+                    ? `Cannot reserve - ${heldCapacity} slot(s) held by users at checkout`
+                    : 'This time slot is no longer available',
+                );
               }
 
               // Atomic update with version check
@@ -110,11 +133,15 @@ export class BookingLockService {
   /**
    * Reserve capacity for multiple slots atomically (for subscriptions)
    * All reservations succeed or all fail
+   * Considers active holds when calculating available capacity
    */
   async reserveMultipleSlots(reservations: SlotReservation[]): Promise<void> {
     if (reservations.length === 0) {
       return;
     }
+
+    // Get excludeHoldGroupId from first reservation (all in batch share same hold group)
+    const excludeHoldGroupId = reservations[0].excludeHoldGroupId;
 
     // Group reservations by date+timeSlot to handle duplicates
     const grouped = this.groupReservations(reservations);
@@ -140,6 +167,18 @@ export class BookingLockService {
             FOR UPDATE
           `;
 
+          // Sum active holds for this slot (excluding the specified hold group if provided)
+          const activeHoldsSum = await tx.slotHold.aggregate({
+            where: {
+              date,
+              timeSlotId,
+              expiresAt: { gt: new Date() },
+              ...(excludeHoldGroupId ? { holdGroupId: { not: excludeHoldGroupId } } : {}),
+            },
+            _sum: { capacity: true },
+          });
+          const heldCapacity = activeHoldsSum._sum.capacity ?? 0;
+
           let totalCapacity: number;
           let bookedCapacity: number;
 
@@ -151,13 +190,16 @@ export class BookingLockService {
             bookedCapacity = cache[0].bookedCapacity;
           }
 
-          const availableCapacity = totalCapacity - bookedCapacity;
+          const availableCapacity = totalCapacity - bookedCapacity - heldCapacity;
 
           if (availableCapacity < totalRequired) {
             const dateFormatted = date.toISOString().split('T')[0];
             throw new ConflictException(
-              `Insufficient capacity on ${dateFormatted} for the selected time slot. ` +
-                `Required: ${totalRequired}, Available: ${availableCapacity}`,
+              heldCapacity > 0
+                ? `Cannot reserve on ${dateFormatted} - ${heldCapacity} slot(s) held by users at checkout. ` +
+                    `Required: ${totalRequired}, Available: ${availableCapacity}`
+                : `Insufficient capacity on ${dateFormatted} for the selected time slot. ` +
+                    `Required: ${totalRequired}, Available: ${availableCapacity}`,
             );
           }
 
@@ -268,5 +310,68 @@ export class BookingLockService {
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Check if a slot has enough capacity without reserving
+   * Returns availability info including held capacity
+   */
+  async checkSlotAvailability(
+    date: Date,
+    timeSlotId: string,
+    requiredCapacity: number,
+  ): Promise<{ available: boolean; heldCapacity: number; availableCapacity: number }> {
+    // Use raw SQL with date cast to match reserveSlot behavior
+    const cache = await this.prisma.$queryRaw<
+      Array<{
+        totalCapacity: number;
+        bookedCapacity: number;
+      }>
+    >`
+      SELECT "totalCapacity", "bookedCapacity"
+      FROM availability_caches
+      WHERE date = ${date}::date AND "timeSlotId" = ${timeSlotId}
+    `;
+
+    // Sum active holds for this slot
+    const activeHoldsSum = await this.prisma.slotHold.aggregate({
+      where: {
+        date,
+        timeSlotId,
+        expiresAt: { gt: new Date() },
+      },
+      _sum: { capacity: true },
+    });
+    const heldCapacity = activeHoldsSum._sum.capacity ?? 0;
+
+    let totalCapacity: number;
+    let bookedCapacity: number;
+
+    if (cache.length === 0) {
+      // No cache entry - calculate on the fly
+      totalCapacity = await this.prisma.cleanerProfile.count({
+        where: {
+          isAvailable: true,
+          vacations: {
+            none: {
+              startDate: { lte: date },
+              endDate: { gte: date },
+            },
+          },
+        },
+      });
+      bookedCapacity = 0;
+    } else {
+      totalCapacity = cache[0].totalCapacity;
+      bookedCapacity = cache[0].bookedCapacity;
+    }
+
+    const availableCapacity = totalCapacity - bookedCapacity - heldCapacity;
+
+    return {
+      available: availableCapacity >= requiredCapacity,
+      heldCapacity,
+      availableCapacity,
+    };
   }
 }

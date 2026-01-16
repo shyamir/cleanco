@@ -339,10 +339,12 @@ export class CheckoutService {
     });
 
     // Reserve slot in AvailabilityCache
+    // Exclude own hold group so the user's hold doesn't block their own checkout
     await this.bookingLockService.reserveSlot({
       date: bookingDate,
       timeSlotId: dto.timeSlotId,
       requiredCapacity: requiredCleaners,
+      excludeHoldGroupId: session.holdGroupId,
     });
 
     // Calculate price
@@ -517,7 +519,7 @@ export class CheckoutService {
     });
 
     // Generate bookings for 12 weeks
-    await this.generateBookingsForSubscription(subscription, 12);
+    await this.generateBookingsForSubscription(subscription, 12, session.holdGroupId);
 
     // Update next billing date
     const lastPaidBooking = await this.prisma.booking.findFirst({
@@ -541,7 +543,7 @@ export class CheckoutService {
   /**
    * Generate bookings for subscription (adapted from subscriptions.service)
    */
-  private async generateBookingsForSubscription(subscription: any, weeksToGenerate: number) {
+  private async generateBookingsForSubscription(subscription: any, weeksToGenerate: number, holdGroupId?: string) {
     const bookings = [];
     const reservations = [];
 
@@ -591,6 +593,7 @@ export class CheckoutService {
           date: bookingDate,
           timeSlotId,
           requiredCapacity: requiredCleaners,
+          excludeHoldGroupId: holdGroupId, // Exclude own hold so checkout doesn't block itself
         });
 
         bookings.push({

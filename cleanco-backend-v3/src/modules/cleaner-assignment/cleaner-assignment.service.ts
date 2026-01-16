@@ -272,6 +272,28 @@ export class CleanerAssignmentService {
     const newAssignmentCount = cleanerIds.length;
     const delta = newAssignmentCount - currentAssignmentCount;
 
+    // Check for active holds BEFORE making changes if we're adding cleaners
+    if (delta > 0) {
+      const availability = await this.bookingLockService.checkSlotAvailability(
+        booking.date,
+        booking.timeSlotId,
+        delta,
+      );
+
+      if (!availability.available && availability.heldCapacity > 0) {
+        throw new BadRequestException(
+          `Cannot add ${delta} cleaner(s) - ${availability.heldCapacity} slot(s) currently held by user(s) at checkout. ` +
+            `Please try again in a few minutes after the hold expires.`,
+        );
+      }
+
+      if (!availability.available) {
+        throw new BadRequestException(
+          `Cannot add ${delta} cleaner(s) - only ${availability.availableCapacity} slot(s) available.`,
+        );
+      }
+    }
+
     // Remove existing assignments
     await this.prisma.cleanerAssignment.deleteMany({
       where: { bookingId },
@@ -306,7 +328,8 @@ export class CleanerAssignmentService {
         );
       } catch (error) {
         this.logger.error(`Failed to update availability cache: ${error.message}`);
-        // Don't throw - the assignment was successful, cache update is secondary
+        // Cache update failed but assignment already done - this shouldn't happen
+        // since we check holds upfront, but log for debugging
       }
     }
 
