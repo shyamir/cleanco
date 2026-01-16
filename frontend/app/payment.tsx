@@ -57,10 +57,9 @@ const Payment = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Validate checkout session exists on mount
+  // Validate checkout session exists on mount (only check once)
   useEffect(() => {
-    if (!checkoutSession && !alertShownRef.current) {
-      alertShownRef.current = true;
+    if (!checkoutSession) {
       Alert.alert(
         "Error",
         "No active checkout session. Please go back and try again.",
@@ -74,7 +73,8 @@ const Payment = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, [checkoutSession, navigation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only check on mount
 
   // Countdown timer
   useEffect(() => {
@@ -171,8 +171,9 @@ const Payment = () => {
         // Clear cached pricing rules
         clearPricingCache();
 
-        // Navigate to confirmation
-        router.push("/confirmation");
+        // Navigate to confirmation (replace removes payment from stack, preventing stale alerts)
+        // Checkout session will be cleared by resetBooking on confirmation page
+        router.replace("/confirmation");
       }
     } catch (error: any) {
       console.error("Failed to process payment:", error);
