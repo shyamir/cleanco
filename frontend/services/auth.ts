@@ -86,7 +86,21 @@ export const authService = {
    */
   async getUser(): Promise<User | null> {
     const userStr = await AsyncStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    if (!userStr) return null;
+    try {
+      const parsed = JSON.parse(userStr);
+      // Validate it's a user object with required fields
+      if (parsed && typeof parsed === 'object' && parsed.id) {
+        return parsed as User;
+      }
+      console.warn('User cache was corrupted, clearing...');
+      await AsyncStorage.removeItem('user');
+      return null;
+    } catch {
+      console.warn('Failed to parse user cache, clearing...');
+      await AsyncStorage.removeItem('user');
+      return null;
+    }
   },
 
   /**

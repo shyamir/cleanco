@@ -94,7 +94,7 @@ const useCleaningBooking = () => {
 
   // Find price from cached pricing rules
   const findPriceFromRules = useCallback((bedroomCount: number, freq: string): number | null => {
-    if (homePricingRules.length === 0) return null;
+    if (!homePricingRules || homePricingRules.length === 0) return null;
 
     // Map frontend frequency to backend format
     const { subscriptionFrequency } = mapFrequencyToBackend(freq);
@@ -126,11 +126,13 @@ const useCleaningBooking = () => {
       setIsLoadingPrice(true);
       try {
         const rules = await servicesApi.getPricingRules('HOME');
-        setHomePricingRules(rules);
+        // Ensure we always set an array (API might return undefined on error)
+        setHomePricingRules(Array.isArray(rules) ? rules : []);
         setHomePricingLoaded(true);
       } catch (error) {
         console.error("Failed to fetch pricing rules:", error);
         setPriceError("Failed to load pricing");
+        setHomePricingRules([]); // Ensure empty array on error
         setHomePricingLoaded(true); // Still mark as loaded so we can use fallback
       } finally {
         setIsLoadingPrice(false);

@@ -786,3 +786,49 @@ model CheckoutSession {
   @@index([status])
   @@map("checkout_sessions")
 }
+
+// ==================== ADMIN PORTAL ====================
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+// Separate admin model for admin portal authentication
+// Completely independent from User model to avoid affecting mobile app
+model Admin {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  passwordHash String
+  email        String?
+  firstName    String?
+  lastName     String?
+  role         AdminRole @default(ADMIN)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+  createdBy    String?   // ID of admin who created this account
+
+  refreshTokens AdminRefreshToken[]
+
+  @@index([username])
+  @@index([role])
+  @@map("admins")
+}
+
+// Refresh tokens for admin sessions
+model AdminRefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  adminId   String
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([token])
+  @@map("admin_refresh_tokens")
+}

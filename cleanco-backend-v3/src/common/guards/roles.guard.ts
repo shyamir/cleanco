@@ -18,6 +18,15 @@ export class RolesGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
+
+    // Admin portal users (SUPER_ADMIN or ADMIN) can access any endpoint requiring ADMIN role
+    if (user?.isAdminPortal) {
+      const isAdminRequired = requiredRoles.includes(UserRole.ADMIN);
+      if (isAdminRequired && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN')) {
+        return true;
+      }
+    }
+
     return requiredRoles.some((role) => user.role === role);
   }
 }

@@ -55,12 +55,19 @@ export default function Otp() {
       // Also update profile (name/email) from pending data
       const pendingProfileStr = await AsyncStorage.getItem("pendingProfile");
       if (pendingProfileStr) {
-        const pendingProfile = JSON.parse(pendingProfileStr);
-        await authService.updateProfile({
-          firstName: pendingProfile.firstName,
-          lastName: pendingProfile.lastName || null,
-          email: pendingProfile.email || null,
-        });
+        try {
+          const pendingProfile = JSON.parse(pendingProfileStr);
+          // Validate it's a valid profile object
+          if (pendingProfile && typeof pendingProfile === 'object' && pendingProfile.firstName) {
+            await authService.updateProfile({
+              firstName: pendingProfile.firstName,
+              lastName: pendingProfile.lastName || null,
+              email: pendingProfile.email || null,
+            });
+          }
+        } catch {
+          console.warn('Failed to parse pendingProfile, skipping...');
+        }
         await AsyncStorage.removeItem("pendingProfile");
       }
 

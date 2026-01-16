@@ -60,24 +60,35 @@ export const AddressProvider = ({ children }: { children: ReactNode }) => {
       if (!forceRefresh) {
         const cached = await AsyncStorage.getItem(ADDRESSES_STORAGE_KEY);
         if (cached) {
-          const parsed = JSON.parse(cached) as BackendAddress[];
-          // Deduplicate by ID (keep the last occurrence)
-          const deduped = parsed.reduce((acc: BackendAddress[], addr) => {
-            const existingIndex = acc.findIndex(a => a.id === addr.id);
-            if (existingIndex >= 0) {
-              acc[existingIndex] = addr; // Replace with newer
+          try {
+            const parsed = JSON.parse(cached);
+            // Ensure parsed is an array (handle corrupted cache)
+            if (!Array.isArray(parsed)) {
+              console.warn('Address cache was corrupted, clearing...');
+              await AsyncStorage.removeItem(ADDRESSES_STORAGE_KEY);
             } else {
-              acc.push(addr);
+              // Deduplicate by ID (keep the last occurrence)
+              const deduped = parsed.reduce((acc: BackendAddress[], addr) => {
+                const existingIndex = acc.findIndex(a => a.id === addr.id);
+                if (existingIndex >= 0) {
+                  acc[existingIndex] = addr; // Replace with newer
+                } else {
+                  acc.push(addr);
+                }
+                return acc;
+              }, []);
+              setSavedAddresses(deduped);
+              // Save deduped version back if there were duplicates
+              if (deduped.length !== parsed.length) {
+                await AsyncStorage.setItem(ADDRESSES_STORAGE_KEY, JSON.stringify(deduped));
+              }
+              setIsLoading(false);
+              return;
             }
-            return acc;
-          }, []);
-          setSavedAddresses(deduped);
-          // Save deduped version back if there were duplicates
-          if (deduped.length !== parsed.length) {
-            await AsyncStorage.setItem(ADDRESSES_STORAGE_KEY, JSON.stringify(deduped));
+          } catch (parseError) {
+            console.warn('Failed to parse address cache, clearing...', parseError);
+            await AsyncStorage.removeItem(ADDRESSES_STORAGE_KEY);
           }
-          setIsLoading(false);
-          return;
         }
       }
 

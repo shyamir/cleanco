@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { BookingLockService } from '../../common/services/booking-lock.service';
 import { ServiceType } from '@prisma/client';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class CleanerAssignmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly bookingLockService: BookingLockService,
   ) {}
 
   /**
@@ -156,11 +158,10 @@ export class CleanerAssignmentService {
     // Sort by workload (ascending) to balance assignments
     cleanersWithWorkload.sort((a, b) => a.workload - b.workload);
 
-    // Filter out cleaners who are already fully booked
-    // Assuming max 3 bookings per cleaner per time slot
-    const maxBookingsPerSlot = 3;
+    // Filter out cleaners who are already assigned to another booking at this time slot
+    // Strict 1:1 - a cleaner can only be at one place at a time
     const availableForAssignment = cleanersWithWorkload.filter(
-      (c) => c.workload < maxBookingsPerSlot,
+      (c) => c.workload === 0,
     );
 
     // Return the required number of cleaners with lowest workload
@@ -204,7 +205,7 @@ export class CleanerAssignmentService {
       throw new NotFoundException('Booking not found');
     }
 
-    // Verify all cleaners exist and are available
+    // Verify all cleaners exist and are available, including conflict checks
     const cleaners = await this.prisma.cleanerProfile.findMany({
       where: {
         id: { in: cleanerIds },
@@ -216,12 +217,60 @@ export class CleanerAssignmentService {
       },
       include: {
         user: true,
+        // Check for conflicting assignments at the same date/time slot
+        assignments: {
+          where: {
+            booking: {
+              date: booking.date,
+              timeSlotId: booking.timeSlotId,
+              status: { in: ['CONFIRMED', 'ASSIGNED', 'IN_PROGRESS'] },
+              id: { not: bookingId }, // Exclude current booking
+            },
+          },
+        },
+        // Check for vacations on this date
+        vacations: {
+          where: {
+            startDate: { lte: booking.date },
+            endDate: { gte: booking.date },
+          },
+        },
       },
     });
 
     if (cleaners.length !== cleanerIds.length) {
       throw new BadRequestException('One or more cleaners not found or inactive');
     }
+
+    // Check for conflicts - cleaner already assigned to another booking at this time
+    const conflictingCleaners = cleaners.filter((c) => c.assignments.length > 0);
+    if (conflictingCleaners.length > 0) {
+      const names = conflictingCleaners
+        .map((c) => `${c.user?.firstName || ''} ${c.user?.lastName || ''}`.trim() || 'Unknown')
+        .join(', ');
+      throw new BadRequestException(
+        `The following cleaner(s) are already assigned to another booking at this time: ${names}`,
+      );
+    }
+
+    // Check for vacations
+    const vacationingCleaners = cleaners.filter((c) => c.vacations.length > 0);
+    if (vacationingCleaners.length > 0) {
+      const names = vacationingCleaners
+        .map((c) => `${c.user?.firstName || ''} ${c.user?.lastName || ''}`.trim() || 'Unknown')
+        .join(', ');
+      throw new BadRequestException(
+        `The following cleaner(s) are on vacation on this date: ${names}`,
+      );
+    }
+
+    // Count current assignments for this booking
+    const currentAssignmentCount = await this.prisma.cleanerAssignment.count({
+      where: { bookingId },
+    });
+
+    const newAssignmentCount = cleanerIds.length;
+    const delta = newAssignmentCount - currentAssignmentCount;
 
     // Remove existing assignments
     await this.prisma.cleanerAssignment.deleteMany({
@@ -233,6 +282,33 @@ export class CleanerAssignmentService {
       bookingId,
       cleaners.map((c) => ({ id: c.id, userId: c.userId })),
     );
+
+    // Update availability cache if the number of cleaners changed
+    if (delta !== 0) {
+      try {
+        if (delta > 0) {
+          // More cleaners assigned - reserve additional capacity
+          await this.bookingLockService.reserveSlot({
+            date: booking.date,
+            timeSlotId: booking.timeSlotId,
+            requiredCapacity: delta,
+          });
+        } else {
+          // Fewer cleaners assigned - release capacity
+          await this.bookingLockService.releaseSlot({
+            date: booking.date,
+            timeSlotId: booking.timeSlotId,
+            requiredCapacity: Math.abs(delta),
+          });
+        }
+        this.logger.log(
+          `Updated availability cache: delta=${delta} for date=${booking.date.toISOString().split('T')[0]}, timeSlotId=${booking.timeSlotId}`,
+        );
+      } catch (error) {
+        this.logger.error(`Failed to update availability cache: ${error.message}`);
+        // Don't throw - the assignment was successful, cache update is secondary
+      }
+    }
 
     // Only update status to ASSIGNED if not pending inspection
     // Office bookings stay in PENDING_INSPECTION until admin confirms price
@@ -290,6 +366,9 @@ export class CleanerAssignmentService {
   async removeCleanerAssignment(assignmentId: string): Promise<void> {
     const assignment = await this.prisma.cleanerAssignment.findUnique({
       where: { id: assignmentId },
+      include: {
+        booking: true,
+      },
     });
 
     if (!assignment) {
@@ -299,6 +378,21 @@ export class CleanerAssignmentService {
     await this.prisma.cleanerAssignment.delete({
       where: { id: assignmentId },
     });
+
+    // Release capacity in availability cache
+    try {
+      await this.bookingLockService.releaseSlot({
+        date: assignment.booking.date,
+        timeSlotId: assignment.booking.timeSlotId,
+        requiredCapacity: 1, // One cleaner removed
+      });
+      this.logger.log(
+        `Released 1 capacity for date=${assignment.booking.date.toISOString().split('T')[0]}, timeSlotId=${assignment.booking.timeSlotId}`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to release capacity: ${error.message}`);
+      // Don't throw - the removal was successful, cache update is secondary
+    }
 
     this.logger.log(`Removed cleaner assignment ${assignmentId}`);
   }

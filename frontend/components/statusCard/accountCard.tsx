@@ -23,10 +23,16 @@ const AccountCard: React.FC = () => {
         const storedPhone = await AsyncStorage.getItem("phone");
 
         if (userStr) {
-          const user = JSON.parse(userStr);
-          setFirstName(user.firstName || "");
-          setLastName(user.lastName || "");
-          setEmail(user.email);
+          try {
+            const user = JSON.parse(userStr);
+            if (user && typeof user === 'object') {
+              setFirstName(user.firstName || "");
+              setLastName(user.lastName || "");
+              setEmail(user.email);
+            }
+          } catch {
+            console.warn('Failed to parse user cache');
+          }
         }
         setPhone(storedPhone);
       };

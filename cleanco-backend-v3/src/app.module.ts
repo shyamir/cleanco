@@ -8,6 +8,8 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { CommonServicesModule } from './common/services/services.module';
 import { QueueModule } from './common/queues/queue.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
+import { AdminManagementModule } from './modules/admin-management/admin-management.module';
 import { UsersModule } from './modules/users/users.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
 import { ServicesModule } from './modules/services/services.module';
@@ -22,6 +24,8 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminPaymentsModule } from './modules/admin/payments/admin-payments.module';
 import { ZonesModule } from './modules/zones/zones.module';
 import { PromoCodesModule } from './modules/promo-codes/promo-codes.module';
+import { AdminPromoCodesModule } from './modules/admin/promo-codes/admin-promo-codes.module';
+import { AdminCleanersModule } from './modules/admin/cleaners/admin-cleaners.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -51,6 +55,8 @@ import configuration from './config/configuration';
 
     // Feature modules
     AuthModule,
+    AdminAuthModule,
+    AdminManagementModule,
     UsersModule,
     AddressesModule,
     ServicesModule,
@@ -65,6 +71,8 @@ import configuration from './config/configuration';
     AdminPaymentsModule,
     ZonesModule,
     PromoCodesModule,
+    AdminPromoCodesModule,
+    AdminCleanersModule,
     SettingsModule,
     CheckoutModule,
   ],

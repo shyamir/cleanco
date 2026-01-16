@@ -80,6 +80,22 @@ export class AdminBookingsService {
           },
           address: true,
           timeSlot: true,
+          cleanerAssignments: {
+            include: {
+              cleaner: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      phoneNumber: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -117,6 +133,22 @@ export class AdminBookingsService {
         },
         address: true,
         timeSlot: true,
+        cleanerAssignments: {
+          include: {
+            cleaner: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    phoneNumber: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
