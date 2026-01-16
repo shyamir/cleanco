@@ -2,17 +2,25 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { BookingsService } from '../../bookings/bookings.service';
 import { AdminBookingsQueryDto } from './dto/admin-bookings-query.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { ConfirmInspectionDto } from './dto/confirm-inspection.dto';
+import { RescheduleBookingDto } from '../../bookings/dto/reschedule-booking.dto';
 import { BookingStatus, PaymentStatus } from '@prisma/client';
 import { DateUtils } from '../../../common/utils/date.utils';
 
 @Injectable()
 export class AdminBookingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => BookingsService))
+    private bookingsService: BookingsService,
+  ) {}
 
   /**
    * Get all bookings with filtering and pagination
@@ -361,5 +369,19 @@ export class AdminBookingsService {
         difference: confirmedPrice - Number(booking.estimatedPrice || 0),
       },
     };
+  }
+
+  /**
+   * Admin reschedule booking (no 24-hour restriction, no reschedule limit)
+   */
+  async rescheduleBooking(bookingId: string, rescheduleDto: RescheduleBookingDto) {
+    return this.bookingsService.adminRescheduleBooking(bookingId, rescheduleDto);
+  }
+
+  /**
+   * Admin cancel booking (releases slot capacity and removes cleaner assignments)
+   */
+  async cancelBooking(bookingId: string, cancelReason?: string) {
+    return this.bookingsService.adminCancelBooking(bookingId, cancelReason);
   }
 }

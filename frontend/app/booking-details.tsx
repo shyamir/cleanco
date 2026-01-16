@@ -428,6 +428,7 @@ export default function BookingDetailsScreen() {
         onCancelPress={() => setRescheduleVisible(false)}
         serviceName={serviceTitle}
         bedrooms={booking.bedrooms}
+        assignedCleanerCount={booking.assignedCleanerCount}
       />
     </SafeAreaProvider>
   );

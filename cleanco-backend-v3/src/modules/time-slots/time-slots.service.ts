@@ -14,10 +14,11 @@ export class TimeSlotsService {
    * Get available time slots for a specific date
    */
   async getAvailableSlots(query: AvailableSlotsQueryDto) {
-    const { date: dateString } = query;
+    const { date: dateString, requiredCleaners: overrideCleaners } = query;
 
-    // Calculate required cleaners based on booking details
-    const requiredCleaners = this.calculateRequiredCleaners(query);
+    // Use provided requiredCleaners if specified (for admin reschedule with manual cleaner adjustments)
+    // Otherwise calculate based on booking details
+    const requiredCleaners = overrideCleaners ?? this.calculateRequiredCleaners(query);
 
     // Parse the date string as Maldives time for consistent date handling
     const requestedDate = DateUtils.parseDateAsMaldives(dateString);

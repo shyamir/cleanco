@@ -354,6 +354,7 @@ export class BookingsService {
       include: {
         address: true,
         timeSlot: true,
+        cleanerAssignments: true,
       },
       orderBy: [
         { date: 'asc' },
@@ -361,7 +362,12 @@ export class BookingsService {
       ],
     });
 
-    return upcomingBooking;
+    if (!upcomingBooking) return null;
+
+    return {
+      ...upcomingBooking,
+      assignedCleanerCount: upcomingBooking.cleanerAssignments?.length || 0,
+    };
   }
 
   /**
@@ -371,7 +377,7 @@ export class BookingsService {
   async getActivityBookings(userId: string) {
     const today = DateUtils.todayInMaldives();
 
-    return this.prisma.booking.findMany({
+    const bookings = await this.prisma.booking.findMany({
       where: {
         userId,
         date: { gte: today },
@@ -386,12 +392,18 @@ export class BookingsService {
       include: {
         address: true,
         timeSlot: true,
+        cleanerAssignments: true,
       },
       orderBy: [
         { date: 'asc' },
         { timeSlot: { orderIndex: 'asc' } },
       ],
     });
+
+    return bookings.map(booking => ({
+      ...booking,
+      assignedCleanerCount: booking.cleanerAssignments?.length || 0,
+    }));
   }
 
   /**
@@ -443,6 +455,7 @@ export class BookingsService {
       include: {
         address: true,
         timeSlot: true,
+        cleanerAssignments: true,
         user: {
           select: {
             id: true,
@@ -459,7 +472,10 @@ export class BookingsService {
       throw new NotFoundException('Booking not found');
     }
 
-    return booking;
+    return {
+      ...booking,
+      assignedCleanerCount: booking.cleanerAssignments?.length || 0,
+    };
   }
 
   /**
@@ -472,10 +488,10 @@ export class BookingsService {
   ) {
     const { newDate: newDateString, newTimeSlotId } = rescheduleDto;
 
-    // Find booking with time slot for accurate time calculation
+    // Find booking with time slot and cleaner assignments
     const booking = await this.prisma.booking.findFirst({
       where: { id, userId },
-      include: { timeSlot: true },
+      include: { timeSlot: true, cleanerAssignments: true },
     });
 
     if (!booking) {
@@ -528,13 +544,17 @@ export class BookingsService {
       throw new BadRequestException('Invalid or inactive time slot');
     }
 
-    // Calculate required cleaners for this booking
-    const requiredCleaners = this.calculateRequiredCleaners({
+    // Get actual assigned cleaner count (may differ from calculated if admin changed it)
+    const actualAssignedCount = booking.cleanerAssignments?.length || 0;
+    const calculatedCount = this.calculateRequiredCleaners({
       serviceType: booking.serviceType,
       bedrooms: booking.bedrooms ?? undefined,
       rooms: booking.rooms ?? undefined,
       floors: booking.floors ?? undefined,
     });
+
+    // Use actual if cleaners are assigned, otherwise use calculated
+    const requiredCleaners = actualAssignedCount > 0 ? actualAssignedCount : calculatedCount;
 
     // STEP 1: Reserve new slot atomically (fail fast if unavailable)
     try {
@@ -585,9 +605,9 @@ export class BookingsService {
       requiredCapacity: requiredCleaners,
     });
 
-    // Reassign cleaners for the new date/time
+    // Reassign cleaners for the new date/time, preserving the actual cleaner count
     try {
-      await this.cleanerAssignmentService.reassignOnReschedule(updatedBooking.id);
+      await this.cleanerAssignmentService.reassignOnReschedule(updatedBooking.id, requiredCleaners);
       this.logger.log(`Cleaner reassignment attempted for rescheduled booking ${updatedBooking.bookingNumber}`);
     } catch (error) {
       this.logger.error(`Cleaner reassignment failed for booking ${updatedBooking.bookingNumber}: ${error.message}`);
@@ -599,15 +619,144 @@ export class BookingsService {
   }
 
   /**
+   * Admin reschedule a booking (no 24-hour restriction, no reschedule limit)
+   */
+  async adminRescheduleBooking(
+    bookingId: string,
+    rescheduleDto: RescheduleBookingDto,
+  ) {
+    const { newDate: newDateString, newTimeSlotId } = rescheduleDto;
+
+    // Find booking with cleaner assignments (no userId check - admin can reschedule any booking)
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { timeSlot: true, cleanerAssignments: true },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    // Check if booking can be rescheduled (same status check as regular reschedule)
+    if (!['PENDING', 'CONFIRMED', 'ASSIGNED'].includes(booking.status)) {
+      throw new BadRequestException(
+        'Only pending, confirmed, or assigned bookings can be rescheduled',
+      );
+    }
+
+    // NOTE: Admin bypasses:
+    // - 24-hour restriction (can reschedule at any time)
+    // - Reschedule count limit (can reschedule unlimited times)
+
+    // Parse new date as Maldives time
+    const newDate = DateUtils.parseDateAsMaldives(newDateString);
+    const today = DateUtils.todayInMaldives();
+
+    if (isBefore(newDate, today)) {
+      throw new BadRequestException('Cannot reschedule to a past date');
+    }
+
+    // Validate new time slot
+    const timeSlot = await this.prisma.timeSlot.findUnique({
+      where: { id: newTimeSlotId },
+    });
+
+    if (!timeSlot || !timeSlot.isActive) {
+      throw new BadRequestException('Invalid or inactive time slot');
+    }
+
+    // Check if rescheduling to the same date and time slot
+    const currentDateStr = DateUtils.formatInMaldives(booking.date, 'yyyy-MM-dd');
+    if (currentDateStr === newDateString && booking.timeSlotId === newTimeSlotId) {
+      throw new BadRequestException('New date and time slot are the same as current');
+    }
+
+    // Get actual assigned cleaner count (may differ from calculated if admin changed it)
+    const actualAssignedCount = booking.cleanerAssignments?.length || 0;
+    const calculatedCount = this.calculateRequiredCleaners({
+      serviceType: booking.serviceType,
+      bedrooms: booking.bedrooms ?? undefined,
+      rooms: booking.rooms ?? undefined,
+      floors: booking.floors ?? undefined,
+    });
+
+    // Use actual if cleaners are assigned, otherwise use calculated
+    const requiredCleaners = actualAssignedCount > 0 ? actualAssignedCount : calculatedCount;
+
+    // STEP 1: Reserve new slot atomically (fail fast if unavailable)
+    try {
+      await this.bookingLockService.reserveSlot({
+        date: newDate,
+        timeSlotId: newTimeSlotId,
+        requiredCapacity: requiredCleaners,
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw new BadRequestException('The new time slot is fully booked');
+      }
+      throw error;
+    }
+
+    // STEP 2: Update booking
+    let updatedBooking;
+    try {
+      updatedBooking = await this.prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          date: newDate,
+          timeSlotId: newTimeSlotId,
+          originalDate: booking.originalDate || booking.date,
+          originalTimeSlotId: booking.originalTimeSlotId || booking.timeSlotId,
+          // Admin reschedule does NOT increment rescheduledCount
+          // This preserves the user's reschedule allowance
+        },
+        include: {
+          address: true,
+          timeSlot: true,
+        },
+      });
+    } catch (error) {
+      // Rollback: release the newly reserved slot
+      await this.bookingLockService.releaseSlot({
+        date: newDate,
+        timeSlotId: newTimeSlotId,
+        requiredCapacity: requiredCleaners,
+      });
+      throw error;
+    }
+
+    // STEP 3: Release old slot (after successful update)
+    await this.bookingLockService.releaseSlot({
+      date: booking.date,
+      timeSlotId: booking.timeSlotId,
+      requiredCapacity: requiredCleaners,
+    });
+
+    // Reassign cleaners for the new date/time, preserving the actual cleaner count
+    try {
+      await this.cleanerAssignmentService.reassignOnReschedule(updatedBooking.id, requiredCleaners);
+      this.logger.log(`Cleaner reassignment attempted for admin-rescheduled booking ${updatedBooking.bookingNumber}`);
+    } catch (error) {
+      this.logger.error(`Cleaner reassignment failed for booking ${updatedBooking.bookingNumber}: ${error.message}`);
+      // Don't fail the reschedule if reassignment fails
+      // Admin can manually reassign if needed
+    }
+
+    this.logger.log(`Admin rescheduled booking ${updatedBooking.bookingNumber} to ${newDateString} at ${timeSlot.displayStartTime}`);
+
+    return updatedBooking;
+  }
+
+  /**
    * Cancel a booking
    */
   async cancel(userId: string, id: string, cancelDto: CancelBookingDto) {
     const { cancelReason } = cancelDto;
 
-    // Find booking with timeSlot for accurate time comparison
+    // Find booking with timeSlot and cleaner assignments
     const booking = await this.prisma.booking.findFirst({
       where: { id, userId },
-      include: { timeSlot: true },
+      include: { timeSlot: true, cleanerAssignments: true },
     });
 
     if (!booking) {
@@ -627,13 +776,17 @@ export class BookingsService {
     // if canceled within 24 hours of the appointment time.
     // The refund policy is handled on the frontend/payment side.
 
-    // Calculate required cleaners for this booking
-    const requiredCleaners = this.calculateRequiredCleaners({
+    // Get actual assigned cleaner count (may differ from calculated if admin changed it)
+    const actualAssignedCount = booking.cleanerAssignments?.length || 0;
+    const calculatedCount = this.calculateRequiredCleaners({
       serviceType: booking.serviceType,
       bedrooms: booking.bedrooms ?? undefined,
       rooms: booking.rooms ?? undefined,
       floors: booking.floors ?? undefined,
     });
+
+    // Use actual if cleaners are assigned, otherwise use calculated
+    const requiredCleaners = actualAssignedCount > 0 ? actualAssignedCount : calculatedCount;
 
     // Update booking
     const updatedBooking = await this.prisma.booking.update({
@@ -660,6 +813,84 @@ export class BookingsService {
     await this.prisma.cleanerAssignment.deleteMany({
       where: { bookingId: id },
     });
+
+    return {
+      message: 'Booking canceled successfully',
+      booking: updatedBooking,
+    };
+  }
+
+  /**
+   * Admin cancel a booking (no restrictions)
+   */
+  async adminCancelBooking(bookingId: string, cancelReason?: string) {
+    // Find booking with cleaner assignments (no userId check - admin can cancel any booking)
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { timeSlot: true, cleanerAssignments: true },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    // Check if booking can be canceled
+    if (booking.status === BookingStatus.CANCELED) {
+      throw new BadRequestException('Booking is already canceled');
+    }
+
+    if (booking.status === BookingStatus.COMPLETED) {
+      throw new BadRequestException('Cannot cancel completed bookings');
+    }
+
+    // Get actual assigned cleaner count (may differ from calculated if admin changed it)
+    const actualAssignedCount = booking.cleanerAssignments?.length || 0;
+    const calculatedCount = this.calculateRequiredCleaners({
+      serviceType: booking.serviceType,
+      bedrooms: booking.bedrooms ?? undefined,
+      rooms: booking.rooms ?? undefined,
+      floors: booking.floors ?? undefined,
+    });
+
+    // Use actual if cleaners are assigned, otherwise use calculated
+    const requiredCleaners = actualAssignedCount > 0 ? actualAssignedCount : calculatedCount;
+
+    // Update booking
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: BookingStatus.CANCELED,
+        canceledAt: DateUtils.nowInMaldives(),
+        cancelReason,
+      },
+      include: {
+        address: true,
+        timeSlot: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Release the reserved slot atomically
+    await this.bookingLockService.releaseSlot({
+      date: booking.date,
+      timeSlotId: booking.timeSlotId,
+      requiredCapacity: requiredCleaners,
+    });
+
+    // Remove all cleaner assignments for this booking
+    await this.prisma.cleanerAssignment.deleteMany({
+      where: { bookingId },
+    });
+
+    this.logger.log(`Admin canceled booking ${updatedBooking.bookingNumber}`);
 
     return {
       message: 'Booking canceled successfully',

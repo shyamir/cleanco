@@ -48,6 +48,7 @@ const Payment = () => {
     checkoutSession?.holdDurationSeconds ?? 0
   );
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const alertShownRef = useRef(false);
 
   // Format remaining time as M:SS
   const formatTime = (seconds: number): string => {
@@ -58,7 +59,8 @@ const Payment = () => {
 
   // Validate checkout session exists on mount
   useEffect(() => {
-    if (!checkoutSession) {
+    if (!checkoutSession && !alertShownRef.current) {
+      alertShownRef.current = true;
       Alert.alert(
         "Error",
         "No active checkout session. Please go back and try again.",
@@ -72,7 +74,7 @@ const Payment = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [checkoutSession, navigation]);
 
   // Countdown timer
   useEffect(() => {

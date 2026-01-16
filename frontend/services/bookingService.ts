@@ -127,6 +127,7 @@ export interface AvailableSlotsQueryOptions {
   officeSize?: string;
   floors?: number;
   rooms?: number;
+  requiredCleaners?: number;
 }
 
 export interface AvailableSlotsResponse {
@@ -159,6 +160,7 @@ export interface SubscriptionAvailabilityQueryOptions {
   officeSize?: string;
   floors?: number;
   rooms?: number;
+  requiredCleaners?: number;
 }
 
 export interface QuoteRequest {
@@ -267,6 +269,8 @@ export interface UpcomingBooking {
   addressAddress?: string;
   addressStreet?: string;
   addressLandmark?: string;
+  // Cleaner assignment count (for reschedule availability)
+  assignedCleanerCount?: number;
 }
 
 // ActivityBooking is the same as UpcomingBooking (used for activity/history pages)
@@ -288,6 +292,8 @@ export interface BookingDetails extends UpcomingBooking {
   specialInstructions?: string;
   paymentMethod?: string;
   discountAmount?: number;
+  // Cleaner assignment count (for reschedule availability)
+  assignedCleanerCount?: number;
 }
 
 // Subscription day slot with time slot details

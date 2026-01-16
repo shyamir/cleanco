@@ -18,6 +18,7 @@ import { AdminBookingsService } from './admin-bookings.service';
 import { AdminBookingsQueryDto } from './dto/admin-bookings-query.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { ConfirmInspectionDto } from './dto/confirm-inspection.dto';
+import { RescheduleBookingDto } from '../../bookings/dto/reschedule-booking.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -71,6 +72,34 @@ export class AdminBookingsController {
     @Body() updateStatusDto: UpdateBookingStatusDto,
   ) {
     return this.adminBookingsService.updateStatus(id, updateStatusDto);
+  }
+
+  @Put(':id/reschedule')
+  @ApiOperation({ summary: 'Admin reschedule booking (no 24h restriction)' })
+  @ApiResponse({ status: 200, description: 'Booking rescheduled successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot reschedule or slot unavailable' })
+  @ApiResponse({ status: 404, description: 'Booking not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  reschedule(
+    @Param('id') id: string,
+    @Body() rescheduleDto: RescheduleBookingDto,
+  ) {
+    return this.adminBookingsService.rescheduleBooking(id, rescheduleDto);
+  }
+
+  @Put(':id/cancel')
+  @ApiOperation({ summary: 'Admin cancel booking (releases slot capacity)' })
+  @ApiResponse({ status: 200, description: 'Booking cancelled successfully' })
+  @ApiResponse({ status: 400, description: 'Booking already cancelled or completed' })
+  @ApiResponse({ status: 404, description: 'Booking not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  cancel(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminBookingsService.cancelBooking(id, body?.reason);
   }
 
   @Delete(':id')

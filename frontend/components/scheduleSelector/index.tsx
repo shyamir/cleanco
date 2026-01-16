@@ -22,11 +22,13 @@ type Slot = { day: string; time: string; timeSlotId?: string };
 type ScheduleSelectorProps = {
   frequency: string;
   onChange?: (slots: Slot[]) => void;
+  requiredCleaners?: number; // Override cleaner count (used for reschedule with manual adjustments)
 };
 
 const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
   frequency,
   onChange,
+  requiredCleaners,
 }) => {
   const { theme } = useTheme();
   const [slots, setSlots] = useState<Slot[]>([
@@ -128,6 +130,7 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
         const response = await bookingApi.getAvailableSlots(startDate, {
           serviceType,
           bedrooms,
+          requiredCleaners,
         });
 
         setAvailableSlots(response.availableSlots);
@@ -139,7 +142,7 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
       }
     };
     fetchAvailableSlots();
-  }, [startDate, frequency, bedrooms, service]);
+  }, [startDate, frequency, bedrooms, service, requiredCleaners]);
 
   // Fetch subscription availability for a specific slot
   const fetchSubscriptionAvailability = async (
@@ -165,6 +168,7 @@ const ScheduleSelector: React.FC<ScheduleSelectorProps> = ({
         {
           serviceType,
           bedrooms,
+          requiredCleaners,
         }
       );
 

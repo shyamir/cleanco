@@ -15,6 +15,7 @@ type RescheduleBookingProps = {
   onConfirmPress: (date: string, timeSlotId: string) => void;
   serviceName: string; // "Home Cleaning" or "Office Cleaning"
   bedrooms?: number;
+  assignedCleanerCount?: number; // For bookings with manual cleaner adjustments
 };
 
 const RescheduleBooking: React.FC<RescheduleBookingProps> = ({
@@ -24,6 +25,7 @@ const RescheduleBooking: React.FC<RescheduleBookingProps> = ({
   onCancelPress,
   serviceName,
   bedrooms,
+  assignedCleanerCount,
 }) => {
   const { theme } = useTheme();
   const { setService, setBedrooms, startDate } = useBooking();
@@ -64,7 +66,11 @@ const RescheduleBooking: React.FC<RescheduleBookingProps> = ({
       title="Reschedule Booking"
       backgroundColor={theme.colors.system.background.default}
     >
-      <ScheduleSelector frequency="Once" onChange={handleScheduleChange} />
+      <ScheduleSelector
+        frequency="Once"
+        onChange={handleScheduleChange}
+        requiredCleaners={assignedCleanerCount}
+      />
       <View style={styles.buttonContainer}>
         <View style={{ opacity: canConfirm ? 1 : 0.5 }}>
           <Button

@@ -52,4 +52,14 @@ export class AvailableSlotsQueryDto {
   @Type(() => Number)
   @IsInt()
   rooms?: number;
+
+  @ApiPropertyOptional({
+    description: 'Override required cleaners count (for admin reschedule when cleaners were manually adjusted)',
+    example: 3,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  requiredCleaners?: number;
 }

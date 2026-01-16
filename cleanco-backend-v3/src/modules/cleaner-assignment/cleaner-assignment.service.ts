@@ -422,14 +422,74 @@ export class CleanerAssignmentService {
 
   /**
    * Re-assign cleaners when booking is rescheduled
+   * @param bookingId - The booking ID
+   * @param cleanerCount - Optional: Number of cleaners to assign (preserves manual admin adjustments)
    */
-  async reassignOnReschedule(bookingId: string): Promise<void> {
+  async reassignOnReschedule(bookingId: string, cleanerCount?: number): Promise<void> {
     // Remove existing assignments
     await this.prisma.cleanerAssignment.deleteMany({
       where: { bookingId },
     });
 
     // Auto-assign new cleaners for the new date/time
-    await this.autoAssignCleaners(bookingId);
+    // Use provided count if specified (preserves admin's manual cleaner count changes)
+    if (cleanerCount !== undefined && cleanerCount > 0) {
+      await this.autoAssignCleanersWithCount(bookingId, cleanerCount);
+    } else {
+      await this.autoAssignCleaners(bookingId);
+    }
+  }
+
+  /**
+   * Auto-assign a specific number of cleaners to a booking
+   * Used when preserving manual admin adjustments during reschedule
+   */
+  async autoAssignCleanersWithCount(bookingId: string, cleanerCount: number): Promise<void> {
+    // Get booking details
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        address: true,
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    this.logger.log(
+      `Booking ${booking.bookingNumber} requires ${cleanerCount} cleaner(s) (preserving manual count)`,
+    );
+
+    // Find available cleaners
+    const availableCleaners = await this.findAvailableCleaners(
+      booking.date,
+      booking.timeSlotId,
+      cleanerCount,
+    );
+
+    if (availableCleaners.length < cleanerCount) {
+      this.logger.warn(
+        `Not enough available cleaners for booking ${booking.bookingNumber}. ` +
+          `Required: ${cleanerCount}, Available: ${availableCleaners.length}`,
+      );
+      // Don't throw error - booking can remain for manual assignment
+      return;
+    }
+
+    // Assign cleaners to booking
+    await this.assignCleanersToBooking(bookingId, availableCleaners);
+
+    // Only update status to ASSIGNED if not pending inspection
+    if (booking.status !== 'PENDING_INSPECTION') {
+      await this.prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: 'ASSIGNED' },
+      });
+    }
+
+    this.logger.log(
+      `Successfully assigned ${availableCleaners.length} cleaner(s) to booking ${booking.bookingNumber}`,
+    );
   }
 }
