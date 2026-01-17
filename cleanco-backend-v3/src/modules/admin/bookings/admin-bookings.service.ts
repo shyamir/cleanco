@@ -110,7 +110,9 @@ export class AdminBookingsService {
               email: true,
             },
           },
-          address: true,
+          address: {
+            include: { zone: true },
+          },
           timeSlot: true,
           cleanerAssignments: {
             include: {
@@ -163,7 +165,9 @@ export class AdminBookingsService {
             email: true,
           },
         },
-        address: true,
+        address: {
+          include: { zone: true },
+        },
         timeSlot: true,
         cleanerAssignments: {
           include: {
@@ -232,7 +236,9 @@ export class AdminBookingsService {
             email: true,
           },
         },
-        address: true,
+        address: {
+          include: { zone: true },
+        },
         timeSlot: true,
       },
     });
@@ -315,7 +321,9 @@ export class AdminBookingsService {
             email: true,
           },
         },
-        address: true,
+        address: {
+          include: { zone: true },
+        },
         timeSlot: true,
       },
       orderBy: { createdAt: 'asc' },
@@ -379,7 +387,9 @@ export class AdminBookingsService {
             email: true,
           },
         },
-        address: true,
+        address: {
+          include: { zone: true },
+        },
         timeSlot: true,
       },
     });
@@ -466,6 +476,7 @@ export class AdminBookingsService {
 
     const addresses = await this.prisma.address.findMany({
       where: { userId },
+      include: { zone: true },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
     });
 
@@ -646,7 +657,9 @@ export class AdminBookingsService {
             adminApproved: true,
           },
           include: {
-            address: true,
+            address: {
+          include: { zone: true },
+        },
             timeSlot: true,
             user: {
               select: {
@@ -808,7 +821,9 @@ export class AdminBookingsService {
             email: true,
           },
         },
-        address: true,
+        address: {
+          include: { zone: true },
+        },
         daySlots: {
           include: { timeSlot: true },
         },
