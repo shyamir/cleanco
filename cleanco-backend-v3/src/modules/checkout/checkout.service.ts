@@ -386,7 +386,7 @@ export class CheckoutService {
             promoCodeId: priceInfo.promoCodeId,
             estimatedPrice: isOfficeBooking ? priceInfo.basePrice : null,
             paymentMethod: dto.paymentMethod,
-            paymentStatus: PaymentStatus.PAID,
+            paymentStatus: isOfficeBooking ? PaymentStatus.PENDING : PaymentStatus.PAID,
             specialInstructions: dto.specialInstructions,
           },
           include: {
@@ -562,7 +562,13 @@ export class CheckoutService {
     });
 
     let paidBookingsCreated = 0;
-    const paidSessionsTarget = 4;
+    // Calculate paid sessions based on frequency (4 weeks × sessions per week)
+    // ONCE_A_WEEK = 4, TWICE_A_WEEK = 8, THRICE_A_WEEK = 12
+    const sessionsPerWeek = subscription.frequency === 'ONCE_A_WEEK' ? 1
+      : subscription.frequency === 'TWICE_A_WEEK' ? 2
+      : subscription.frequency === 'THRICE_A_WEEK' ? 3
+      : 1;
+    const paidSessionsTarget = 4 * sessionsPerWeek;
 
     for (let week = 0; week < weeksToGenerate; week++) {
       const weekStart = addWeeks(subscription.startDate, week);
@@ -631,6 +637,11 @@ export class CheckoutService {
     }
 
     // Create all bookings
+    this.logger.log(
+      `Creating ${bookings.length} bookings for subscription (frequency=${subscription.frequency}, paidSessionsTarget=${paidSessionsTarget})`,
+    );
+
+    let assignedCount = 0;
     for (const bookingData of bookings) {
       const created = await this.prisma.booking.create({ data: bookingData });
 
@@ -638,11 +649,16 @@ export class CheckoutService {
       if (bookingData.paymentStatus === PaymentStatus.PAID) {
         try {
           await this.cleanerAssignmentService.autoAssignCleaners(created.id);
+          assignedCount++;
         } catch (error) {
-          this.logger.error(`Auto-assignment failed for booking ${created.id}`);
+          this.logger.error(`Auto-assignment failed for booking ${created.id}: ${error.message}`);
         }
       }
     }
+
+    this.logger.log(
+      `Subscription booking creation complete: ${bookings.length} total, ${assignedCount} auto-assigned`,
+    );
 
     return bookings.length;
   }

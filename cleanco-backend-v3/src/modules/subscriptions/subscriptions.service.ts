@@ -720,23 +720,43 @@ export class SubscriptionsService {
       this.logger.log(`Generated ${bookings.length} bookings for subscription ${subscription.id}`);
 
       // Auto-assign cleaners to the newly created bookings
+      // Include both PENDING (home) and PENDING_INSPECTION (office) statuses
       const createdBookings = await this.prisma.booking.findMany({
         where: {
           subscriptionId: subscription.id,
           date: { gte: DateUtils.todayInMaldives() },
-          status: BookingStatus.PENDING,
+          status: { in: [BookingStatus.PENDING, BookingStatus.PENDING_INSPECTION] },
         },
         orderBy: { date: 'asc' },
       });
 
+      this.logger.log(`Found ${createdBookings.length} bookings to auto-assign for subscription ${subscription.id}`);
+
+      // Log all booking dates/times for debugging
+      const bookingSummary = createdBookings.map((b) => ({
+        id: b.id,
+        date: b.date.toISOString().split('T')[0],
+        timeSlotId: b.timeSlotId,
+        status: b.status,
+      }));
+      this.logger.log(`Bookings to assign: ${JSON.stringify(bookingSummary, null, 2)}`);
+
+      let assignedCount = 0;
+      let failedCount = 0;
+
       for (const booking of createdBookings) {
         try {
           await this.cleanerAssignmentService.autoAssignCleaners(booking.id);
+          assignedCount++;
+          this.logger.log(`Auto-assigned cleaners to booking ${booking.id} (${assignedCount}/${createdBookings.length})`);
         } catch (error) {
+          failedCount++;
           this.logger.error(`Auto-assignment failed for subscription booking ${booking.id}: ${error.message}`);
           // Don't fail the subscription creation if auto-assignment fails
         }
       }
+
+      this.logger.log(`Auto-assignment complete: ${assignedCount} succeeded, ${failedCount} failed out of ${createdBookings.length} bookings`);
     } catch (error) {
       // Rollback: release all reserved slots
       for (const reservation of reservations) {

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
   Delete,
   Body,
@@ -18,7 +19,10 @@ import { AdminBookingsService } from './admin-bookings.service';
 import { AdminBookingsQueryDto } from './dto/admin-bookings-query.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { ConfirmInspectionDto } from './dto/confirm-inspection.dto';
+import { AdminCreateBookingDto } from './dto/admin-create-booking.dto';
+import { AdminCreateUserDto } from './dto/admin-create-user.dto';
 import { RescheduleBookingDto } from '../../bookings/dto/reschedule-booking.dto';
+import { CreateAddressDto } from '../../addresses/dto/create-address.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -136,5 +140,63 @@ export class AdminBookingsController {
     @CurrentUser() user: any,
   ) {
     return this.adminBookingsService.confirmInspection(id, user.id, confirmDto);
+  }
+
+  // ===== ADMIN CREATE BOOKING ENDPOINTS =====
+
+  @Post()
+  @ApiOperation({
+    summary: 'Admin create booking for a user',
+    description: 'Create a one-time or subscription booking for any user. Admin can also create new users inline.',
+  })
+  @ApiResponse({ status: 201, description: 'Booking created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid booking data' })
+  @ApiResponse({ status: 404, description: 'User or address not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  createBooking(@Body() dto: AdminCreateBookingDto) {
+    return this.adminBookingsService.createBooking(dto);
+  }
+
+  @Post('users')
+  @ApiOperation({
+    summary: 'Admin create new customer',
+    description: 'Create a new customer account that can then be used for bookings.',
+  })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 400, description: 'Phone number already exists' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  createUser(@Body() dto: AdminCreateUserDto) {
+    return this.adminBookingsService.createUser(dto);
+  }
+
+  @Get('users/:userId/addresses')
+  @ApiOperation({
+    summary: 'Get addresses for a specific user',
+    description: 'Admin can view any user\'s saved addresses.',
+  })
+  @ApiResponse({ status: 200, description: 'List of user addresses' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  getUserAddresses(@Param('userId') userId: string) {
+    return this.adminBookingsService.getUserAddresses(userId);
+  }
+
+  @Post('users/:userId/addresses')
+  @ApiOperation({
+    summary: 'Create address for a user',
+    description: 'Admin can add a new address for any user.',
+  })
+  @ApiResponse({ status: 201, description: 'Address created successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  createUserAddress(
+    @Param('userId') userId: string,
+    @Body() dto: CreateAddressDto,
+  ) {
+    return this.adminBookingsService.createAddressForUser(userId, dto);
   }
 }

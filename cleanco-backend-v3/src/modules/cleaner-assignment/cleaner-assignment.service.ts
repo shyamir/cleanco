@@ -32,9 +32,10 @@ export class CleanerAssignmentService {
 
     // Calculate required number of cleaners
     const requiredCleaners = this.calculateRequiredCleaners(booking);
+    const dateStr = booking.date.toISOString().split('T')[0];
 
     this.logger.log(
-      `Booking ${booking.bookingNumber} requires ${requiredCleaners} cleaner(s)`,
+      `=== Auto-assigning ${booking.bookingNumber} (date=${dateStr}, timeSlot=${booking.timeSlotId}, status=${booking.status}) - requires ${requiredCleaners} cleaner(s) ===`,
     );
 
     // Find available cleaners
@@ -112,6 +113,11 @@ export class CleanerAssignmentService {
     timeSlotId: string,
     requiredCount: number,
   ): Promise<Array<{ id: string; userId: string; workload: number }>> {
+    const dateStr = date.toISOString().split('T')[0];
+    this.logger.log(
+      `Finding ${requiredCount} available cleaners for date=${dateStr}, timeSlotId=${timeSlotId}`,
+    );
+
     // Get all active cleaner profiles
     const cleanerProfiles = await this.prisma.cleanerProfile.findMany({
       where: {
@@ -139,21 +145,48 @@ export class CleanerAssignmentService {
               },
             },
           },
+          include: {
+            booking: {
+              select: {
+                id: true,
+                bookingNumber: true,
+                date: true,
+                status: true,
+              },
+            },
+          },
         },
       },
     });
+
+    this.logger.log(`Found ${cleanerProfiles.length} total active cleaner profiles`);
 
     // Filter out cleaners on vacation
     const availableCleaners = cleanerProfiles.filter(
       (cleaner) => cleaner.vacations.length === 0,
     );
 
+    this.logger.log(`${availableCleaners.length} cleaners not on vacation`);
+
     // Calculate workload for each cleaner (number of assignments on that date/time)
-    const cleanersWithWorkload = availableCleaners.map((cleaner) => ({
-      id: cleaner.id,
-      userId: cleaner.userId,
-      workload: cleaner.assignments.length,
-    }));
+    const cleanersWithWorkload = availableCleaners.map((cleaner) => {
+      const workload = cleaner.assignments.length;
+      if (workload > 0) {
+        const assignmentDetails = cleaner.assignments.map(
+          (a: any) =>
+            `booking=${a.booking.bookingNumber}, date=${a.booking.date?.toISOString?.().split('T')[0] || a.booking.date}, status=${a.booking.status}`,
+        );
+        this.logger.log(
+          `Cleaner ${cleaner.user.firstName} has ${workload} assignments: [${assignmentDetails.join('; ')}]`,
+        );
+      }
+      return {
+        id: cleaner.id,
+        userId: cleaner.userId,
+        workload,
+        name: `${cleaner.user.firstName} ${cleaner.user.lastName}`,
+      };
+    });
 
     // Sort by workload (ascending) to balance assignments
     cleanersWithWorkload.sort((a, b) => a.workload - b.workload);
@@ -162,6 +195,10 @@ export class CleanerAssignmentService {
     // Strict 1:1 - a cleaner can only be at one place at a time
     const availableForAssignment = cleanersWithWorkload.filter(
       (c) => c.workload === 0,
+    );
+
+    this.logger.log(
+      `${availableForAssignment.length} cleaners available for assignment (workload=0): [${availableForAssignment.map((c) => c.name).join(', ')}]`,
     );
 
     // Return the required number of cleaners with lowest workload
