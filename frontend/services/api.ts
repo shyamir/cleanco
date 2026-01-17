@@ -1,7 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 
-const API_BASE_URL = 'http://localhost:3000/api/v1'; // Update this to your backend URL
+const API_BASE_URL = Platform.select({
+  android: 'http://10.0.2.2:3000/api/v1',
+  default: 'http://localhost:3000/api/v1',
+});
 
 // Simple auth event listener for session expiry
 type AuthFailureListener = () => void;

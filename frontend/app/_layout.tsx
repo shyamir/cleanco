@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Stack, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import { AddressProvider } from "../context/address-context";
 import { BookingProvider } from "@/context/booking-context";
 import { ActivityProvider } from "@/context/activity-context";
@@ -87,7 +87,10 @@ export default function RootLayout() {
             <ThemeProvider>
               <Stack
                 initialRouteName="splash"
-                screenOptions={{ headerShown: false, animation: "fade" }}
+                screenOptions={{
+                  headerShown: false,
+                  animation: Platform.OS === "android" ? "fade_from_bottom" : "fade",
+                }}
               />
             </ThemeProvider>
           </HomeDataProvider>

@@ -95,6 +95,7 @@ const AccountCard: React.FC = () => {
           onPress={() => router.push("/profile")}
         />
 
+        {/* Image rendered last so it appears on top */}
         <View style={styles.imageWrapper}>
           <Image
             source={require("@/assets/images/activity-1.png")}
@@ -107,7 +108,7 @@ const AccountCard: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  wrapper: { height: "auto" },
+  wrapper: { height: "auto", overflow: "hidden" },
   container: {
     alignItems: "flex-start",
     flexDirection: "row",
@@ -125,11 +126,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   imageWrapper: {
-    zIndex: -10,
     position: "absolute",
     top: -60,
     right: -100,
     opacity: 0.9,
+    pointerEvents: "none",
   },
 });
 export default AccountCard;

@@ -67,6 +67,14 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
       customStyle={styles.wrapper}
     >
       <View style={styles.container}>
+        {/* Decorative image rendered first so it appears behind other content */}
+        <View style={styles.imageWrapper}>
+          <Image
+            source={require("@/assets/images/activity-1.png")}
+            resizeMode="contain"
+          />
+        </View>
+
         <View style={styles.body}>
           <View style={styles.textWrapper}>
             <Text
@@ -109,20 +117,13 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ booking }) => {
           label={displayAddress}
           labelColor={theme.colors.card.label.secondary}
         />
-
-        <View style={styles.imageWrapper}>
-          <Image
-            source={require("@/assets/images/activity-1.png")}
-            resizeMode="contain"
-          />
-        </View>
       </View>
     </BaseCard>
   );
 };
 
 const styles = StyleSheet.create({
-  wrapper: { height: "auto" },
+  wrapper: { height: "auto", overflow: "hidden" },
   container: {
     alignItems: "flex-start",
     flexDirection: "column",
@@ -137,7 +138,6 @@ const styles = StyleSheet.create({
   textWrapper: { gap: 8, paddingVertical: 12 },
   text: {},
   imageWrapper: {
-    zIndex: -10,
     position: "absolute",
     top: 0,
     right: -120,

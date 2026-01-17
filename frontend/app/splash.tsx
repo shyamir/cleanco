@@ -61,7 +61,8 @@ export default function Splash() {
         player={player}
         style={styles.video}
         contentFit="cover"
-        fullscreenOptions={{ enable: false }}
+        nativeControls={false}
+        allowsFullscreen={false}
         allowsPictureInPicture={false}
       />
     </View>
